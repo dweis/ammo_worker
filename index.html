@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AmmoWorker</title>
+  <style>
+  html, body, pre#info { width: 100%; height: 100%;}
+  </style>
+</head>
+<body>
+  <pre id="info"></pre>
+  <script src="js/catiline.js"></script>
+  <!--<script src="js/ammo.js"></script>-->
+  <script src="js/ammo_worker.js"></script>
+  <script>
+    var el = document.getElementById('info');
+    var worker = cw({
+      gravity: { x: 0, y: -9.82, z: 0 },
+      step: 1/60,
+      iterations: 10,
+      memory: 256 * 1024 * 1024,
+      maxBodies: 10,
+      init: function() {
+        var Module = { TOTAL_MEMORY: this.memory },
+            that = this;
+        
+        var trans = new Ammo.btTransform();
+        
+        this.bodies = [];
+        
+        try {
+          importScripts('./js/ammo.js');
+
+          this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
+          this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
+          this.overlappingPairCache = new Ammo.btDbvtBroadphase();
+          this.solver = new Ammo.btSequentialImpulseConstraintSolver();
+          this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(this.dispatcher,
+              this.overlappingPairCache, this.solver, this.collisionConfiguration);
+          this.dynamicsWorld.setGravity(new Ammo.btVector3(this.gravity.x,
+            this.gravity.y, this.gravity.z));
+          
+          this.fire('ready');
+        } catch (e) {
+          console.error(e.message);
+        }
+        
+        if (this.dynamicsWorld) {
+          this.buffers = [
+            new ArrayBuffer(this.maxBodies * 7 * 8),
+            new ArrayBuffer(this.maxBodies * 7 * 8),
+            new ArrayBuffer(this.maxBodies * 7 * 8)
+          ];
+          
+          setInterval(function() {
+            try {
+              that.dynamicsWorld.stepSimulation(that.step, that.iterations);
+              
+              var update;
+              
+              if (that.buffers.length > 0) {
+                update = new Float64Array(that.buffers.pop());    
+              }
+              
+              if (update && update.buffer instanceof ArrayBuffer) {
+                for (var i in that.bodies) {
+                  if (that.bodies[i]) {
+                    that.bodies[i].getMotionState().getWorldTransform(trans);
+
+                    update[i * 7 + 0] = trans.getOrigin().x();
+                    update[i * 7 + 1] = trans.getOrigin().y();
+                    update[i * 7 + 2] = trans.getOrigin().z();
+                    update[i * 7 + 3] = trans.getRotation().x();
+                    update[i * 7 + 4] = trans.getRotation().y();
+                    update[i * 7 + 5] = trans.getRotation().z();
+                    update[i * 7 + 6] = trans.getRotation().w();
+                  }
+                }
+        
+                that.fire('update', update.buffer, [update.buffer]);
+              }
+              
+            } catch(e) {
+              console.error(e.message);
+            }  
+          }, this.step * 1000);
+        }
+      },
+      
+      swap: function(buf, cb) {
+        if (buf instanceof ArrayBuffer) {
+          this.buffers.push(buf);
+        }
+      },
+      
+      addRigidBody: function(descriptor, fn) {
+        try {
+        var colShape,
+            startTransform = new Ammo.btTransform(),
+            isDynamic = (descriptor.mass != 0),
+            localInertia = new Ammo.btVector3(0, 0, 0),
+            myMotionState,
+            rbInfo,
+            body;
+        
+        if (descriptor.shape.shape === 'box') {
+          colShape = new Ammo.btBoxShape(new Ammo.btVector3(descriptor.shape.halfExtents.x,
+              descriptor.shape.halfExtents.y, descriptor.shape.halfExtents.z));
+        } else if (descriptor.shape.shape === 'sphere') {
+          colShape = new Ammo.btSphereShape(descriptor.shape.radius);
+        } else if (descriptor.shape.shape === 'staticplane') {
+          colShape = new Ammo.btStaticPlaneShape(new Ammo.btVector3(descriptor.shape.normal.x, descriptor.shape.normal.y, descriptor.shape.normal.z), descriptor.shape.distance);
+        } else {
+          return console.error('Unknown shape: ' + descriptor.shape.shape);
+        }
+        
+        startTransform.setIdentity();
+      
+        if (isDynamic) {
+          colShape.calculateLocalInertia(descriptor.mass,localInertia);
+        }
+      
+        startTransform.setOrigin(new Ammo.btVector3(descriptor.position.x, descriptor.position.y, descriptor.position.z));
+        startTransform.setRotation(new Ammo.btQuaternion(descriptor.quaternion.x, descriptor.quaternion.y, descriptor.quaternion.z, descriptor.quaternion.w));
+      
+        myMotionState = new Ammo.btDefaultMotionState(startTransform);
+        rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
+        body = new Ammo.btRigidBody(rbInfo);
+      
+        body.setRestitution(descriptor.restitution);
+        body.setFriction(descriptor.friction);
+        
+        this.dynamicsWorld.addRigidBody(body);
+        
+        var idx = this.bodies.push(body) - 1;
+
+        if (typeof fn === 'function') {
+          fn(idx);
+        }
+      } catch(e) {
+        console.error(e.message);  
+      }
+      },
+      
+      shutdown: function() {
+        Ammo.destroy(this.collisionConfiguration);
+        Ammo.destroy(this.dispatcher);
+        Ammo.destroy(this.overlappingPairCache);
+        Ammo.destroy(this.solver);
+      }  
+    });
+
+    worker.on('ready', function() {
+      worker.addRigidBody({
+        position: {
+          x: 0,
+          y: 0,
+          z: 0
+        },
+        quaternion: {
+          x: 0,
+          y: 0,
+          z: 0,
+          w: 1
+        },
+        shape: {
+          shape: 'staticplane',
+          normal: {
+            x: 0,
+            y: 1,
+            z: 0
+          },
+          distance: 0
+        },
+        friction: 0.8,
+        restitution: 0.2,
+        mass: 0
+      });
+
+      worker.addRigidBody({
+        position: {
+          x: 0,
+          y: 5,
+          z: 0
+        },
+        quaternion: {
+          x: 0,
+          y: 0,
+          z: 0,
+          w: 1
+        },
+        shape: {
+          shape: 'box',
+          halfExtents: {
+            x: 0.1,
+            y: 0.1,
+            z: 0.1
+          }
+        },
+        friction: 0.8,
+        restitution: 0.2,
+        mass: 1
+      });
+
+      worker.addRigidBody({
+        position: {
+          x: 0,
+          y: 6,
+          z: 0
+        },
+        quaternion: {
+          x: 0,
+          y: 0,
+          z: 0,
+          w: 1
+        },
+        shape: {
+          shape: 'box',
+          halfExtents: {
+            x: 0.1,
+            y: 0.1,
+            z: 0.1
+          }
+        },
+        friction: 0.8,
+        restitution: 0.2,
+        mass: 1
+      });
+    });
+
+    worker.on('update', function(buf) {
+      var data = new Float64Array(buf);
+      el.innerHTML = '';
+      for (var i = 0; i < 10; i++) 
+        el.innerHTML += [data[i * 7 + 0], data[ i * 7 + 1 ], data[ i * 7 + 2 ], 
+          data[ i * 7 + 3 ], data[ i * 7 + 4 ], data[ i * 7 + 5 ], data[ i * 7 + 6 ]].join(' ') + '\n';
+
+      setTimeout(function() {
+        worker.swap(buf, [buf])
+      }, 1000/60);
+    });
+  </script>
+</body>
+</html>
