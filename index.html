@@ -88,6 +88,14 @@
         worker.swap(buf, [buf])
       }, 1000/60);
     });
+
+    setTimeout(function() {
+      worker.startSimulation();
+
+      setTimeout(function() {
+        worker.stopSimulation();
+      }, 3000);
+    }, 500);
   </script>
 </body>
 </html>
