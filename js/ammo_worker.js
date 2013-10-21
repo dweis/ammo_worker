@@ -47,6 +47,7 @@
           that = this;
 
       importScripts('./js/ammo.js');
+      //http://assets.verold.com/verold_api/lib/ammo.js
 
       this.bodies = [];
 
@@ -141,6 +142,34 @@
         gravity.y, gravity.z));
     },
 
+    _createShape: function(descriptor) {
+      var colShape;
+      switch(descriptor.shape.shape) {
+      case 'box': 
+        colShape = new Ammo.btBoxShape(new Ammo.btVector3(descriptor.shape.halfExtents.x,
+            descriptor.shape.halfExtents.y, descriptor.shape.halfExtents.z));
+        break;
+      case 'sphere':
+        colShape = new Ammo.btSphereShape(descriptor.shape.radius);
+        break;
+      case 'staticplane':
+        colShape = new Ammo.btStaticPlaneShape(new Ammo.btVector3(descriptor.shape.normal.x, descriptor.shape.normal.y, descriptor.shape.normal.z), descriptor.shape.distance);
+        break;
+      case 'cylinder':
+        colShape = new Ammo.btCylinderShape(new Ammo.btVector3(descriptor.shape.width, descriptor.shape.height, descriptor.shape.depth));
+        break;
+      case 'capsule':
+        colShape = new Ammo.btCapsuleShape(descriptor.shape.radius, descriptor.shape.height);
+        break;
+      case 'cone':
+        colShape = new Ammo.btConeShape(descriptor.shape.radisu, descriptor.shape.height);
+        break;
+      default:
+        return console.error('Unknown shape: ' + descriptor.shape.shape);
+      }
+      return colShape;
+    },
+
     addRigidBody: function(descriptor, fn) {
       var colShape,
           startTransform = new Ammo.btTransform(),
@@ -150,18 +179,9 @@
           rbInfo,
           body;
 
-      if (descriptor.shape.shape === 'box') {
-        colShape = new Ammo.btBoxShape(new Ammo.btVector3(descriptor.shape.halfExtents.x,
-            descriptor.shape.halfExtents.y, descriptor.shape.halfExtents.z));
-      } else if (descriptor.shape.shape === 'sphere') {
-        colShape = new Ammo.btSphereShape(descriptor.shape.radius);
-      } else if (descriptor.shape.shape === 'staticplane') {
-        colShape = new Ammo.btStaticPlaneShape(new Ammo.btVector3(descriptor.shape.normal.x, descriptor.shape.normal.y, descriptor.shape.normal.z), descriptor.shape.distance);
-      } else {
-        return console.error('Unknown shape: ' + descriptor.shape.shape);
-      }
-
       startTransform.setIdentity();
+
+      colShape = this._createShape(descriptor);
 
       if (isDynamic) {
         colShape.calculateLocalInertia(descriptor.mass,localInertia);
