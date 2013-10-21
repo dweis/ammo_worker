@@ -15,12 +15,16 @@
 
     this.worker = cw(new AmmoWorkerAPI(opts));
 
+    function proxyMethod(method) {
+      context[method] = function() {
+        context.worker[method].apply(context.worker, arguments);
+      };
+    }
+
     for (i in apiMethods) {
-      (function(method) {
-        context[method] = function() {
-          context.worker[method].apply(context.worker, arguments);
-        }
-      })(apiMethods[i]);
+      if (apiMethods.hasOwnProperty(i)) {
+        proxyMethod(apiMethods[i]);
+      }
     }
 
     this.setStep(opts.step);
@@ -34,14 +38,14 @@
 
     for (var i in opts) {
       this[i] = opts[i];
-    }   
+    }
   }
 
   AmmoWorkerAPI.prototype = {
     init: function() {
       var Module = { TOTAL_MEMORY: this.memory },
           that = this;
-      
+
       importScripts('./js/ammo.js');
 
       this.bodies = [];
@@ -52,7 +56,7 @@
       this.solver = new Ammo.btSequentialImpulseConstraintSolver();
       this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(this.dispatcher,
           this.overlappingPairCache, this.solver, this.collisionConfiguration);
-      
+
       this.fire('ready');
     },
 
@@ -67,30 +71,30 @@
         new ArrayBuffer(this.maxBodies * 7 * 8),
         new ArrayBuffer(this.maxBodies * 7 * 8)
       ];
-      
+
       last = Date.now();
       this.simulationTimerId = setInterval(function() {
+        var update;
         var now = Date.now();
         var dt = now - last || 1;
         that.dynamicsWorld.stepSimulation(dt, that.iterations);
-          var alpha;
-          if (meanDt > 0) {
-            alpha = Math.min(0.1, dt/1000);
-          } else {
-            alpha = 0.1; // first run
-          }
-          meanDt = alpha*dt + (1-alpha)*meanDt;
 
-          var alpha2 = 1/frame++;
-          meanDt2 = alpha2*dt + (1-alpha2)*meanDt2;
-        last = Date.now();
-        
-        var update;
-        
-        if (that.buffers.length > 0) {
-          update = new Float64Array(that.buffers.pop());    
+        var alpha;
+        if (meanDt > 0) {
+          alpha = Math.min(0.1, dt/1000);
+        } else {
+          alpha = 0.1; // first run
         }
-        
+        meanDt = alpha*dt + (1-alpha)*meanDt;
+
+        var alpha2 = 1/frame++;
+        meanDt2 = alpha2*dt + (1-alpha2)*meanDt2;
+        last = Date.now();
+
+        if (that.buffers.length > 0) {
+          update = new Float64Array(that.buffers.pop());
+        }
+
         if (update && update.buffer instanceof ArrayBuffer) {
           for (var i in that.bodies) {
             if (that.bodies[i]) {
@@ -105,7 +109,7 @@
               update[i * 7 + 6] = trans.getRotation().w();
             }
           }
-  
+
           that.fire('update', update.buffer, [update.buffer]);
           that.fire('stats', { currFPS: Math.round(1000/meanDt), allFPS: Math.round(1000/meanDt2) });
         }
@@ -117,7 +121,7 @@
         clearInterval(this.simulationTimerId);
       }
     },
-    
+
     swap: function(buf, cb) {
       if (buf instanceof ArrayBuffer) {
         this.buffers.push(buf);
@@ -131,7 +135,7 @@
     setIterations: function(iterations) {
       this.iterations = iterations;
     },
-    
+
     setGravity: function(gravity) {
       this.dynamicsWorld.setGravity(new Ammo.btVector3(gravity.x,
         gravity.y, gravity.z));
@@ -145,7 +149,7 @@
           myMotionState,
           rbInfo,
           body;
-      
+
       if (descriptor.shape.shape === 'box') {
         colShape = new Ammo.btBoxShape(new Ammo.btVector3(descriptor.shape.halfExtents.x,
             descriptor.shape.halfExtents.y, descriptor.shape.halfExtents.z));
@@ -156,25 +160,25 @@
       } else {
         return console.error('Unknown shape: ' + descriptor.shape.shape);
       }
-      
+
       startTransform.setIdentity();
-    
+
       if (isDynamic) {
         colShape.calculateLocalInertia(descriptor.mass,localInertia);
       }
-    
+
       startTransform.setOrigin(new Ammo.btVector3(descriptor.position.x, descriptor.position.y, descriptor.position.z));
       startTransform.setRotation(new Ammo.btQuaternion(descriptor.quaternion.x, descriptor.quaternion.y, descriptor.quaternion.z, descriptor.quaternion.w));
-    
+
       myMotionState = new Ammo.btDefaultMotionState(startTransform);
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
-    
+
       body.setRestitution(descriptor.restitution);
       body.setFriction(descriptor.friction);
-      
+
       this.dynamicsWorld.addRigidBody(body);
-      
+
       var idx = this.bodies.push(body) - 1;
 
       if (typeof fn === 'function') {
@@ -186,13 +190,13 @@
       this.dynamicsWorld.removeRigidBody(this.bodies[id]);
       Ammo.destroy(this.bodies[id]);
     },
-    
+
     shutdown: function() {
       Ammo.destroy(this.collisionConfiguration);
       Ammo.destroy(this.dispatcher);
       Ammo.destroy(this.overlappingPairCache);
       Ammo.destroy(this.solver);
-    }  
+    }
   };
 
 
