@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AmmoWorker</title>
+  <style>
+  html, body, pre#info { width: 100%; height: 100%;}
+  </style>
+</head>
+<body>
+  <pre id="info"></pre>
+  <script src="js/catiline.js"></script>
+  <script src="js/ammo_worker.js"></script>
+  <script>
+    var el = document.getElementById('info');
+    var worker = new AmmoWorker();
+
+    worker.on('ready', function() {
+      worker.addRigidBody({
+        position: {
+          x: 0,
+          y: 0,
+          z: 0
+        },
+        quaternion: {
+          x: 0,
+          y: 0,
+          z: 0,
+          w: 1
+        },
+        shape: {
+          shape: 'staticplane',
+          normal: {
+            x: 0,
+            y: 1,
+            z: 0
+          },
+          distance: 0
+        },
+        friction: 0.8,
+        restitution: 0.2,
+        mass: 0
+      });
+
+      worker.addRigidBody({
+        position: {
+          x: 0,
+          y: 1,
+          z: 0
+        },
+        quaternion: {
+          x: 0,
+          y: 0,
+          z: 0,
+          w: 1
+        },
+        shape: {
+          shape: 'box',
+          halfExtents: {
+            x: 5,
+            y: 3.6,
+            z: 20
+          }
+        },
+        friction: 0.8,
+        restitution: 0.2,
+        mass: 1
+      }).then(function(bodyId) {
+        worker.addVehicle({
+          bodyId: bodyId,
+          suspensionsStiffness: 5.88,
+          suspensionCompression: 0.83,
+          suspensionDamping: 0.88,
+          maxSuspensionLevel: 500,
+          frictionSlip: 10.5,
+          maxSuspensionForce: 6000
+        }).then(function(vehicleId) {
+          console.log('vehicle added:', vehicleId);
+
+          for ( var i = 0; i < 4; i++ ) {
+            worker.addWheel({
+              vehicleId: vehicleId,
+              connectionPoint: {
+                x: i % 2 === 0 ? -1.6 : 1.6,
+                y: -1,
+                z: i < 2 ? 3.3 : -3.2
+              },
+              wheelDirection: { x: 0, y: -1, z: 0 },
+              wheelAxle: { x: -1, y: 0, z: 0 },
+              suspensionRestLength: 0.5,
+              wheelRadius: 0.7,
+              isFrontWheel: i < 2 ? false : true
+            }).then(function() {
+              console.log('wheel added');
+            }.bind(this));
+          }
+        }.bind(this));
+      }.bind(this));
+    });
+
+    worker.on('error', function(err) {
+      throw(err);
+    });
+
+    worker.on('stats', function(stats) {
+      console.log(stats);
+    });
+
+    worker.on('update', function(buf) {
+      var data = new Float64Array(buf);
+      el.innerHTML = '';
+      for (var i = 0; i < 10; i++)
+        el.innerHTML += [data[i * 7 + 0], data[ i * 7 + 1 ], data[ i * 7 + 2 ],
+          data[ i * 7 + 3 ], data[ i * 7 + 4 ], data[ i * 7 + 5 ], data[ i * 7 + 6 ]].join(' ') + '\n';
+
+      for (var i = 0; i < 4; i++) {
+        worker.applyEngineForce({ vehicleId: 0, wheel: i, force: 1000 });
+      }
+
+      setTimeout(function() {
+        worker.swap(buf, [buf])
+      }, 1000/60);
+    });
+
+    setTimeout(function() {
+      worker.startSimulation();
+
+      setTimeout(function() {
+        worker.stopSimulation();
+      }, 5000);
+    }, 500);
+  </script>
+</body>
+</html>

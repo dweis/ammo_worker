@@ -235,23 +235,27 @@
           descriptor.isFrontWheel
         );
       }
+
+      if (typeof fn === 'function') {
+        fn();
+      }
     },
 
     setSteering: function(descriptor) {
-      if (this.vehicles[descriptor.id] !== undefined) {
-        this.vehicles[descriptor.id].setSteeringValue(descriptor.steering, descriptor.wheel);
+      if (this.vehicles[descriptor.vehicleId] !== undefined) {
+        this.vehicles[descriptor.vehicleId].setSteeringValue(descriptor.steering, descriptor.wheel);
       }
     },
 
     setBrake: function(descriptor) {
-      if (this.vehicles[descriptor.id] !== undefined) {
-        this.vehicles[descriptor.id].setBrake(descriptor.brake, descriptor.wheel);
+      if (this.vehicles[descriptor.vehicleId] !== undefined) {
+        this.vehicles[descriptor.vehicleId].setBrake(descriptor.brake, descriptor.wheel);
       }
     },
 
     applyEngineForce: function(descriptor) {
-      if (this.vehicles[descriptor.id] !== undefined) {
-        this.vehicles[descriptor.id].applyEngineForce(descriptor.force, descriptor.wheel);
+      if (this.vehicles[descriptor.vehicleId] !== undefined) {
+        this.vehicles[descriptor.vehicleId].applyEngineForce(descriptor.force, descriptor.wheel);
       }
     },
 
