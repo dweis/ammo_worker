@@ -3,7 +3,9 @@
     var context = this, i, apiMethods = [
           'on', 'fire', 'addRigidBody', 'swap',
           'setStep', 'setIterations', 'setGravity',
-          'startSimulation', 'stopSimulation'
+          'startSimulation', 'stopSimulation',
+          'addVehicle', 'removeVehicle', 'addWheel',
+          'applyEngineForce'
         ];
 
     opts = opts || {};
@@ -12,12 +14,13 @@
     opts.step = opts.step || 1/60;
     opts.memory = opts.memory || 256 * 1024 * 1024;
     opts.maxBodies = opts.maxBodies || 1000;
+    opts.maxVehicles = opts.maxVehicles || 32;
 
     this.worker = cw(new AmmoWorkerAPI(opts));
 
     function proxyMethod(method) {
       context[method] = function() {
-        context.worker[method].apply(context.worker, arguments);
+        return context.worker[method].apply(context.worker, arguments);
       };
     }
 
@@ -35,6 +38,7 @@
   function AmmoWorkerAPI(opts) {
     this.memory = 1024 * 1024 * 1024;
     this.maxBodies = 1000;
+    this.maxVehicles = 32;
 
     for (var i in opts) {
       this[i] = opts[i];
@@ -46,10 +50,11 @@
       var Module = { TOTAL_MEMORY: this.memory },
           that = this;
 
-      importScripts('./js/ammo.js');
-      //http://assets.verold.com/verold_api/lib/ammo.js
+      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      //'./js/ammo.js'
 
       this.bodies = [];
+      this.vehicles = [];
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
@@ -170,6 +175,86 @@
       return colShape;
     },
 
+    addVehicle: function(descriptor, fn) {
+      var vehicleTuning = new Ammo.btVehicleTuning(),
+          body = this.bodies[descriptor.bodyId],
+          vehicle;
+
+      if (!body) { 
+        return console.error('could not find body');
+      }
+
+      vehicleTuning.set_m_suspensionStiffness(descriptor.suspensionStiffness);
+      vehicleTuning.set_m_suspensionCompression(descriptor.suspensionCompression);
+      vehicleTuning.set_m_suspensionDamping(descriptor.suspensionDamping);
+      vehicleTuning.set_m_maxSuspensionTravelCm(descriptor.maxSuspensionTravel);
+      vehicleTuning.set_m_maxSuspensionForce(descriptor.maxSuspensionForce);
+
+      vehicle = new Ammo.btRaycastVehicle(vehicleTuning, body, new Ammo.btDefaultVehicleRaycaster(this.dynamicsWorld));
+      vehicle.tuning = vehicleTuning;
+
+      body.setActivationState(4);
+      vehicle.setCoordinateSystem(0, 1, 2);
+
+      this.dynamicsWorld.addVehicle(vehicle);
+      var idx = this.vehicles.push(vehicle);
+
+      if (typeof fn === 'function') {
+        fn(idx);  
+      }
+    },
+
+    removeVehicle: function(id) {
+      this.dynamicsWorld.removeVehicle(this.vehicles[id]);
+      delete this.vehicles[id];
+    },
+
+
+    addWheel: function(descriptor, fn) {
+      var vehicle = this.vehicles[descriptor.vehicleId];
+
+      if (vehicle !== undefined) {
+        var tuning = this.vehicles[descriptor.id].tuning,
+            connectionPoint = new Ammo.btVector3(descriptor.connectionPoint.x,
+                                                 descriptor.connectionPoint.y,
+                                                 descriptor.connectionPoint.z),
+            wheelDirection = new Ammo.btVector3(descriptor.wheelDirection.x,
+                                                descriptor.wheelDirection.y,
+                                                descriptor.wheelDirection.z),
+            wheelAxle = new Ammo.btVector3(descriptor.wheelAxle.x,
+                                           descriptor.wheelAxle.y,
+                                           descriptor.wheelAxle.z);
+
+        var wheel = vehicle.addWheel(
+          connectionPoint,
+          wheelDirection,
+          wheelAxle,
+          descriptor.suspensionRestLength,
+          descriptor.wheelRadius,
+          tuning,
+          descriptor.isFrontWheel
+        );
+      }
+    },
+
+    setSteering: function(descriptor) {
+      if (this.vehicles[descriptor.id] !== undefined) {
+        this.vehicles[descriptor.id].setSteeringValue(descriptor.steering, descriptor.wheel);
+      }
+    },
+
+    setBrake: function(descriptor) {
+      if (this.vehicles[descriptor.id] !== undefined) {
+        this.vehicles[descriptor.id].setBrake(descriptor.brake, descriptor.wheel);
+      }
+    },
+
+    applyEngineForce: function(descriptor) {
+      if (this.vehicles[descriptor.id] !== undefined) {
+        this.vehicles[descriptor.id].applyEngineForce(descriptor.force, descriptor.wheel);
+      }
+    },
+
     addRigidBody: function(descriptor, fn) {
       var colShape,
           startTransform = new Ammo.btTransform(),
@@ -218,7 +303,6 @@
       Ammo.destroy(this.solver);
     }
   };
-
 
   window.AmmoWorker = AmmoWorker;
 })();
