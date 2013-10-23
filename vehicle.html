@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>AmmoWorker</title>
+  <title>VehicleTest</title>
   <style>
-  html, body, pre#info { width: 100%; height: 100%; margin: 0; padding: 0;}
+  html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; }
   #container {
     background: #000;
-    width: 100%;
-    height: 100%;
   }
   </style>
 </head>
@@ -17,8 +15,26 @@
   <script src="js/catiline.js"></script>
   <script src="js/ammo_worker.js"></script>
   <script src="js/three.js"></script>
-  <script>
-    var el = document.getElementById('info');
+  <script src="js/demo_scene.js"></script>
+  <script type="text/javascript">
+    function init() {
+
+      // draw!
+      var update = function() {
+        typeof preUpdate === 'function' && preUpdate();
+        renderer.render(scene, camera);
+        typeof postUpdate === 'function' && postUpdate();
+      }
+
+      scene.updateMatrixWorld(true);
+
+      worker.on('update', function(data) {
+        next = new Float64Array(data);
+      });
+
+      requestAnimationFrame(update);
+    }
+
     var worker = new AmmoWorker();
 
     worker.on('ready', function() {
@@ -102,116 +118,13 @@
           }
         }.bind(this));
       }.bind(this));
+
+      init();
     });
 
     worker.on('error', function(err) {
       throw(err);
     });
-
-    worker.on('stats', function(stats) {
-      console.log(stats);
-    });
-
-    worker.on('update', function(buf) {
-      var data = new Float64Array(buf);
-      /*
-      el.innerHTML = '';
-      for (var i = 0; i < 10; i++)
-        el.innerHTML += [data[i * 7 + 0], data[ i * 7 + 1 ], data[ i * 7 + 2 ],
-          data[ i * 7 + 3 ], data[ i * 7 + 4 ], data[ i * 7 + 5 ], data[ i * 7 + 6 ]].join(' ') + '\n';
-
-      for (var i = 0; i < 4; i++) {
-        worker.applyEngineForce({ vehicleId: 0, wheel: i, force: 1000 });
-      }
-
-      setTimeout(function() {
-        worker.swap(buf, [buf])
-      }, 1000/60);
-      */
-    });
-
-    setTimeout(function() {
-      worker.startSimulation();
-
-      setTimeout(function() {
-        worker.stopSimulation();
-      }, 5000);
-    }, 500);
-  </script>
-  <script type="text/javascript">
-
-  // set the scene size
-  var WIDTH = document.body.clientWidth,
-      HEIGHT = document.body.clientHeight;
-
-  // set some camera attributes
-  var VIEW_ANGLE = 45,
-      ASPECT = WIDTH / HEIGHT,
-      NEAR = 0.1,
-      FAR = 10000;
-
-  // get the DOM element to attach to
-  // - assume we've got jQuery to hand
-  var container = document.getElementById('container');
-
-  // create a WebGL renderer, camera
-  // and a scene
-  var renderer = new THREE.WebGLRenderer();
-  var camera = new THREE.PerspectiveCamera(  VIEW_ANGLE,
-                                  ASPECT,
-                                  NEAR,
-                                  FAR  );
-  var scene = new THREE.Scene();
-
-  // the camera starts at 0,0,0 so pull it back
-  camera.position.z = 300;
-
-  // start the renderer
-  renderer.setSize(WIDTH, HEIGHT);
-
-  // attach the render-supplied DOM element
-  container.appendChild(renderer.domElement);
-
-  // create the sphere's material
-  var material = new THREE.MeshLambertMaterial(
-  {
-      color: 0xCC0000
-  });
-
-  /*
-  // set up the sphere vars
-  var radius = 50, segments = 16, rings = 16;
-
-  // create a new mesh with sphere geometry -
-  // we will cover the sphereMaterial next!
-  var sphere = new THREE.Mesh(
-     new THREE.SphereGeometry(radius, segments, rings),
-     sphereMaterial);
-  */
-
-  // add the sphere to the scene
-  //scene.add(sphere);
-
-  var box = new THREE.Mesh(new THREE.CubeGeometry(50, 50, 50), material);
-  scene.add(box);
-
-
-  // and the camera
-  scene.add(camera);
-
-  // create a point light
-  var pointLight = new THREE.PointLight( 0xFFFFFF );
-
-  // set its position
-  pointLight.position.x = 10;
-  pointLight.position.y = 50;
-  pointLight.position.z = 130;
-
-  // add to the scene
-  scene.add(pointLight);
-
-  // draw!
-  renderer.render(scene, camera);
   </script>
 </body>
 </html>

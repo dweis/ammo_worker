@@ -1,4 +1,5 @@
 (function() {
+
   function AmmoWorker(opts) {
     var context = this, i, apiMethods = [
           'on', 'fire', 'addRigidBody', 'swap',
@@ -46,6 +47,77 @@
       this[i] = opts[i];
     }
   }
+
+  AmmoWorker.getShapeJSON = function(o) {
+    var inverseParent = new THREE.Matrix4(),
+        tmpMatrix = new THREE.Matrix4();
+
+    var json = {
+      'shape': 'compound',
+      'children': [
+      ]
+    };
+
+    inverseParent.getInverse(o.matrixWorld);
+
+    o.traverse(function(o) {
+      if (o instanceof THREE.Mesh) {
+        var min, max, halfExtents, tmpVec3 = new THREE.Vector3(),
+        position = new THREE.Vector3(),
+        rotation = new THREE.Quaternion(),
+        worldTransform = o.matrixWorld.clone(),
+        scale = new THREE.Vector3();
+
+        tmpMatrix.copy(inverseParent);
+        tmpMatrix.multiply(worldTransform);
+
+        position.getPositionFromMatrix(tmpMatrix);
+        scale.getScaleFromMatrix(worldTransform);
+        tmpMatrix.extractRotation(tmpMatrix);
+        rotation.setFromRotationMatrix(tmpMatrix);
+
+        o.geometry.computeBoundingBox();
+        min = o.geometry.boundingBox.min.clone();
+        max = o.geometry.boundingBox.max.clone();
+
+        tmpVec3.subVectors(max, min);
+        tmpVec3.multiplyScalar(0.5);
+
+        tmpVec3.multiplyVectors(tmpVec3, scale);
+        halfExtents = tmpVec3;
+
+        var center = new THREE.Vector3();
+        center.x = ( min.x + max.x ) / 2;
+        center.y = ( min.y + max.y ) / 2;
+        center.z = ( min.z + max.z ) / 2;
+        center.multiplyVectors(center, scale);
+
+        json.children.push({
+          shape: 'box',
+          halfExtents: {
+            x: halfExtents.x,
+            y: halfExtents.y,
+            z: halfExtents.z
+          },
+          localTransform: {
+            position: {
+              x: position.x,
+              y: position.y,
+              z: position.z
+            },
+            rotation: {
+              x: rotation.x,
+              y: rotation.y,
+              z: rotation.z,
+              w: rotation.w
+            }
+          }
+        });
+      }
+    });
+
+    return json;
+  };
 
   AmmoWorkerAPI.prototype = {
     init: function() {
@@ -234,7 +306,7 @@
           body = this.bodies[descriptor.bodyId],
           vehicle;
 
-      if (!body) { 
+      if (!body) {
         return console.error('could not find body');
       }
 
@@ -254,7 +326,7 @@
       var idx = this.vehicles.push(vehicle) - 1;
 
       if (typeof fn === 'function') {
-        fn(idx);  
+        fn(idx);
       }
     },
 
