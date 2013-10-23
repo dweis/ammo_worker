@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>AmmoWorker</title>
+  <title>CompoundObjectTest</title>
   <style>
-  html, body, pre#info { width: 100%; height: 100%; margin: 0; padding: 0;}
+  html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; }
   #container {
     background: #000;
-    width: 100%;
-    height: 100%;
   }
   </style>
 </head>
@@ -17,52 +15,27 @@
   <script src="js/catiline.js"></script>
   <script src="js/ammo_worker.js"></script>
   <script src="js/three.js"></script>
-  <script>
-    var el = document.getElementById('info');
-    var worker = new AmmoWorker();
-
-    worker.on('error', function(err) {
-      throw(err);
-    });
-
-    worker.on('ready', function() {
-      worker.addRigidBody({
-        position: {
-          x: 0,
-          y: 0,
-          z: 0
-        },
-        quaternion: {
-          x: 0,
-          y: 0,
-          z: 0,
-          w: 1
-        },
-        shape: {
-          shape: 'staticplane',
-          normal: {
-            x: 0,
-            y: 1,
-            z: 0
-          },
-          distance: 0
-        },
-        friction: 0.8,
-        restitution: 0.2,
-        mass: 0
-      });
-    });
-
-    setTimeout(function() {
-      worker.startSimulation();
-    }, 500);
-  </script>
+  <script src="js/demo_scene.js"></script>
   <script type="text/javascript">
-  worker.on('ready', function() {
+  function init() {
     var next, data;
     var objects = [];
 
     var tmpMatrix = new THREE.Matrix4();
+
+    function preUpdate() {
+      updateBodies();
+    }
+
+    function postUpdate() {
+      if (next) {
+        worker.swap(data && data.buffer);
+        data = next;
+        next = undefined;
+      }
+      requestAnimationFrame(update);
+    }
+
     function createCompoundShape() {
       var o = new THREE.Object3D();
 
@@ -222,59 +195,12 @@
       }
     }
 
-    // set the scene size
-    var WIDTH = document.body.clientWidth,
-        HEIGHT = document.body.clientHeight;
-
-    // set some camera attributes
-    var VIEW_ANGLE = 45,
-        ASPECT = WIDTH / HEIGHT,
-        NEAR = 0.01,
-        FAR = 1000;
-
-    // get the DOM element to attach to
-    // - assume we've got jQuery to hand
-    var container = document.getElementById('container');
-
-    // create a WebGL renderer, camera
-    // and a scene
-    var renderer = new THREE.WebGLRenderer();
-    renderer.shadowMapEnabled = true;
-    renderer.shadowMapSoft = false;
-    renderer.shadowMapType = THREE.PCFSoftShadowMap;
-    renderer.physicallyBasedShading = true;
-    var camera = new THREE.PerspectiveCamera(  VIEW_ANGLE,
-                                    ASPECT,
-                                    NEAR,
-                                    FAR  );
-    var scene = new THREE.Scene();
-
-    // the camera starts at 0,0,0 so pull it back
-    camera.position.z = 50;
-    camera.position.y = 10;
-    camera.position.x = 10;
-    camera.lookAt(new THREE.Vector3(0,2.5,0));
-
-    // start the renderer
-    renderer.setSize(WIDTH, HEIGHT);
-
-    // attach the render-supplied DOM element
-    container.appendChild(renderer.domElement);
-
-    var groundMaterial = new THREE.MeshLambertMaterial({
-      color: 0x00CC00
-    });
-
-    var ground = new THREE.Mesh(new THREE.PlaneGeometry(100,100),groundMaterial); 
-    ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
-    ground.receiveShadow = true;
-    scene.add(ground);
-
     // create the sphere's material
     var material = new THREE.MeshLambertMaterial(
     {
         color: 0xCC0000
     });
+
 
     for (var i = 0; i < 200; i++) {
       var box = createCompoundShape();
@@ -287,25 +213,11 @@
       objects[i] = box;
     }
 
-    // and the camera
-    scene.add(camera);
-
-    var light = new THREE.DirectionalLight( 0xCCCCCC );
-    light.position.set( 20, 80, 0 );
-    light.target.position.copy( scene.position );
-    light.castShadow = true;
-    scene.add(light);
-
     // draw!
     var update = function() {
-      updateBodies();
+      preUpdate && preUpdate();
       renderer.render(scene, camera);
-      if (next) {
-        worker.swap(data && data.buffer);
-        data = next;
-        next = undefined;
-      }
-      requestAnimationFrame(update);
+      postUpdate && postUpdate();
     }
 
     scene.updateMatrixWorld(true);
@@ -316,7 +228,47 @@
     });
 
     requestAnimationFrame(update);
+  }
+
+  var worker = new AmmoWorker();
+
+  worker.on('error', function(err) {
+    throw(err);
   });
+
+  worker.on('ready', function() {
+    worker.addRigidBody({
+      position: {
+        x: 0,
+        y: 0,
+        z: 0
+      },
+      quaternion: {
+        x: 0,
+        y: 0,
+        z: 0,
+        w: 1
+      },
+      shape: {
+        shape: 'staticplane',
+        normal: {
+          x: 0,
+          y: 1,
+          z: 0
+        },
+        distance: 0
+      },
+      friction: 0.8,
+      restitution: 0.2,
+      mass: 0
+    });
+
+    init();
+  });
+
+  setTimeout(function() {
+    worker.startSimulation();
+  }, 500);
   </script>
 </body>
 </html>

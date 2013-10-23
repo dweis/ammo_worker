@@ -15,6 +15,7 @@
     opts.memory = opts.memory || 256 * 1024 * 1024;
     opts.maxBodies = opts.maxBodies || 1000;
     opts.maxVehicles = opts.maxVehicles || 32;
+    opts.maxWheelsPerVehicle = opts.maxWheelsPerVehicle || 8;
 
     this.worker = cw(new AmmoWorkerAPI(opts));
 
@@ -39,6 +40,7 @@
     this.memory = 1024 * 1024 * 1024;
     this.maxBodies = 1000;
     this.maxVehicles = 32;
+    this.maxWheelsPerVehicle = 8;
 
     for (var i in opts) {
       this[i] = opts[i];
@@ -50,7 +52,8 @@
       var Module = { TOTAL_MEMORY: this.memory },
           that = this;
 
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      importScripts('./js/ammo.js');
+      //'http://assets.verold.com/verold_api/lib/ammo.js'
       //'./js/ammo.js'
 
       this.bodies = [];
@@ -70,12 +73,14 @@
       var that = this,
           trans = new Ammo.btTransform(),
           meanDt = 0, meanDt2 = 0, frame = 1,
-          last;
+          last,
+          bufferSize = (this.maxBodies * 7 * 8) +
+                       (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
       this.buffers = [
-        new ArrayBuffer(this.maxBodies * 7 * 8),
-        new ArrayBuffer(this.maxBodies * 7 * 8),
-        new ArrayBuffer(this.maxBodies * 7 * 8)
+        new ArrayBuffer(bufferSize),
+        new ArrayBuffer(bufferSize),
+        new ArrayBuffer(bufferSize)
       ];
 
       last = Date.now();
@@ -114,6 +119,25 @@
               update[i * 7 + 4] = trans.getRotation().y();
               update[i * 7 + 5] = trans.getRotation().z();
               update[i * 7 + 6] = trans.getRotation().w();
+            }
+          }
+
+          for (i in that.vehicles) {
+            if (that.vehicles[i]) {
+              vehicle = that.vehicles[i];
+
+              for ( j = 0; j < vehicle.getNumWheels() + 1; j++ ) {
+                trans = vehicle.getWheelInfo(j).get_m_worldTransform();
+                pos = (that.maxBodies * 7) + (i * that.maxWheelsPerVehicle * 7) + (j * 7);
+
+                update[pos + 0] = trans.getOrigin().x();
+                update[pos + 1] = trans.getOrigin().y();
+                update[pos + 2] = trans.getOrigin().z();
+                update[pos + 3] = trans.getRotation().x();
+                update[pos + 4] = trans.getRotation().y();
+                update[pos + 5] = trans.getRotation().z();
+                update[pos + 6] = trans.getRotation().w();
+              }
             }
           }
 
@@ -175,35 +199,6 @@
     },
 
     _createShape: function(shape) {
-      /*
-      {
-        "shape": {
-          "shape": "compound",
-          "children": [
-            {
-              "shape": "box",
-              "halfExtents": {
-                "x": 1,
-                "y": 1,
-                "z": 1
-              },
-              "localTransform": {
-                "x": 1,
-                "y": 1,
-                "z": 1 
-              }
-            },
-            {
-              "shape": "compound",
-              "children": [
-
-              ]
-            }
-          ]
-        }
-      }
-      */
-
       var colShape;
       switch(shape.shape) {
       case 'box':
@@ -239,7 +234,7 @@
           body = this.bodies[descriptor.bodyId],
           vehicle;
 
-      if (!body) {
+      if (!body) { 
         return console.error('could not find body');
       }
 
@@ -256,10 +251,10 @@
       vehicle.setCoordinateSystem(0, 1, 2);
 
       this.dynamicsWorld.addVehicle(vehicle);
-      var idx = this.vehicles.push(vehicle);
+      var idx = this.vehicles.push(vehicle) - 1;
 
       if (typeof fn === 'function') {
-        fn(idx);
+        fn(idx);  
       }
     },
 
@@ -273,7 +268,7 @@
       var vehicle = this.vehicles[descriptor.vehicleId];
 
       if (vehicle !== undefined) {
-        var tuning = this.vehicles[descriptor.id].tuning,
+        var tuning = vehicle.tuning,
             connectionPoint = new Ammo.btVector3(descriptor.connectionPoint.x,
                                                  descriptor.connectionPoint.y,
                                                  descriptor.connectionPoint.z),
@@ -283,7 +278,6 @@
             wheelAxle = new Ammo.btVector3(descriptor.wheelAxle.x,
                                            descriptor.wheelAxle.y,
                                            descriptor.wheelAxle.z);
-
         var wheel = vehicle.addWheel(
           connectionPoint,
           wheelDirection,
