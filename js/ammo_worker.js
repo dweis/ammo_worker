@@ -48,7 +48,7 @@
     }
   }
 
-  AmmoWorker.getShapeJSON = function(o) {
+  AmmoWorker.prototype.getShapeJSON = function(o) {
     var inverseParent = new THREE.Matrix4(),
         tmpMatrix = new THREE.Matrix4();
 

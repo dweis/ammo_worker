@@ -1,54 +1,148 @@
-// set the scene size
-var WIDTH = document.body.clientWidth,
-    HEIGHT = document.body.clientHeight;
+var DemoScene = function() {
+}
 
-// set some camera attributes
-var VIEW_ANGLE = 45,
-    ASPECT = WIDTH / HEIGHT,
-    NEAR = 0.01,
-    FAR = 1000;
+DemoScene.prototype.init = function() {
+  this._initWorker();
+};
 
-// get the DOM element to attach to
-// - assume we've got jQuery to hand
-var container = document.getElementById('container');
+DemoScene.prototype._initWorker = function() {
+  this.worker = new AmmoWorker();
 
-// create a WebGL renderer, camera
-// and a scene
-var renderer = new THREE.WebGLRenderer();
-renderer.shadowMapEnabled = true;
-renderer.shadowMapSoft = false;
-renderer.shadowMapType = THREE.PCFSoftShadowMap;
-renderer.physicallyBasedShading = true;
-var camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
-var scene = new THREE.Scene();
+  this.worker.on('error', function(err) {
+    throw(err);
+  });
 
-// the camera starts at 0,0,0 so pull it back
-camera.position.z = 50;
-camera.position.y = 10;
-camera.position.x = 10;
-camera.lookAt(new THREE.Vector3(0,2.5,0));
+  this.worker.on('update', function(data) {
+    this.next = new Float64Array(data);
+  }.bind(this));
 
-var controls = new THREE.OrbitControls(camera);
+  this.worker.on('ready', function() {
+    this.worker.addRigidBody({
+      position: {
+        x: 0,
+        y: 0,
+        z: 0
+      },
+      quaternion: {
+        x: 0,
+        y: 0,
+        z: 0,
+        w: 1
+      },
+      shape: {
+        shape: 'staticplane',
+        normal: {
+          x: 0,
+          y: 1,
+          z: 0
+        },
+        distance: 0
+      },
+      friction: 0.8,
+      restitution: 0.2,
+      mass: 0
+    }).then(function(){
+      this._initScene();
+    }.bind(this));
+  }.bind(this));
+};
 
-// start the renderer
-renderer.setSize(WIDTH, HEIGHT);
+DemoScene.prototype._initScene = function() {
+  var stats = this.stats = new Stats();
+  stats.setMode(0);
 
-// attach the render-supplied DOM element
-container.appendChild(renderer.domElement);
+  // Align top-left
+  stats.domElement.style.position = 'absolute';
+  stats.domElement.style.left = '0px';
+  stats.domElement.style.bottom = '0px';
 
-var groundMaterial = new THREE.MeshLambertMaterial({
-  color: 0x00CC00
-});
+  document.body.appendChild(stats.domElement);
 
-var ground = new THREE.Mesh(new THREE.PlaneGeometry(100,100),groundMaterial); 
-ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
-ground.receiveShadow = true;
-scene.add(ground);
-// and the camera
-scene.add(camera);
+  // set the scene size
+  var WIDTH = document.body.clientWidth,
+      HEIGHT = document.body.clientHeight;
 
-var light = new THREE.DirectionalLight( 0xCCCCCC );
-light.position.set( 20, 80, 0 );
-light.target.position.copy( scene.position );
-light.castShadow = true;
-scene.add(light);
+  // set some camera attributes
+  var VIEW_ANGLE = 45,
+      ASPECT = WIDTH / HEIGHT,
+      NEAR = 0.01,
+      FAR = 1000;
+
+  // get the DOM element to attach to
+  // - assume we've got jQuery to hand
+  var container = document.getElementById('container');
+
+  // create a WebGL renderer, camera
+  // and a scene
+  var renderer = this.renderer = new THREE.WebGLRenderer();
+  renderer.shadowMapEnabled = true;
+  renderer.shadowMapSoft = false;
+  renderer.shadowMapType = THREE.PCFSoftShadowMap;
+  renderer.physicallyBasedShading = true;
+  var camera = this.camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+  var scene = this.scene = new THREE.Scene();
+
+  // the camera starts at 0,0,0 so pull it back
+  camera.position.z = 50;
+  camera.position.y = 10;
+  camera.position.x = 10;
+  camera.lookAt(new THREE.Vector3(0,2.5,0));
+
+  var controls = this.controls = new THREE.OrbitControls(camera);
+
+  // start the renderer
+  renderer.setSize(WIDTH, HEIGHT);
+
+  // attach the render-supplied DOM element
+  container.appendChild(renderer.domElement);
+
+  var groundMaterial = new THREE.MeshLambertMaterial({
+    color: 0x00CC00
+  });
+
+  var ground = new THREE.Mesh(new THREE.PlaneGeometry(100,100),groundMaterial); 
+  ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
+  ground.receiveShadow = true;
+  scene.add(ground);
+  // and the camera
+  scene.add(camera);
+
+  var light = new THREE.DirectionalLight( 0xCCCCCC );
+  light.position.set( 20, 80, 0 );
+  light.target.position.copy( scene.position );
+  light.castShadow = true;
+  scene.add(light);
+
+  if (typeof this.initDemo === 'function') {
+    this.initDemo();
+  }
+
+  this.worker.startSimulation();
+
+  this.update = this.update.bind(this);
+  requestAnimationFrame(this.update);
+};
+
+DemoScene.prototype.update = function(delta) {
+  this.stats.begin();
+  if (typeof this.preUpdate === 'function') {
+    this.preUpdate(delta);
+  }
+
+  this.controls.update();
+  this.renderer.render(this.scene, this.camera);
+
+  if (this.next) {
+    this.worker.swap(this.data && this.data.buffer);
+    this.data = this.next;
+    this.next = undefined;
+  }
+
+  if (typeof this.postUpdate === 'function') {
+    this.postUpdate(delta);
+  }
+
+  this.stats.end();
+
+  requestAnimationFrame(this.update);
+}

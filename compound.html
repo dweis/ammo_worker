@@ -19,201 +19,134 @@
   <script src="js/OrbitControls.js"></script>
   <script src="js/demo_scene.js"></script>
   <script type="text/javascript">
-  function init() {
-    var next, data;
-    var objects = [];
+  function CompoundDemo() {
+  }
 
-    var tmpMatrix = new THREE.Matrix4();
+  CompoundDemo.prototype = new DemoScene();
 
-    var stats = new Stats();
-    stats.setMode(0);
+  CompoundDemo.prototype.initDemo = function() {
+    this.objects=[];
+    this._createShapes();
+    this.scene.updateMatrixWorld(true);
+    this._createBodies();
+  };
 
-    // Align top-left
-    stats.domElement.style.position = 'absolute';
-    stats.domElement.style.left = '0px';
-    stats.domElement.style.bottom = '0px';
-
-    document.body.appendChild( stats.domElement );
-
-    function preUpdate() {
-      stats.begin();
-      controls.update();
-      updateBodies();
-    }
-
-    function postUpdate() {
-      if (next) {
-        worker.swap(data && data.buffer);
-        data = next;
-        next = undefined;
-      }
-      stats.end();
-      requestAnimationFrame(update);
-    }
-
-    function createCompoundShape() {
-      var o = new THREE.Object3D();
-
-      o.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
-
-      var o1 = new THREE.Object3D();
-      o1.position.x = 1;
-      o1.position.y = 1;
-      o1.position.z = 0;
-      o1.scale.x = 1.5;
-      o1.scale.y = 1.5;
-      o1.scale.z = 1.5;
-      o1.quaternion.setFromAxisAngle({ x: 0, y: 1, z: 0 }, Math.PI/4);
-      o1.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
-      o.add(o1);
-
-      var o2 = new THREE.Object3D();
-      o2.position.x = 1;
-      o2.position.y = 1;
-      o2.position.z = 0;
-      o2.scale.x = 2;
-      o2.scale.y = 2;
-      o2.scale.z = 2;
-      o2.quaternion.setFromAxisAngle({ x: 0, y: 1, z: 0 }, Math.PI/4);
-      o2.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
-      o1.add(o2);
-
-      o.traverse(function(o) {
-        o.castShadow = true;
-      });
-
-      return o;
-    }
-
-    function createBodies() {
-      function createBody(object) {
-        var json = {};
-        json.shape = AmmoWorker.getShapeJSON(object) ;
-        json.mass = 1;
-        json.friction = 0.5;
-        json.restitution = 0.5;
-        json.position = { 
-          x: object.position.x,
-          y: object.position.y,
-          z: object.position.z
-        };
-        json.quaternion = {
-          x: object.quaternion.x,
-          y: object.quaternion.y,
-          z: object.quaternion.z,
-          w: object.quaternion.w
-        };
-        worker.addRigidBody(json).then(function(id) {
-          console.log('successfully added: ', id);  
-          object.bodyIndex = id;
-        });
-      }
-
-      for (var i in objects) {
-        createBody(objects[i]);
-      }
-    }
-
-    function updateBodies() {
-      var object, position, quaternion, update, bodyIndex;
-      if (!data) return;
-
-      function updateBody(object) {
-        position = object.position;
-        quaternion = object.quaternion;
-
-        bodyIndex = object.bodyIndex;
-
-        if (data) {
-          position.x = data[bodyIndex * 7 + 0];
-          position.y = data[bodyIndex * 7 + 1];
-          position.z = data[bodyIndex * 7 + 2];
-          quaternion.x = data[bodyIndex * 7 + 3];
-          quaternion.y = data[bodyIndex * 7 + 4];
-          quaternion.z = data[bodyIndex * 7 + 5];
-          quaternion.w = data[bodyIndex * 7 + 6];
-        }
-      }
-
-      for (var i in objects) {
-        updateBody(objects[i]);
-      }
-    }
-
-    // create the sphere's material
+  CompoundDemo.prototype._createShapes = function() {
     var material = new THREE.MeshLambertMaterial(
     {
         color: 0xCC0000
     });
 
-
     for (var i = 0; i < 20; i++) {
-      var box = createCompoundShape();
+      var box = this._createCompoundShape(material);
       box.position.x = 10 - (Math.random() * 20);
       box.position.z = 10 - (Math.random() * 20);
       box.position.y = 10 + Math.random() * 5;
       box.bodyId = i;
-      scene.add(box);
+      this.scene.add(box);
 
-      objects[i] = box;
+      this.objects[i] = box;
     }
+  };
 
-    // draw!
-    var update = function() {
-      preUpdate && preUpdate();
-      renderer.render(scene, camera);
-      postUpdate && postUpdate();
-    }
+  CompoundDemo.prototype._createCompoundShape = function(material) {
+    var o = new THREE.Object3D();
 
-    scene.updateMatrixWorld(true);
-    createBodies();
+    o.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
 
-    worker.on('update', function(data) {
-      next = new Float64Array(data);
+    var o1 = new THREE.Object3D();
+    o1.position.x = 1;
+    o1.position.y = 1;
+    o1.position.z = 0;
+    o1.scale.x = 1.5;
+    o1.scale.y = 1.5;
+    o1.scale.z = 1.5;
+    o1.quaternion.setFromAxisAngle({ x: 0, y: 1, z: 0 }, Math.PI/4);
+    o1.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
+    o.add(o1);
+
+    var o2 = new THREE.Object3D();
+    o2.position.x = 1;
+    o2.position.y = 1;
+    o2.position.z = 0;
+    o2.scale.x = 2;
+    o2.scale.y = 2;
+    o2.scale.z = 2;
+    o2.quaternion.setFromAxisAngle({ x: 0, y: 1, z: 0 }, Math.PI/4);
+    o2.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
+    o1.add(o2);
+
+    o.traverse(function(o) {
+      o.castShadow = true;
     });
 
-    requestAnimationFrame(update);
-  }
+    return o;
+  };
 
-  var worker = new AmmoWorker();
+  CompoundDemo.prototype._createBody = function(object) {
+    var json = {};
+    json.shape = this.worker.getShapeJSON(object) ;
+    json.mass = 1;
+    json.friction = 0.5;
+    json.restitution = 0.5;
+    json.position = { 
+      x: object.position.x,
+      y: object.position.y,
+      z: object.position.z
+    };
+    json.quaternion = {
+      x: object.quaternion.x,
+      y: object.quaternion.y,
+      z: object.quaternion.z,
+      w: object.quaternion.w
+    };
+    this.worker
+      .addRigidBody(json)
+      .then(function(id) {
+        console.log('successfully added: ', id);  
+        object.bodyIndex = id;
+      });
+  };
 
-  worker.on('error', function(err) {
-    throw(err);
-  });
+  CompoundDemo.prototype._createBodies = function() {
+    for (var i in this.objects) {
+      this._createBody(this.objects[i]);
+    }
+  };
 
-  worker.on('ready', function() {
-    worker.addRigidBody({
-      position: {
-        x: 0,
-        y: 0,
-        z: 0
-      },
-      quaternion: {
-        x: 0,
-        y: 0,
-        z: 0,
-        w: 1
-      },
-      shape: {
-        shape: 'staticplane',
-        normal: {
-          x: 0,
-          y: 1,
-          z: 0
-        },
-        distance: 0
-      },
-      friction: 0.8,
-      restitution: 0.2,
-      mass: 0
-    });
+  CompoundDemo.prototype._updateBodies = function() {
+    var object, position, quaternion, update, bodyIndex;
+    if (!this.data) return;
 
-    init();
-  });
+    var updateBody = function(object) {
+      position = object.position;
+      quaternion = object.quaternion;
 
-  setTimeout(function() {
-    worker.startSimulation();
-  }, 500);
+      bodyIndex = object.bodyIndex;
+
+      if (this.data) {
+        position.x = this.data[bodyIndex * 7 + 0];
+        position.y = this.data[bodyIndex * 7 + 1];
+        position.z = this.data[bodyIndex * 7 + 2];
+        quaternion.x = this.data[bodyIndex * 7 + 3];
+        quaternion.y = this.data[bodyIndex * 7 + 4];
+        quaternion.z = this.data[bodyIndex * 7 + 5];
+        quaternion.w = this.data[bodyIndex * 7 + 6];
+      }
+    }.bind(this);
+
+    for (var i in this.objects) {
+      updateBody(this.objects[i]);
+    }
+  };
+
+  CompoundDemo.prototype.preUpdate = function() {
+    this._updateBodies();
+  };
+
+  var demo = new CompoundDemo();
+
+  demo.init();
   </script>
 </body>
 </html>
