@@ -159,7 +159,6 @@
         for (var idx in shape.children) {
           if (shape.children.hasOwnProperty(idx)) {
             child = shape.children[idx];
-            console.log(child.localTransform);
             childShape = this._createShape(child);
             localTransform.setIdentity();
             localTransform.setOrigin(new Ammo.btVector3(child.localTransform.position.x,
@@ -172,7 +171,6 @@
         }
       }
 
-      console.log('done');
       return compound;
     },
 
@@ -207,13 +205,10 @@
       */
 
       var colShape;
-      console.log('shape', shape);
       switch(shape.shape) {
       case 'box':
-      console.log('before');
         colShape = new Ammo.btBoxShape(new Ammo.btVector3(shape.halfExtents.x,
             shape.halfExtents.y, shape.halfExtents.z));
-        console.log('after');
         break;
       case 'sphere':
         colShape = new Ammo.btSphereShape(shape.radius);

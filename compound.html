@@ -53,90 +53,8 @@
       });
     });
 
-    /*
-      worker.addRigidBody({
-        position: {
-          x: 0,
-          y: 1,
-          z: 0
-        },
-        quaternion: {
-          x: 0,
-          y: 0,
-          z: 0,
-          w: 1
-        },
-        shape: {
-          shape: 'box',
-          halfExtents: {
-            x: 5,
-            y: 3.6,
-            z: 20
-          }
-        },
-        friction: 0.8,
-        restitution: 0.2,
-        mass: 1
-      }).then(function(bodyId) {
-        worker.addVehicle({
-          bodyId: bodyId,
-          suspensionsStiffness: 5.88,
-          suspensionCompression: 0.83,
-          suspensionDamping: 0.88,
-          maxSuspensionLevel: 500,
-          frictionSlip: 10.5,
-          maxSuspensionForce: 6000
-        }).then(function(vehicleId) {
-          console.log('vehicle added:', vehicleId);
-
-          for ( var i = 0; i < 4; i++ ) {
-            worker.addWheel({
-              vehicleId: vehicleId,
-              connectionPoint: {
-                x: i % 2 === 0 ? -1.6 : 1.6,
-                y: -1,
-                z: i < 2 ? 3.3 : -3.2
-              },
-              wheelDirection: { x: 0, y: -1, z: 0 },
-              wheelAxle: { x: -1, y: 0, z: 0 },
-              suspensionRestLength: 0.5,
-              wheelRadius: 0.7,
-              isFrontWheel: i < 2 ? false : true
-            }).then(function() {
-              console.log('wheel added');
-            }.bind(this));
-          }
-        }.bind(this));
-      }.bind(this));
-    });
-
-    worker.on('stats', function(stats) {
-      console.log(stats);
-    });
-
-    // worker.on('update', function(buf) {
-    //   var data = new Float64Array(buf);
-    //   el.innerHTML = '';
-    //   for (var i = 0; i < 10; i++)
-    //     el.innerHTML += [data[i * 7 + 0], data[ i * 7 + 1 ], data[ i * 7 + 2 ],
-    //       data[ i * 7 + 3 ], data[ i * 7 + 4 ], data[ i * 7 + 5 ], data[ i * 7 + 6 ]].join(' ') + '\n';
-
-    //   for (var i = 0; i < 4; i++) {
-    //     worker.applyEngineForce({ vehicleId: 0, wheel: i, force: 1000 });
-    //   }
-
-    //   setTimeout(function() {
-    //     worker.swap(buf, [buf])
-    //   }, 1000/60);
-    // });
-  */
-
     setTimeout(function() {
       worker.startSimulation();
-
-      //setTimeout(function() {
-      //  worker.stopSimulation();
-      //}, 5000);
     }, 500);
   </script>
   <script type="text/javascript">
@@ -154,6 +72,9 @@
       o1.position.x = 1;
       o1.position.y = 1;
       o1.position.z = 0;
+      o1.scale.x = 1.5;
+      o1.scale.y = 1.5;
+      o1.scale.z = 1.5;
       o1.quaternion.setFromAxisAngle({ x: 0, y: 1, z: 0 }, Math.PI/4);
       o1.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
       o.add(o1);
@@ -244,7 +165,6 @@
       });
 
       return json;
-      //console.log(JSON.stringify(json, null, '  '));
     }
 
     function createBodies() {
@@ -287,18 +207,15 @@
         bodyIndex = object.bodyIndex;
 
         if (data) {
-          //if (data[i * 7 + 1] != 0) {
-            position.x = data[bodyIndex * 7 + 0];
-            position.y = data[bodyIndex * 7 + 1];
-            position.z = data[bodyIndex * 7 + 2];
-            quaternion.x = data[bodyIndex * 7 + 3];
-            quaternion.y = data[bodyIndex * 7 + 4];
-            quaternion.z = data[bodyIndex * 7 + 5];
-            quaternion.w = data[bodyIndex * 7 + 6];
-          //}
+          position.x = data[bodyIndex * 7 + 0];
+          position.y = data[bodyIndex * 7 + 1];
+          position.z = data[bodyIndex * 7 + 2];
+          quaternion.x = data[bodyIndex * 7 + 3];
+          quaternion.y = data[bodyIndex * 7 + 4];
+          quaternion.z = data[bodyIndex * 7 + 5];
+          quaternion.w = data[bodyIndex * 7 + 6];
         }
       }
-
 
       for (var i in objects) {
         updateBody(objects[i]);
@@ -359,20 +276,7 @@
         color: 0xCC0000
     });
 
-    /*
-    // set up the sphere vars
-    var radius = 50, segments = 16, rings = 16;
-
-    // create a new mesh with sphere geometry -
-    // we will cover the sphereMaterial next!
-    var sphere = new THREE.Mesh(
-       new THREE.SphereGeometry(radius, segments, rings),
-       sphereMaterial);
-    */
-
-    // add the sphere to the scene
-    //scene.add(sphere);
-    for (var i = 0; i < 500; i++) {
+    for (var i = 0; i < 200; i++) {
       var box = createCompoundShape();
       box.position.x = 10 - (Math.random() * 20);
       box.position.z = 10 - (Math.random() * 20);
@@ -380,11 +284,6 @@
       box.bodyId = i;
       scene.add(box);
 
-      /*
-      setTimeout(function() {
-        getJSON(box);
-      }, 100);
-      */
       objects[i] = box;
     }
 
@@ -409,10 +308,8 @@
       requestAnimationFrame(update);
     }
 
-    setTimeout(function() {
-      createBodies();
-
-    }, 100)
+    scene.updateMatrixWorld(true);
+    createBodies();
 
     worker.on('update', function(data) {
       next = new Float64Array(data);
