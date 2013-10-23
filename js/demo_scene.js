@@ -28,6 +28,8 @@ camera.position.y = 10;
 camera.position.x = 10;
 camera.lookAt(new THREE.Vector3(0,2.5,0));
 
+var controls = new THREE.OrbitControls(camera);
+
 // start the renderer
 renderer.setSize(WIDTH, HEIGHT);
 
