@@ -21,6 +21,10 @@
     var el = document.getElementById('info');
     var worker = new AmmoWorker();
 
+    worker.on('error', function(err) {
+      throw(err);
+    });
+
     worker.on('ready', function() {
       worker.addRigidBody({
         position: {
@@ -47,7 +51,9 @@
         restitution: 0.2,
         mass: 0
       });
+    });
 
+    /*
       worker.addRigidBody({
         position: {
           x: 0,
@@ -104,148 +110,316 @@
       }.bind(this));
     });
 
-    worker.on('error', function(err) {
-      throw(err);
-    });
-
     worker.on('stats', function(stats) {
       console.log(stats);
     });
 
-    worker.on('update', function(buf) {
-      var data = new Float64Array(buf);
-      /*
-      el.innerHTML = '';
-      for (var i = 0; i < 10; i++)
-        el.innerHTML += [data[i * 7 + 0], data[ i * 7 + 1 ], data[ i * 7 + 2 ],
-          data[ i * 7 + 3 ], data[ i * 7 + 4 ], data[ i * 7 + 5 ], data[ i * 7 + 6 ]].join(' ') + '\n';
+    // worker.on('update', function(buf) {
+    //   var data = new Float64Array(buf);
+    //   el.innerHTML = '';
+    //   for (var i = 0; i < 10; i++)
+    //     el.innerHTML += [data[i * 7 + 0], data[ i * 7 + 1 ], data[ i * 7 + 2 ],
+    //       data[ i * 7 + 3 ], data[ i * 7 + 4 ], data[ i * 7 + 5 ], data[ i * 7 + 6 ]].join(' ') + '\n';
 
-      for (var i = 0; i < 4; i++) {
-        worker.applyEngineForce({ vehicleId: 0, wheel: i, force: 1000 });
-      }
+    //   for (var i = 0; i < 4; i++) {
+    //     worker.applyEngineForce({ vehicleId: 0, wheel: i, force: 1000 });
+    //   }
 
-      setTimeout(function() {
-        worker.swap(buf, [buf])
-      }, 1000/60);
-      */
-    });
+    //   setTimeout(function() {
+    //     worker.swap(buf, [buf])
+    //   }, 1000/60);
+    // });
+  */
 
     setTimeout(function() {
       worker.startSimulation();
 
-      setTimeout(function() {
-        worker.stopSimulation();
-      }, 5000);
+      //setTimeout(function() {
+      //  worker.stopSimulation();
+      //}, 5000);
     }, 500);
   </script>
   <script type="text/javascript">
-  function createCompoundShape() {
-    var o = new THREE.Object3D();
+  worker.on('ready', function() {
+    var next, data;
+    var objects = [];
 
-    o.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
+    var tmpMatrix = new THREE.Matrix4();
+    function createCompoundShape() {
+      var o = new THREE.Object3D();
 
-    var o1 = new THREE.Object3D();
-    o1.position.x += 1;
-    o1.position.y += 1;
-    o1.position.z += 0;
-    o1.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
-    o.add(o1);
+      o.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
 
-    var o2 = new THREE.Object3D();
-    o2.position.x += 1;
-    o2.position.y += 1;
-    o2.position.z += 0;
-    o2.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
-    o1.add(o2);
+      var o1 = new THREE.Object3D();
+      o1.position.x = 1;
+      o1.position.y = 1;
+      o1.position.z = 0;
+      o1.quaternion.setFromAxisAngle({ x: 0, y: 1, z: 0 }, Math.PI/4);
+      o1.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
+      o.add(o1);
 
-    o.traverse(function(obj) {
-      if (obj instanceof THREE.Mesh) {
-        
+      var o2 = new THREE.Object3D();
+      o2.position.x = 1;
+      o2.position.y = 1;
+      o2.position.z = 0;
+      o2.scale.x = 2;
+      o2.scale.y = 2;
+      o2.scale.z = 2;
+      o2.quaternion.setFromAxisAngle({ x: 0, y: 1, z: 0 }, Math.PI/4);
+      o2.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
+      o1.add(o2);
+
+      o.traverse(function(o) {
+        o.castShadow = true;
+      });
+
+      return o;
+    }
+
+    function getJSON(o) {
+      var inverseParent = new THREE.Matrix4();
+
+      var json = {
+        'shape': 'compound',
+        'children': [
+        ]
+      };
+
+      inverseParent.getInverse(o.matrixWorld);
+
+      o.traverse(function(o) {
+        if (o instanceof THREE.Mesh) {
+          var min, max, halfExtents, tmpVec3 = new THREE.Vector3(),
+          position = new THREE.Vector3(),
+          rotation = new THREE.Quaternion(),
+          worldTransform = o.matrixWorld.clone(),
+          scale = new THREE.Vector3();
+      
+          tmpMatrix.copy(inverseParent);
+          tmpMatrix.multiply(worldTransform);
+
+          position.getPositionFromMatrix(tmpMatrix);
+          scale.getScaleFromMatrix(worldTransform);
+          tmpMatrix.extractRotation(tmpMatrix);
+          rotation.setFromRotationMatrix(tmpMatrix);
+          
+          o.geometry.computeBoundingBox();
+          min = o.geometry.boundingBox.min.clone();
+          max = o.geometry.boundingBox.max.clone();
+          
+          tmpVec3.subVectors(max, min); 
+          tmpVec3.multiplyScalar(0.5);
+          
+          tmpVec3.multiplyVectors(tmpVec3, scale);
+          halfExtents = tmpVec3;
+          
+          var center = new THREE.Vector3();
+          center.x = ( min.x + max.x ) / 2;
+          center.y = ( min.y + max.y ) / 2;
+          center.z = ( min.z + max.z ) / 2;
+          center.multiplyVectors(center, scale);
+       
+          json.children.push({
+            shape: 'box',
+            halfExtents: {
+              x: halfExtents.x,
+              y: halfExtents.y,
+              z: halfExtents.z
+            },
+            localTransform: {
+              position: {
+                x: position.x,
+                y: position.y,
+                z: position.z
+              },
+              rotation: {
+                x: rotation.x,
+                y: rotation.y,
+                z: rotation.z,
+                w: rotation.w
+              }
+            }
+          }); 
+        }
+      });
+
+      return json;
+      //console.log(JSON.stringify(json, null, '  '));
+    }
+
+    function createBodies() {
+      function createBody(object) {
+        var json = {};
+        json.shape = getJSON(object) ;
+        json.mass = 1;
+        json.friction = 0.5;
+        json.restitution = 0.5;
+        json.position = { 
+          x: object.position.x,
+          y: object.position.y,
+          z: object.position.z
+        };
+        json.quaternion = {
+          x: object.quaternion.x,
+          y: object.quaternion.y,
+          z: object.quaternion.z,
+          w: object.quaternion.w
+        };
+        worker.addRigidBody(json).then(function(id) {
+          console.log('successfully added: ', id);  
+          object.bodyIndex = id;
+        });
       }
+
+      for (var i in objects) {
+        createBody(objects[i]);
+      }
+    }
+
+    function updateBodies() {
+      var object, position, quaternion, update, bodyIndex;
+      if (!data) return;
+
+      function updateBody(object) {
+        position = object.position;
+        quaternion = object.quaternion;
+
+        bodyIndex = object.bodyIndex;
+
+        if (data) {
+          //if (data[i * 7 + 1] != 0) {
+            position.x = data[bodyIndex * 7 + 0];
+            position.y = data[bodyIndex * 7 + 1];
+            position.z = data[bodyIndex * 7 + 2];
+            quaternion.x = data[bodyIndex * 7 + 3];
+            quaternion.y = data[bodyIndex * 7 + 4];
+            quaternion.z = data[bodyIndex * 7 + 5];
+            quaternion.w = data[bodyIndex * 7 + 6];
+          //}
+        }
+      }
+
+
+      for (var i in objects) {
+        updateBody(objects[i]);
+      }
+    }
+
+    // set the scene size
+    var WIDTH = document.body.clientWidth,
+        HEIGHT = document.body.clientHeight;
+
+    // set some camera attributes
+    var VIEW_ANGLE = 45,
+        ASPECT = WIDTH / HEIGHT,
+        NEAR = 0.01,
+        FAR = 1000;
+
+    // get the DOM element to attach to
+    // - assume we've got jQuery to hand
+    var container = document.getElementById('container');
+
+    // create a WebGL renderer, camera
+    // and a scene
+    var renderer = new THREE.WebGLRenderer();
+    renderer.shadowMapEnabled = true;
+    renderer.shadowMapSoft = false;
+    renderer.shadowMapType = THREE.PCFSoftShadowMap;
+    renderer.physicallyBasedShading = true;
+    var camera = new THREE.PerspectiveCamera(  VIEW_ANGLE,
+                                    ASPECT,
+                                    NEAR,
+                                    FAR  );
+    var scene = new THREE.Scene();
+
+    // the camera starts at 0,0,0 so pull it back
+    camera.position.z = 50;
+    camera.position.y = 10;
+    camera.position.x = 10;
+    camera.lookAt(new THREE.Vector3(0,2.5,0));
+
+    // start the renderer
+    renderer.setSize(WIDTH, HEIGHT);
+
+    // attach the render-supplied DOM element
+    container.appendChild(renderer.domElement);
+
+    var groundMaterial = new THREE.MeshLambertMaterial({
+      color: 0x00CC00
     });
 
-    return o;
-  }
+    var ground = new THREE.Mesh(new THREE.PlaneGeometry(100,100),groundMaterial); 
+    ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
+    ground.receiveShadow = true;
+    scene.add(ground);
 
-  // set the scene size
-  var WIDTH = document.body.clientWidth,
-      HEIGHT = document.body.clientHeight;
+    // create the sphere's material
+    var material = new THREE.MeshLambertMaterial(
+    {
+        color: 0xCC0000
+    });
 
-  // set some camera attributes
-  var VIEW_ANGLE = 45,
-      ASPECT = WIDTH / HEIGHT,
-      NEAR = 0.01,
-      FAR = 1000;
+    /*
+    // set up the sphere vars
+    var radius = 50, segments = 16, rings = 16;
 
-  // get the DOM element to attach to
-  // - assume we've got jQuery to hand
-  var container = document.getElementById('container');
+    // create a new mesh with sphere geometry -
+    // we will cover the sphereMaterial next!
+    var sphere = new THREE.Mesh(
+       new THREE.SphereGeometry(radius, segments, rings),
+       sphereMaterial);
+    */
 
-  // create a WebGL renderer, camera
-  // and a scene
-  var renderer = new THREE.WebGLRenderer();
-  var camera = new THREE.PerspectiveCamera(  VIEW_ANGLE,
-                                  ASPECT,
-                                  NEAR,
-                                  FAR  );
-  var scene = new THREE.Scene();
+    // add the sphere to the scene
+    //scene.add(sphere);
+    for (var i = 0; i < 500; i++) {
+      var box = createCompoundShape();
+      box.position.x = 10 - (Math.random() * 20);
+      box.position.z = 10 - (Math.random() * 20);
+      box.position.y = 10 + Math.random() * 5;
+      box.bodyId = i;
+      scene.add(box);
 
-  // the camera starts at 0,0,0 so pull it back
-  camera.position.z = 50;
-  camera.position.y = 10;
-  camera.position.x = 10;
-  camera.lookAt(new THREE.Vector3(0,2.5,0));
+      /*
+      setTimeout(function() {
+        getJSON(box);
+      }, 100);
+      */
+      objects[i] = box;
+    }
 
-  // start the renderer
-  renderer.setSize(WIDTH, HEIGHT);
+    // and the camera
+    scene.add(camera);
 
-  // attach the render-supplied DOM element
-  container.appendChild(renderer.domElement);
+    var light = new THREE.DirectionalLight( 0xCCCCCC );
+    light.position.set( 20, 80, 0 );
+    light.target.position.copy( scene.position );
+    light.castShadow = true;
+    scene.add(light);
 
-  // create the sphere's material
-  var material = new THREE.MeshLambertMaterial(
-  {
-      color: 0xCC0000
+    // draw!
+    var update = function() {
+      updateBodies();
+      renderer.render(scene, camera);
+      if (next) {
+        worker.swap(data && data.buffer);
+        data = next;
+        next = undefined;
+      }
+      requestAnimationFrame(update);
+    }
+
+    setTimeout(function() {
+      createBodies();
+
+    }, 100)
+
+    worker.on('update', function(data) {
+      next = new Float64Array(data);
+    });
+
+    requestAnimationFrame(update);
   });
-
-  /*
-  // set up the sphere vars
-  var radius = 50, segments = 16, rings = 16;
-
-  // create a new mesh with sphere geometry -
-  // we will cover the sphereMaterial next!
-  var sphere = new THREE.Mesh(
-     new THREE.SphereGeometry(radius, segments, rings),
-     sphereMaterial);
-  */
-
-  // add the sphere to the scene
-  //scene.add(sphere);
-  for (var i = 0; i < 100; i++) {
-    var box = createCompoundShape();
-    box.position.x = 10 - (Math.random() * 20);
-    box.position.z = 10 - (Math.random() * 20);
-    box.position.y = Math.random() * 5;
-    box.bodyId = i;
-    scene.add(box);
-  }
-
-  // and the camera
-  scene.add(camera);
-
-  // create a point light
-  var pointLight = new THREE.PointLight( 0xFFFFFF );
-
-  // set its position
-  pointLight.position.x = 10;
-  pointLight.position.y = 10;
-  pointLight.position.z = 13;
-
-  // add to the scene
-  scene.add(pointLight);
-
-  // draw!
-  renderer.render(scene, camera);
   </script>
 </body>
 </html>

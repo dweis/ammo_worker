@@ -83,7 +83,7 @@
         var update;
         var now = Date.now();
         var dt = now - last || 1;
-        that.dynamicsWorld.stepSimulation(dt, that.iterations);
+        that.dynamicsWorld.stepSimulation(that.step, that.iterations);
 
         var alpha;
         if (meanDt > 0) {
@@ -104,6 +104,7 @@
         if (update && update.buffer instanceof ArrayBuffer) {
           for (var i in that.bodies) {
             if (that.bodies[i]) {
+              trans.setIdentity();
               that.bodies[i].getMotionState().getWorldTransform(trans);
 
               update[i * 7 + 0] = trans.getOrigin().x();
@@ -148,7 +149,35 @@
     },
 
 
-    _createShape: function(descriptor) {
+    _createCompoundShape: function(shape) {
+      var compound = new Ammo.btCompoundShape(),
+          localTransform = new Ammo.btTransform(),
+          child,
+          childShape;
+
+      if (shape.children && shape.children.length) {
+        for (var idx in shape.children) {
+          if (shape.children.hasOwnProperty(idx)) {
+            child = shape.children[idx];
+            console.log(child.localTransform);
+            childShape = this._createShape(child);
+            localTransform.setIdentity();
+            localTransform.setOrigin(new Ammo.btVector3(child.localTransform.position.x,
+                  child.localTransform.position.y, child.localTransform.position.z));
+            localTransform.setRotation(new Ammo.btQuaternion(child.localTransform.rotation.x,
+                  child.localTransform.rotation.y, child.localTransform.rotation.z,
+                  child.localTransform.rotation.w));
+            compound.addChildShape(localTransform, childShape);
+          }
+        }
+      }
+
+      console.log('done');
+      return compound;
+    },
+
+    _createShape: function(shape) {
+      /*
       {
         "shape": {
           "shape": "compound",
@@ -175,32 +204,37 @@
           ]
         }
       }
+      */
 
       var colShape;
-      switch(descriptor.shape.shape) {
-      case 'box': 
-        colShape = new Ammo.btBoxShape(new Ammo.btVector3(descriptor.shape.halfExtents.x,
-            descriptor.shape.halfExtents.y, descriptor.shape.halfExtents.z));
+      console.log('shape', shape);
+      switch(shape.shape) {
+      case 'box':
+      console.log('before');
+        colShape = new Ammo.btBoxShape(new Ammo.btVector3(shape.halfExtents.x,
+            shape.halfExtents.y, shape.halfExtents.z));
+        console.log('after');
         break;
       case 'sphere':
-        colShape = new Ammo.btSphereShape(descriptor.shape.radius);
+        colShape = new Ammo.btSphereShape(shape.radius);
         break;
       case 'staticplane':
-        colShape = new Ammo.btStaticPlaneShape(new Ammo.btVector3(descriptor.shape.normal.x, descriptor.shape.normal.y, descriptor.shape.normal.z), descriptor.shape.distance);
+        colShape = new Ammo.btStaticPlaneShape(new Ammo.btVector3(shape.normal.x, shape.normal.y, shape.normal.z), shape.distance);
         break;
       case 'cylinder':
-        colShape = new Ammo.btCylinderShape(new Ammo.btVector3(descriptor.shape.width, descriptor.shape.height, descriptor.shape.depth));
+        colShape = new Ammo.btCylinderShape(new Ammo.btVector3(shape.width, shape.height, shape.depth));
         break;
       case 'capsule':
-        colShape = new Ammo.btCapsuleShape(descriptor.shape.radius, descriptor.shape.height);
+        colShape = new Ammo.btCapsuleShape(shape.radius, shape.height);
         break;
       case 'cone':
-        colShape = new Ammo.btConeShape(descriptor.shape.radisu, descriptor.shape.height);
+        colShape = new Ammo.btConeShape(shape.radius, shape.height);
         break;
       case 'compound':
+        colShape = this._createCompoundShape(shape);
         break;
       default:
-        return console.error('Unknown shape: ' + descriptor.shape.shape);
+        return console.error('Unknown shape: ' + shape.shape);
       }
       return colShape;
     },
@@ -210,7 +244,7 @@
           body = this.bodies[descriptor.bodyId],
           vehicle;
 
-      if (!body) { 
+      if (!body) {
         return console.error('could not find body');
       }
 
@@ -230,7 +264,7 @@
       var idx = this.vehicles.push(vehicle);
 
       if (typeof fn === 'function') {
-        fn(idx);  
+        fn(idx);
       }
     },
 
@@ -300,7 +334,7 @@
 
       startTransform.setIdentity();
 
-      colShape = this._createShape(descriptor);
+      colShape = this._createShape(descriptor.shape);
 
       if (isDynamic) {
         colShape.calculateLocalInertia(descriptor.mass,localInertia);
