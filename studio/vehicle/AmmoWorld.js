@@ -1,3 +1,45 @@
+function AmmoWorld() {
+}
+ 
+AmmoWorld.prototype = new VAPI.VeroldComponent();
+ 
+AmmoWorld.prototype.init = function() {
+  console.log('Starting up!');
+  
+  this.worker = new AmmoWorker();
+  
+  this.worker.startSimulation();
+  
+  
+  this.worker.on('error', function(err) { console.error(err); });
+  this.worker.on('update', _.bind(this.updatePhysics, this));
+  this.worker.on('ready', _.bind(function() {
+    this.getEvents().trigger('ammoworld_ready', this);
+  }, this));
+};
+ 
+AmmoWorld.prototype.sceneLoaded = function() {
+  window.ammoWorldComponent = this;
+};
+ 
+AmmoWorld.prototype.shutdown = function() {
+  console.log('Shutting down!');
+  this.worker.fire('shutdown');
+  this.worker.done();
+};
+ 
+AmmoWorld.prototype.updatePhysics = function(data) {
+  this.next = new Float64Array(data);
+};
+ 
+AmmoWorld.prototype.postRender = function(delta) {
+  if (this.next) {
+    this.worker.swap(this.data && this.data.buffer);
+    this.data = this.next;
+    this.next = undefined;
+  }
+};
+
 (function() {
   function AmmoWorker(opts) {
     var context = this, i, apiMethods = [
@@ -15,6 +57,7 @@
     opts.memory = opts.memory || 256 * 1024 * 1024;
     opts.maxBodies = opts.maxBodies || 1000;
     opts.maxVehicles = opts.maxVehicles || 32;
+    opts.maxWheelsPerVehicle = opts.maxWheelsPerVehicle || 8;
 
     this.worker = cw(new AmmoWorkerAPI(opts));
 
@@ -39,6 +82,7 @@
     this.memory = 1024 * 1024 * 1024;
     this.maxBodies = 1000;
     this.maxVehicles = 32;
+    this.maxWheelsPerVehicle = 8;
 
     for (var i in opts) {
       this[i] = opts[i];
@@ -51,7 +95,6 @@
           that = this;
 
       importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
-      //'./js/ammo.js'
 
       this.bodies = [];
       this.vehicles = [];
@@ -70,12 +113,14 @@
       var that = this,
           trans = new Ammo.btTransform(),
           meanDt = 0, meanDt2 = 0, frame = 1,
-          last;
-
+          last,
+          bufferSize = (this.maxBodies * 7 * 8) +
+                       (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
+          
       this.buffers = [
-        new ArrayBuffer(this.maxBodies * 7 * 8),
-        new ArrayBuffer(this.maxBodies * 7 * 8),
-        new ArrayBuffer(this.maxBodies * 7 * 8)
+        new ArrayBuffer(bufferSize),
+        new ArrayBuffer(bufferSize),
+        new ArrayBuffer(bufferSize)
       ];
 
       last = Date.now();
@@ -83,7 +128,10 @@
         var update;
         var now = Date.now();
         var dt = now - last || 1;
-        that.dynamicsWorld.stepSimulation(dt, that.iterations);
+        var i;
+        var vehicle;
+        var pos;
+        that.dynamicsWorld.stepSimulation(that.step/*dt*/, that.iterations);
 
         var alpha;
         if (meanDt > 0) {
@@ -102,20 +150,42 @@
         }
 
         if (update && update.buffer instanceof ArrayBuffer) {
-          for (var i in that.bodies) {
+          for (i in that.bodies) {
             if (that.bodies[i]) {
               that.bodies[i].getMotionState().getWorldTransform(trans);
+              
+              pos = i * 7;
 
-              update[i * 7 + 0] = trans.getOrigin().x();
-              update[i * 7 + 1] = trans.getOrigin().y();
-              update[i * 7 + 2] = trans.getOrigin().z();
-              update[i * 7 + 3] = trans.getRotation().x();
-              update[i * 7 + 4] = trans.getRotation().y();
-              update[i * 7 + 5] = trans.getRotation().z();
-              update[i * 7 + 6] = trans.getRotation().w();
+              update[pos + 0] = trans.getOrigin().x();
+              update[pos + 1] = trans.getOrigin().y();
+              update[pos + 2] = trans.getOrigin().z();
+              update[pos + 3] = trans.getRotation().x();
+              update[pos + 4] = trans.getRotation().y();
+              update[pos + 5] = trans.getRotation().z();
+              update[pos + 6] = trans.getRotation().w();
             }
           }
-
+          
+          for (i in that.vehicles) {
+            if (that.vehicles[i]) {
+              vehicle = that.vehicles[i];
+              
+              for ( j = 0; j < vehicle.getNumWheels() + 1; j++ ) {
+                trans = vehicle.getWheelInfo(j).get_m_worldTransform(); 
+                
+                pos = (that.maxBodies * 7) + (i * that.maxWheelsPerVehicle * 7) + (j * 7);
+    
+                update[pos + 0] = trans.getOrigin().x();
+                update[pos + 1] = trans.getOrigin().y();
+                update[pos + 2] = trans.getOrigin().z();
+                update[pos + 3] = trans.getRotation().x();
+                update[pos + 4] = trans.getRotation().y();
+                update[pos + 5] = trans.getRotation().z();
+                update[pos + 6] = trans.getRotation().w();
+              }
+            }
+          }
+          
           that.fire('update', update.buffer, [update.buffer]);
           that.fire('stats', { currFPS: Math.round(1000/meanDt), allFPS: Math.round(1000/meanDt2) });
         }
@@ -147,35 +217,7 @@
         gravity.y, gravity.z));
     },
 
-
     _createShape: function(descriptor) {
-      {
-        "shape": {
-          "shape": "compound",
-          "children": [
-            {
-              "shape": "box",
-              "halfExtents": {
-                "x": 1,
-                "y": 1,
-                "z": 1
-              },
-              "localTransform": {
-                "x": 1,
-                "y": 1,
-                "z": 1 
-              }
-            },
-            {
-              "shape": "compound",
-              "children": [
-
-              ]
-            }
-          ]
-        }
-      }
-
       var colShape;
       switch(descriptor.shape.shape) {
       case 'box': 
@@ -196,8 +238,6 @@
         break;
       case 'cone':
         colShape = new Ammo.btConeShape(descriptor.shape.radisu, descriptor.shape.height);
-        break;
-      case 'compound':
         break;
       default:
         return console.error('Unknown shape: ' + descriptor.shape.shape);
@@ -227,7 +267,7 @@
       vehicle.setCoordinateSystem(0, 1, 2);
 
       this.dynamicsWorld.addVehicle(vehicle);
-      var idx = this.vehicles.push(vehicle);
+      var idx = this.vehicles.push(vehicle) - 1;
 
       if (typeof fn === 'function') {
         fn(idx);  
@@ -244,7 +284,7 @@
       var vehicle = this.vehicles[descriptor.vehicleId];
 
       if (vehicle !== undefined) {
-        var tuning = this.vehicles[descriptor.id].tuning,
+        var tuning = vehicle.tuning,
             connectionPoint = new Ammo.btVector3(descriptor.connectionPoint.x,
                                                  descriptor.connectionPoint.y,
                                                  descriptor.connectionPoint.z),
@@ -254,7 +294,6 @@
             wheelAxle = new Ammo.btVector3(descriptor.wheelAxle.x,
                                            descriptor.wheelAxle.y,
                                            descriptor.wheelAxle.z);
-
         var wheel = vehicle.addWheel(
           connectionPoint,
           wheelDirection,
@@ -286,6 +325,7 @@
     applyEngineForce: function(descriptor) {
       if (this.vehicles[descriptor.vehicleId] !== undefined) {
         this.vehicles[descriptor.vehicleId].applyEngineForce(descriptor.force, descriptor.wheel);
+        //console.log('applying force', descriptor.force, descriptor.wheel);
       }
     },
 
@@ -340,3 +380,5 @@
 
   window.AmmoWorker = AmmoWorker;
 })();
+
+return AmmoWorld;

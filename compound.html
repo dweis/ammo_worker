@@ -139,6 +139,33 @@
     }, 500);
   </script>
   <script type="text/javascript">
+  function createCompoundShape() {
+    var o = new THREE.Object3D();
+
+    o.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
+
+    var o1 = new THREE.Object3D();
+    o1.position.x += 1;
+    o1.position.y += 1;
+    o1.position.z += 0;
+    o1.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
+    o.add(o1);
+
+    var o2 = new THREE.Object3D();
+    o2.position.x += 1;
+    o2.position.y += 1;
+    o2.position.z += 0;
+    o2.add(new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material));
+    o1.add(o2);
+
+    o.traverse(function(obj) {
+      if (obj instanceof THREE.Mesh) {
+        
+      }
+    });
+
+    return o;
+  }
 
   // set the scene size
   var WIDTH = document.body.clientWidth,
@@ -147,8 +174,8 @@
   // set some camera attributes
   var VIEW_ANGLE = 45,
       ASPECT = WIDTH / HEIGHT,
-      NEAR = 0.1,
-      FAR = 10000;
+      NEAR = 0.01,
+      FAR = 1000;
 
   // get the DOM element to attach to
   // - assume we've got jQuery to hand
@@ -164,7 +191,10 @@
   var scene = new THREE.Scene();
 
   // the camera starts at 0,0,0 so pull it back
-  camera.position.z = 300;
+  camera.position.z = 50;
+  camera.position.y = 10;
+  camera.position.x = 10;
+  camera.lookAt(new THREE.Vector3(0,2.5,0));
 
   // start the renderer
   renderer.setSize(WIDTH, HEIGHT);
@@ -191,10 +221,14 @@
 
   // add the sphere to the scene
   //scene.add(sphere);
-
-  var box = new THREE.Mesh(new THREE.CubeGeometry(50, 50, 50), material);
-  scene.add(box);
-
+  for (var i = 0; i < 100; i++) {
+    var box = createCompoundShape();
+    box.position.x = 10 - (Math.random() * 20);
+    box.position.z = 10 - (Math.random() * 20);
+    box.position.y = Math.random() * 5;
+    box.bodyId = i;
+    scene.add(box);
+  }
 
   // and the camera
   scene.add(camera);
@@ -204,8 +238,8 @@
 
   // set its position
   pointLight.position.x = 10;
-  pointLight.position.y = 50;
-  pointLight.position.z = 130;
+  pointLight.position.y = 10;
+  pointLight.position.z = 13;
 
   // add to the scene
   scene.add(pointLight);
