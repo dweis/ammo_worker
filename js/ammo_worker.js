@@ -362,7 +362,7 @@
       }
 
       if (typeof fn === 'function') {
-        fn();
+        fn(vehicle.getNumWheels() - 1);
       }
     },
 

@@ -1,12 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>VehicleTest</title>
+  <title>Vehicle Test</title>
   <style>
-  html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; }
-  #container {
-    background: #000;
-  }
+  html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
   </style>
 </head>
 <body>
@@ -15,60 +12,62 @@
   <script src="js/catiline.js"></script>
   <script src="js/ammo_worker.js"></script>
   <script src="js/three.js"></script>
+  <script src="js/stats.min.js"></script>
   <script src="js/OrbitControls.js"></script>
   <script src="js/demo_scene.js"></script>
-  <script type="text/javascript">
-    function init() {
+  <script>
+    var gEngineForce = 0;
+    var gBreakingForce = 0;
 
-      // draw!
-      var update = function() {
-        typeof preUpdate === 'function' && preUpdate();
-        renderer.render(scene, camera);
-        typeof postUpdate === 'function' && postUpdate();
-      }
+    var maxEngineForce = 1000;//this should be engine/velocity dependent
+    var maxBreakingForce = 100;
 
-      scene.updateMatrixWorld(true);
+    var gVehicleSteering = 0;
+    var steeringIncrement = 0.04;
+    var steeringClamp = 0.3;
+    var wheelRadius = 0.5;
+    var wheelWidth = 0.4;
+    var wheelFriction = 1000;//BT_LARGE_FLOAT;
+    var suspensionStiffness = 20;
+    var suspensionDamping = 2.3;
+    var suspensionCompression = 4.4;
+    var rollInfluence = 0.1;//1.0f;
+    var connectionHeight = 1.2;
 
-      worker.on('update', function(data) {
-        next = new Float64Array(data);
-      });
 
-      requestAnimationFrame(update);
+    var suspensionRestLength = 0.6;
+
+    function VehicleTest() {
     }
 
-    var worker = new AmmoWorker();
+    VehicleTest.prototype = new DemoScene();
 
-    worker.on('ready', function() {
-      worker.addRigidBody({
-        position: {
-          x: 0,
-          y: 0,
-          z: 0
-        },
-        quaternion: {
-          x: 0,
-          y: 0,
-          z: 0,
-          w: 1
-        },
-        shape: {
-          shape: 'staticplane',
-          normal: {
-            x: 0,
-            y: 1,
-            z: 0
-          },
-          distance: 0
-        },
-        friction: 0.8,
-        restitution: 0.2,
-        mass: 0
+    VehicleTest.prototype.initDemo = function() {
+      var material = new THREE.MeshLambertMaterial({ color: 0xCC0000 });
+
+      var o = new THREE.Object3D();
+
+      var o1 = new THREE.Object3D();
+
+      o.add(o1);
+      o1.position.y = 1;
+
+      o1.add(new THREE.Mesh(new THREE.CubeGeometry(2, 1, 4), material));
+
+      o.traverse(function(o) {
+        o.castShadow = true;
       });
 
-      worker.addRigidBody({
+      this.body = o;
+
+      this.wheels = [];
+
+      this.scene.add(o);
+
+      this.worker.addRigidBody({
         position: {
           x: 0,
-          y: 1,
+          y: 10,
           z: 0
         },
         quaternion: {
@@ -78,18 +77,39 @@
           w: 1
         },
         shape: {
-          shape: 'box',
-          halfExtents: {
-            x: 5,
-            y: 3.6,
-            z: 20
-          }
+          shape: 'compound',
+          children: [
+            { 
+              shape: 'box',
+              halfExtents: {
+                x: 1.0,
+                y: 0.5,
+                z: 2
+              },
+              localTransform: {
+                position: {
+                  x: 0,
+                  y: 1,
+                  z: 0
+                },
+                rotation: {
+                  x: 0,
+                  y: 0,
+                  z: 0,
+                  w: 1
+                }
+              }
+
+            }
+          ]
         },
         friction: 0.8,
         restitution: 0.2,
-        mass: 1
+        mass: 800
       }).then(function(bodyId) {
-        worker.addVehicle({
+        o.bodyIndex = bodyId;
+
+        this.worker.addVehicle({
           bodyId: bodyId,
           suspensionsStiffness: 5.88,
           suspensionCompression: 0.83,
@@ -100,32 +120,85 @@
         }).then(function(vehicleId) {
           console.log('vehicle added:', vehicleId);
 
+          var wheel, cylinder, euler = new THREE.Euler();
+          euler.set(0, 0, Math.PI/2);
+
           for ( var i = 0; i < 4; i++ ) {
-            worker.addWheel({
+            this.worker.addWheel({
               vehicleId: vehicleId,
               connectionPoint: {
                 x: i % 2 === 0 ? -1.6 : 1.6,
-                y: -1,
-                z: i < 2 ? 3.3 : -3.2
+                y: connectionHeight,
+                z: i < 2 ? 2 : -2
               },
               wheelDirection: { x: 0, y: -1, z: 0 },
               wheelAxle: { x: -1, y: 0, z: 0 },
-              suspensionRestLength: 0.5,
-              wheelRadius: 0.7,
+              suspensionRestLength: 0.7,
+              wheelRadius: 0.5,
               isFrontWheel: i < 2 ? false : true
-            }).then(function() {
+            }).then(function(wheelIndex) {
+              wheel = new THREE.Object3D();
+              cylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.25), material);
+              cylinder.quaternion.setFromEuler(euler);
+              wheel.wheelIndex = wheelIndex;
+              this.wheels[wheelIndex] = wheel;
+              wheel.add(cylinder);
+
+              this.scene.add(wheel);
+
               console.log('wheel added');
             }.bind(this));
           }
         }.bind(this));
       }.bind(this));
+    };
 
-      init();
-    });
+    VehicleTest.prototype._updateBody = function() {
+     var object, position, quaternion, update, bodyIndex, pos;
+      if (!this.data) return;
 
-    worker.on('error', function(err) {
-      throw(err);
-    });
+      var updateBody = function(object) {
+        position = object.position;
+        quaternion = object.quaternion;
+
+        bodyIndex = object.bodyIndex;
+
+        position.x = this.data[bodyIndex * 7 + 0];
+        position.y = this.data[bodyIndex * 7 + 1];
+        position.z = this.data[bodyIndex * 7 + 2];
+        quaternion.x = this.data[bodyIndex * 7 + 3];
+        quaternion.y = this.data[bodyIndex * 7 + 4];
+        quaternion.z = this.data[bodyIndex * 7 + 5];
+        quaternion.w = this.data[bodyIndex * 7 + 6];
+
+        if (this.wheels.length === 4) {
+          for (var i = 0; i < 4; i++) {
+            pos = (1000 * 7) + (bodyIndex * 8 * 7) + (i * 7);
+
+            position = this.wheels[i].position;
+            quaternion = this.wheels[i].quaternion;  
+
+            position.x = this.data[pos + 0];
+            position.y = this.data[pos + 1];
+            position.z = this.data[pos + 2];
+            quaternion.x = this.data[pos + 3];
+            quaternion.y = this.data[pos + 4];
+            quaternion.z = this.data[pos + 5];
+            quaternion.w = this.data[pos + 6];
+          }
+        }
+      }.bind(this);
+
+      updateBody(this.body);
+    };
+
+    VehicleTest.prototype.preUpdate = function() {
+      this._updateBody();
+    };
+
+    var demo = new VehicleTest();
+
+    demo.init();
   </script>
 </body>
 </html>
