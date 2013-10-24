@@ -29,10 +29,7 @@
   };
 
   CompoundDemo.prototype._createShapes = function() {
-    var material = new THREE.MeshLambertMaterial(
-    {
-        color: 0xCC0000
-    });
+    var material = new THREE.MeshLambertMaterial({ color: 0xCC0000 });
 
     for (var i = 0; i < 100; i++) {
       var box = this._createCompoundShape(material);
@@ -81,29 +78,9 @@
   };
 
   CompoundDemo.prototype._createBody = function(object) {
-    /*
-    var json = {};
-    json.shape = this.worker.getShapeJSON(object) ;
-    json.mass = 1;
-    json.friction = 0.5;
-    json.restitution = 0.5;
-    json.position = { 
-      x: object.position.x,
-      y: object.position.y,
-      z: object.position.z
-    };
-    json.quaternion = {
-      x: object.quaternion.x,
-      y: object.quaternion.y,
-      z: object.quaternion.z,
-      w: object.quaternion.w
-    };
-    */
-    console.log(object);
     this.worker
       .addRigidBodyObject(object, 1)
       .then(function(id) {
-        console.log('successfully added: ', id);  
         object.bodyIndex = id;
       });
   };

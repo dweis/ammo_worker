@@ -6,7 +6,8 @@
           'setStep', 'setIterations', 'setGravity',
           'startSimulation', 'stopSimulation',
           'addVehicle', 'removeVehicle', 'addWheel',
-          'applyEngineForce'
+          'applyEngineForce', 'setBrake', 'setSteeringValue',
+          'setWheelInfo'
         ];
 
     opts = opts || {};
@@ -399,6 +400,7 @@
       var idx = this.vehicles.push(vehicle) - 1;
 
       if (typeof fn === 'function') {
+        console.log('added');
         fn(idx);
       }
     },
@@ -432,14 +434,14 @@
           tuning,
           descriptor.isFrontWheel
         );
-      }
 
-      if (typeof fn === 'function') {
-        fn(vehicle.getNumWheels() - 1);
+        if (typeof fn === 'function') {
+          fn(vehicle.getNumWheels() - 1);
+        }
       }
     },
 
-    setSteering: function(descriptor) {
+    setSteeringValue: function(descriptor) {
       if (this.vehicles[descriptor.vehicleId] !== undefined) {
         this.vehicles[descriptor.vehicleId].setSteeringValue(descriptor.steering, descriptor.wheel);
       }
@@ -451,8 +453,35 @@
       }
     },
 
+    setWheelInfo: function(descriptor) {
+      if (this.vehicles[descriptor.vehicleId] !== undefined) {
+        var info = this.vehicles[descriptor.vehicleId].getWheelInfo(descriptor.wheel);
+
+        if (descriptor.suspensionStiffness) {
+          info.set_m_suspensionStiffness(descriptor.suspensionStiffness);
+        }
+
+        if (descriptor.wheelsDampingRelaxation) {
+          info.set_m_wheelsDampingRelaxation(descriptor.wheelsDampingRelaxation);
+        }
+
+        if (descriptor.wheelsDampingCompression) {
+          info.set_m_wheelsDampingCompression(descriptor.wheelsDampingCompression);
+        }
+
+        if (descriptor.frictionSlip) {
+          info.set_m_frictionSlip(descriptor.frictionSlip);
+        }
+
+        if (descriptor.rollInfluence) {
+          info.set_m_rollInfluence(descriptor.rollInfluence);
+        }
+      }
+    },
+
     applyEngineForce: function(descriptor) {
       if (this.vehicles[descriptor.vehicleId] !== undefined) {
+        //this.vehicles[descriptor.vehicleId].setBrake(0, descriptor.wheel);
         this.vehicles[descriptor.vehicleId].applyEngineForce(descriptor.force, descriptor.wheel);
       }
     },

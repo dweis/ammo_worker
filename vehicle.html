@@ -31,11 +31,11 @@
     var suspensionStiffness = 20;
     var suspensionDamping = 2.3;
     var suspensionCompression = 4.4;
-    var rollInfluence = 0.1;//1.0f;
+    var rollInfluence = 2;//1.0f;
     var connectionHeight = 1.2;
 
 
-    var suspensionRestLength = 0.6;
+    var suspensionRestLength = 0.2;
 
     function VehicleTest() {
     }
@@ -66,6 +66,8 @@
 
       o.position.y = 10;
 
+      this.scene.updateMatrixWorld(true);
+
       this.worker.addRigidBodyObject(o, 800).then(function(bodyIndex) {
         o.bodyIndex = bodyIndex;
         console.log(bodyIndex);
@@ -76,7 +78,6 @@
           suspensionCompression: 0.83,
           suspensionDamping: 0.88,
           maxSuspensionLevel: 500,
-          frictionSlip: 10.5,
           maxSuspensionForce: 6000
         }).then(function(vehicleId) {
           console.log('vehicle added:', vehicleId);
@@ -94,12 +95,12 @@
               },
               wheelDirection: { x: 0, y: -1, z: 0 },
               wheelAxle: { x: -1, y: 0, z: 0 },
-              suspensionRestLength: 0.7,
-              wheelRadius: 0.5,
+              suspensionRestLength: 0.4,
+              wheelRadius: 0.75,
               isFrontWheel: i < 2 ? false : true
             }).then(function(wheelIndex) {
               wheel = new THREE.Object3D();
-              cylinder = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.25), material);
+              cylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.25), material);
               cylinder.quaternion.setFromEuler(euler);
               wheel.wheelIndex = wheelIndex;
               this.wheels[wheelIndex] = wheel;
@@ -107,7 +108,13 @@
 
               this.scene.add(wheel);
 
-              console.log('wheel added');
+              this.worker.setWheelInfo({ vehicleId: 0, wheel: wheelIndex, 
+                suspensionStiffness: suspensionStiffness,
+                wheelsDampingRelaxation: suspensionDamping,
+                wheelsDampingCompression: suspensionCompression,
+                frictionSlip: wheelFriction,
+                rollInfluence: rollInfluence
+              });
             }.bind(this));
           }
         }.bind(this));
@@ -133,6 +140,16 @@
     };
 
     VehicleTest.prototype.preUpdate = function() {
+ 
+      for (var i = 0; i < 4; i++) {
+        //this.worker.setBrake({ vehicleId: 0, wheel: i, brake: 0 });
+        this.worker.applyEngineForce({ vehicleId: 0, wheel: i, force: 500 });
+
+        if (i < 2) {
+          this.worker.setSteeringValue({ vehicleId: 0, wheel: i, steering: 0.3 });
+        }
+      }
+
       this._updateBody();
     };
 
