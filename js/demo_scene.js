@@ -17,33 +17,8 @@ DemoScene.prototype._initWorker = function() {
   }.bind(this));
 
   this.worker.on('ready', function() {
-    this.worker.addRigidBody({
-      position: {
-        x: 0,
-        y: 0,
-        z: 0
-      },
-      quaternion: {
-        x: 0,
-        y: 0,
-        z: 0,
-        w: 1
-      },
-      shape: {
-        shape: 'staticplane',
-        normal: {
-          x: 0,
-          y: 1,
-          z: 0
-        },
-        distance: 0
-      },
-      friction: 0.8,
-      restitution: 0.2,
-      mass: 0
-    }).then(function(){
-      this._initScene();
-    }.bind(this));
+    this._initScene();
+
   }.bind(this));
 };
 
@@ -100,11 +75,12 @@ DemoScene.prototype._initScene = function() {
     color: 0x666666
   });
 
-  var ground = new THREE.Mesh(new THREE.PlaneGeometry(1000,1000),groundMaterial); 
-  ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
+  var ground = new THREE.Mesh(new THREE.CubeGeometry(1000,0.001, 1000),groundMaterial); 
+  //ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
   ground.receiveShadow = true;
   scene.add(ground);
-  // and the camera
+
+  this.worker.addRigidBodyObject(ground, 0);
   scene.add(camera);
 
   var light = new THREE.DirectionalLight( 0xCCCCCC );
@@ -131,12 +107,6 @@ DemoScene.prototype.update = function(delta) {
 
   this.controls.update();
   this.renderer.render(this.scene, this.camera);
-
-  if (this.next) {
-    this.worker.swap(this.data && this.data.buffer);
-    this.data = this.next;
-    this.next = undefined;
-  }
 
   if (typeof this.postUpdate === 'function') {
     this.postUpdate(delta);

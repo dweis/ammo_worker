@@ -64,53 +64,14 @@
 
       this.scene.add(o);
 
-      this.worker.addRigidBody({
-        position: {
-          x: 0,
-          y: 10,
-          z: 0
-        },
-        quaternion: {
-          x: 0,
-          y: 0,
-          z: 0,
-          w: 1
-        },
-        shape: {
-          shape: 'compound',
-          children: [
-            { 
-              shape: 'box',
-              halfExtents: {
-                x: 1.0,
-                y: 0.5,
-                z: 2
-              },
-              localTransform: {
-                position: {
-                  x: 0,
-                  y: 1,
-                  z: 0
-                },
-                rotation: {
-                  x: 0,
-                  y: 0,
-                  z: 0,
-                  w: 1
-                }
-              }
+      o.position.y = 10;
 
-            }
-          ]
-        },
-        friction: 0.8,
-        restitution: 0.2,
-        mass: 800
-      }).then(function(bodyId) {
-        o.bodyIndex = bodyId;
+      this.worker.addRigidBodyObject(o, 800).then(function(bodyIndex) {
+        o.bodyIndex = bodyIndex;
+        console.log(bodyIndex);
 
         this.worker.addVehicle({
-          bodyId: bodyId,
+          bodyId: bodyIndex,
           suspensionsStiffness: 5.88,
           suspensionCompression: 0.83,
           suspensionDamping: 0.88,
@@ -138,7 +99,7 @@
               isFrontWheel: i < 2 ? false : true
             }).then(function(wheelIndex) {
               wheel = new THREE.Object3D();
-              cylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.25), material);
+              cylinder = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.25), material);
               cylinder.quaternion.setFromEuler(euler);
               wheel.wheelIndex = wheelIndex;
               this.wheels[wheelIndex] = wheel;
@@ -154,37 +115,16 @@
     };
 
     VehicleTest.prototype._updateBody = function() {
-     var object, position, quaternion, update, bodyIndex, pos;
-      if (!this.data) return;
+     var object, bodyIndex, pos;
 
       var updateBody = function(object) {
-        position = object.position;
-        quaternion = object.quaternion;
-
         bodyIndex = object.bodyIndex;
 
-        position.x = this.data[bodyIndex * 7 + 0];
-        position.y = this.data[bodyIndex * 7 + 1];
-        position.z = this.data[bodyIndex * 7 + 2];
-        quaternion.x = this.data[bodyIndex * 7 + 3];
-        quaternion.y = this.data[bodyIndex * 7 + 4];
-        quaternion.z = this.data[bodyIndex * 7 + 5];
-        quaternion.w = this.data[bodyIndex * 7 + 6];
+        this.worker.updateBody(object, bodyIndex);
 
         if (this.wheels.length === 4) {
           for (var i = 0; i < 4; i++) {
-            pos = (1000 * 7) + (bodyIndex * 8 * 7) + (i * 7);
-
-            position = this.wheels[i].position;
-            quaternion = this.wheels[i].quaternion;  
-
-            position.x = this.data[pos + 0];
-            position.y = this.data[pos + 1];
-            position.z = this.data[pos + 2];
-            quaternion.x = this.data[pos + 3];
-            quaternion.y = this.data[pos + 4];
-            quaternion.z = this.data[pos + 5];
-            quaternion.w = this.data[pos + 6];
+            this.worker.updateWheel(this.wheels[i], 0, i);  
           }
         }
       }.bind(this);

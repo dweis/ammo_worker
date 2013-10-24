@@ -22,7 +22,7 @@
     SimpleDemo.prototype = new DemoScene();
 
     SimpleDemo.prototype.initDemo = function() {
-      var material = new THREE.MeshLambertMaterial({ color: 0xCC0000 });
+      var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
       this.objects = [];
       for (var i = 0; i < 100; i++) {
@@ -30,7 +30,6 @@
         this.scene.add(o);
         this.objects.push(o);
       }
-      console.log(this.objects);
     };
 
     SimpleDemo.prototype._createBox = function(material) {
@@ -38,29 +37,17 @@
 
       o.add(new THREE.Mesh(new THREE.CubeGeometry(2, 2, 2), material));
 
-      this.worker.addRigidBody({
-        position: {
-          x: (Math.random() * 30) - 15,
-          y: 10 + (Math.random() * 20) - 10,
-          z: (Math.random() * 30) - 15,
-        },
-        quaternion: {
-          x: 0,
-          y: 0,
-          z: 0,
-          w: 1
-        },
-        shape: {
-          shape: 'box',
-          halfExtents: {
-            x: 1,
-            y: 1,
-            z: 1
-          }
-        },
-        friction: 0.8,
-        restitution: 0.2,
-        mass: 1
+      o.position.x = (Math.random() * 30) - 15;
+      o.position.y = 10 + (Math.random() * 20) - 10;
+      o.position.z = (Math.random() * 30) - 15;
+
+      this.worker.addRigidBodyObject(o, 10, {
+        shape: 'box',
+        halfExtents: {
+          x: 1,
+          y: 1,
+          z: 1
+        }
       }).then(function(id) {
         o.bodyIndex = id;
       });
@@ -73,24 +60,12 @@
     };
 
     SimpleDemo.prototype._updateBodies = function() {
-      var object, position, quaternion, update, bodyIndex;
-      if (!this.data) return;
+      var object, bodyIndex;
 
       var updateBody = function(object) {
-        position = object.position;
-        quaternion = object.quaternion;
-
         bodyIndex = object.bodyIndex;
 
-        if (this.data) {
-          position.x = this.data[bodyIndex * 7 + 0];
-          position.y = this.data[bodyIndex * 7 + 1];
-          position.z = this.data[bodyIndex * 7 + 2];
-          quaternion.x = this.data[bodyIndex * 7 + 3];
-          quaternion.y = this.data[bodyIndex * 7 + 4];
-          quaternion.z = this.data[bodyIndex * 7 + 5];
-          quaternion.w = this.data[bodyIndex * 7 + 6];
-        }
+        this.worker.updateBody(object, bodyIndex);
       }.bind(this);
 
       for (var i in this.objects) {

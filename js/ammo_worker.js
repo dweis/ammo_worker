@@ -20,6 +20,17 @@
 
     this.worker = cw(new AmmoWorkerAPI(opts));
 
+    var that = this;
+    this.update = function(data) {
+      if (that.next) {
+        that.worker.swap(that.data && that.data.buffer);
+        that.data = that.next;
+      }
+      that.next = new Float64Array(data);
+    };
+
+    this.worker.on('update', this.update);
+
     function proxyMethod(method) {
       context[method] = function() {
         return context.worker[method].apply(context.worker, arguments);
@@ -47,6 +58,68 @@
       this[i] = opts[i];
     }
   }
+
+  AmmoWorker.prototype.addRigidBodyObject = function(o, mass, shape) {
+    if (!shape) {
+      shape = this.getShapeJSON(o);
+    }
+
+    var descriptor = {
+      mass: mass,
+      shape: shape,
+      position: {
+        x: o.position.x,
+        y: o.position.y,
+        z: o.position.z
+      },
+      quaternion: {
+        x: o.quaternion.x,
+        y: o.quaternion.y,
+        z: o.quaternion.z,
+        w: o.quaternion.w
+      }
+    };
+
+    return this.worker.addRigidBody(descriptor);
+  };
+
+  AmmoWorker.prototype.updateBody = function(object, idx) {
+    var position, quaternion, pos;
+
+    if (this.data) {
+      pos = idx * 7;
+
+      position = object.position;
+      quaternion = object.quaternion;
+
+      position.x = this.data[pos + 0];
+      position.y = this.data[pos + 1];
+      position.z = this.data[pos + 2];
+      quaternion.x = this.data[pos + 3];
+      quaternion.y = this.data[pos + 4];
+      quaternion.z = this.data[pos + 5];
+      quaternion.w = this.data[pos + 6];
+    }
+  };
+
+  AmmoWorker.prototype.updateWheel = function(object, vehicleIdx, wheelIdx) {
+    var position, quaternion, pos;
+
+    if (this.data) {
+      pos = (1000 * 7) + (vehicleIdx * 8 * 7) + (wheelIdx * 7);
+
+      position = object.position;
+      quaternion = object.quaternion;  
+
+      position.x = this.data[pos + 0];
+      position.y = this.data[pos + 1];
+      position.z = this.data[pos + 2];
+      quaternion.x = this.data[pos + 3];
+      quaternion.y = this.data[pos + 4];
+      quaternion.z = this.data[pos + 5];
+      quaternion.w = this.data[pos + 6];
+    }
+  };
 
   AmmoWorker.prototype.getShapeJSON = function(o) {
     var inverseParent = new THREE.Matrix4(),
@@ -408,15 +481,28 @@
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
 
-      body.setRestitution(descriptor.restitution);
-      body.setFriction(descriptor.friction);
-
       this.dynamicsWorld.addRigidBody(body);
 
       var idx = this.bodies.push(body) - 1;
 
       if (typeof fn === 'function') {
         fn(idx);
+      }
+    },
+
+    setRestition: function(id, restitution) {
+      var body = this.bodies[id];
+
+      if (body) {
+        body.setRestitution(descriptor.restitution);
+      }
+    },
+
+    setFriction: function(id, friction) {
+      var body = this.bodies[id];
+
+      if (body) {
+        body.setFriction(descriptor.friction);
       }
     },
 

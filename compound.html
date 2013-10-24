@@ -34,7 +34,7 @@
         color: 0xCC0000
     });
 
-    for (var i = 0; i < 20; i++) {
+    for (var i = 0; i < 100; i++) {
       var box = this._createCompoundShape(material);
       box.position.x = 10 - (Math.random() * 20);
       box.position.z = 10 - (Math.random() * 20);
@@ -81,6 +81,7 @@
   };
 
   CompoundDemo.prototype._createBody = function(object) {
+    /*
     var json = {};
     json.shape = this.worker.getShapeJSON(object) ;
     json.mass = 1;
@@ -97,8 +98,10 @@
       z: object.quaternion.z,
       w: object.quaternion.w
     };
+    */
+    console.log(object);
     this.worker
-      .addRigidBody(json)
+      .addRigidBodyObject(object, 1)
       .then(function(id) {
         console.log('successfully added: ', id);  
         object.bodyIndex = id;
@@ -112,24 +115,12 @@
   };
 
   CompoundDemo.prototype._updateBodies = function() {
-    var object, position, quaternion, update, bodyIndex;
-    if (!this.data) return;
+    var object, bodyIndex;
 
     var updateBody = function(object) {
-      position = object.position;
-      quaternion = object.quaternion;
-
       bodyIndex = object.bodyIndex;
 
-      if (this.data) {
-        position.x = this.data[bodyIndex * 7 + 0];
-        position.y = this.data[bodyIndex * 7 + 1];
-        position.z = this.data[bodyIndex * 7 + 2];
-        quaternion.x = this.data[bodyIndex * 7 + 3];
-        quaternion.y = this.data[bodyIndex * 7 + 4];
-        quaternion.z = this.data[bodyIndex * 7 + 5];
-        quaternion.w = this.data[bodyIndex * 7 + 6];
-      }
+      this.worker.updateBody(object, bodyIndex);
     }.bind(this);
 
     for (var i in this.objects) {
