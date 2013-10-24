@@ -76,7 +76,7 @@ DemoScene.prototype._initScene = function() {
   // and a scene
   var renderer = this.renderer = new THREE.WebGLRenderer();
   renderer.shadowMapEnabled = true;
-  renderer.shadowMapSoft = false;
+  renderer.shadowMapSoft = true;
   renderer.shadowMapType = THREE.PCFSoftShadowMap;
   renderer.physicallyBasedShading = true;
   var camera = this.camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
@@ -97,10 +97,10 @@ DemoScene.prototype._initScene = function() {
   container.appendChild(renderer.domElement);
 
   var groundMaterial = new THREE.MeshLambertMaterial({
-    color: 0x00CC00
+    color: 0x666666
   });
 
-  var ground = new THREE.Mesh(new THREE.PlaneGeometry(100,100),groundMaterial); 
+  var ground = new THREE.Mesh(new THREE.PlaneGeometry(1000,1000),groundMaterial); 
   ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
   ground.receiveShadow = true;
   scene.add(ground);
