@@ -1,100 +1,22 @@
-function AmmoWorld() {
-}
- 
-AmmoWorld.prototype = new VAPI.VeroldComponent();
- 
-AmmoWorld.prototype.init = function() {
-  console.log('Starting up!');
-  
-  this.worker = new AmmoWorker();
-  
-  this.worker.startSimulation();
-  
-  
-  this.worker.on('error', function(err) { console.error(err); });
-  this.worker.on('update', _.bind(this.updatePhysics, this));
-  this.worker.on('ready', _.bind(function() {
-    this.getEvents().trigger('ammoworld_ready', this);
-  }, this));
-};
- 
-AmmoWorld.prototype.sceneLoaded = function() {
-  window.ammoWorldComponent = this;
-};
- 
-AmmoWorld.prototype.shutdown = function() {
-  console.log('Shutting down!');
-  this.worker.fire('shutdown');
-  this.worker.done();
-};
- 
-AmmoWorld.prototype.updatePhysics = function(data) {
-  this.next = new Float64Array(data);
-};
- 
-AmmoWorld.prototype.postRender = function(delta) {
-  if (this.next) {
-    this.worker.swap(this.data && this.data.buffer);
-    this.data = this.next;
-    this.next = undefined;
-  }
-};
-
-(function() {
-  function AmmoWorker(opts) {
-    var context = this, i, apiMethods = [
-          'on', 'fire', 'addRigidBody', 'swap',
-          'setStep', 'setIterations', 'setGravity',
-          'startSimulation', 'stopSimulation',
-          'addVehicle', 'removeVehicle', 'addWheel',
-          'applyEngineForce'
-        ];
-
-    opts = opts || {};
-    opts.gravity = opts.gravity || { x: 0, y: -9.82, z: 0},
-    opts.iterations = opts.iterations || 10;
-    opts.step = opts.step || 1/60;
-    opts.memory = opts.memory || 256 * 1024 * 1024;
-    opts.maxBodies = opts.maxBodies || 1000;
-    opts.maxVehicles = opts.maxVehicles || 32;
-    opts.maxWheelsPerVehicle = opts.maxWheelsPerVehicle || 8;
-
-    this.worker = cw(new AmmoWorkerAPI(opts));
-
-    function proxyMethod(method) {
-      context[method] = function() {
-        return context.worker[method].apply(context.worker, arguments);
-      };
-    }
-
-    for (i in apiMethods) {
-      if (apiMethods.hasOwnProperty(i)) {
-        proxyMethod(apiMethods[i]);
-      }
-    }
-
-    this.setStep(opts.step);
-    this.setIterations(opts.iterations);
-    this.setGravity(opts.gravity);
-  }
-
+/* global importScripts */
+define([], function() {
   function AmmoWorkerAPI(opts) {
-    this.memory = 1024 * 1024 * 1024;
     this.maxBodies = 1000;
     this.maxVehicles = 32;
     this.maxWheelsPerVehicle = 8;
 
     for (var i in opts) {
-      this[i] = opts[i];
+      if (opts.hasOwnProperty(i)) {
+        this[i] = opts[i];
+      }
     }
   }
 
   AmmoWorkerAPI.prototype = {
     init: function() {
-      var Module = { TOTAL_MEMORY: this.memory },
-          that = this;
 
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      importScripts('./js/ammo.js');
+      // import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.bodies = [];
       this.vehicles = [];
@@ -116,7 +38,7 @@ AmmoWorld.prototype.postRender = function(delta) {
           last,
           bufferSize = (this.maxBodies * 7 * 8) +
                        (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
-          
+
       this.buffers = [
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
@@ -125,13 +47,13 @@ AmmoWorld.prototype.postRender = function(delta) {
 
       last = Date.now();
       this.simulationTimerId = setInterval(function() {
+        var vehicle;
         var update;
         var now = Date.now();
         var dt = now - last || 1;
-        var i;
-        var vehicle;
+        var i, j;
         var pos;
-        that.dynamicsWorld.stepSimulation(that.step/*dt*/, that.iterations);
+        that.dynamicsWorld.stepSimulation(that.step, that.iterations);
 
         var alpha;
         if (meanDt > 0) {
@@ -152,29 +74,27 @@ AmmoWorld.prototype.postRender = function(delta) {
         if (update && update.buffer instanceof ArrayBuffer) {
           for (i in that.bodies) {
             if (that.bodies[i]) {
+              trans.setIdentity();
               that.bodies[i].getMotionState().getWorldTransform(trans);
-              
-              pos = i * 7;
 
-              update[pos + 0] = trans.getOrigin().x();
-              update[pos + 1] = trans.getOrigin().y();
-              update[pos + 2] = trans.getOrigin().z();
-              update[pos + 3] = trans.getRotation().x();
-              update[pos + 4] = trans.getRotation().y();
-              update[pos + 5] = trans.getRotation().z();
-              update[pos + 6] = trans.getRotation().w();
+              update[i * 7 + 0] = trans.getOrigin().x();
+              update[i * 7 + 1] = trans.getOrigin().y();
+              update[i * 7 + 2] = trans.getOrigin().z();
+              update[i * 7 + 3] = trans.getRotation().x();
+              update[i * 7 + 4] = trans.getRotation().y();
+              update[i * 7 + 5] = trans.getRotation().z();
+              update[i * 7 + 6] = trans.getRotation().w();
             }
           }
-          
+
           for (i in that.vehicles) {
             if (that.vehicles[i]) {
               vehicle = that.vehicles[i];
-              
+
               for ( j = 0; j < vehicle.getNumWheels() + 1; j++ ) {
-                trans = vehicle.getWheelInfo(j).get_m_worldTransform(); 
-                
+                trans = vehicle.getWheelInfo(j).get_m_worldTransform();
                 pos = (that.maxBodies * 7) + (i * that.maxWheelsPerVehicle * 7) + (j * 7);
-    
+
                 update[pos + 0] = trans.getOrigin().x();
                 update[pos + 1] = trans.getOrigin().y();
                 update[pos + 2] = trans.getOrigin().z();
@@ -185,7 +105,7 @@ AmmoWorld.prototype.postRender = function(delta) {
               }
             }
           }
-          
+
           that.fire('update', update.buffer, [update.buffer]);
           that.fire('stats', { currFPS: Math.round(1000/meanDt), allFPS: Math.round(1000/meanDt2) });
         }
@@ -198,7 +118,7 @@ AmmoWorld.prototype.postRender = function(delta) {
       }
     },
 
-    swap: function(buf, cb) {
+    swap: function(buf) {
       if (buf instanceof ArrayBuffer) {
         this.buffers.push(buf);
       }
@@ -217,30 +137,59 @@ AmmoWorld.prototype.postRender = function(delta) {
         gravity.y, gravity.z));
     },
 
-    _createShape: function(descriptor) {
+
+    _createCompoundShape: function(shape) {
+      var compound = new Ammo.btCompoundShape(),
+          localTransform = new Ammo.btTransform(),
+          child,
+          childShape;
+
+      if (shape.children && shape.children.length) {
+        for (var idx in shape.children) {
+          if (shape.children.hasOwnProperty(idx)) {
+            child = shape.children[idx];
+            childShape = this._createShape(child);
+            localTransform.setIdentity();
+            localTransform.setOrigin(new Ammo.btVector3(child.localTransform.position.x,
+                  child.localTransform.position.y, child.localTransform.position.z));
+            localTransform.setRotation(new Ammo.btQuaternion(child.localTransform.rotation.x,
+                  child.localTransform.rotation.y, child.localTransform.rotation.z,
+                  child.localTransform.rotation.w));
+            compound.addChildShape(localTransform, childShape);
+          }
+        }
+      }
+
+      return compound;
+    },
+
+    _createShape: function(shape) {
       var colShape;
-      switch(descriptor.shape.shape) {
-      case 'box': 
-        colShape = new Ammo.btBoxShape(new Ammo.btVector3(descriptor.shape.halfExtents.x,
-            descriptor.shape.halfExtents.y, descriptor.shape.halfExtents.z));
+      switch(shape.shape) {
+      case 'box':
+        colShape = new Ammo.btBoxShape(new Ammo.btVector3(shape.halfExtents.x,
+            shape.halfExtents.y, shape.halfExtents.z));
         break;
       case 'sphere':
-        colShape = new Ammo.btSphereShape(descriptor.shape.radius);
+        colShape = new Ammo.btSphereShape(shape.radius);
         break;
       case 'staticplane':
-        colShape = new Ammo.btStaticPlaneShape(new Ammo.btVector3(descriptor.shape.normal.x, descriptor.shape.normal.y, descriptor.shape.normal.z), descriptor.shape.distance);
+        colShape = new Ammo.btStaticPlaneShape(new Ammo.btVector3(shape.normal.x, shape.normal.y, shape.normal.z), shape.distance);
         break;
       case 'cylinder':
-        colShape = new Ammo.btCylinderShape(new Ammo.btVector3(descriptor.shape.width, descriptor.shape.height, descriptor.shape.depth));
+        colShape = new Ammo.btCylinderShape(new Ammo.btVector3(shape.width, shape.height, shape.depth));
         break;
       case 'capsule':
-        colShape = new Ammo.btCapsuleShape(descriptor.shape.radius, descriptor.shape.height);
+        colShape = new Ammo.btCapsuleShape(shape.radius, shape.height);
         break;
       case 'cone':
-        colShape = new Ammo.btConeShape(descriptor.shape.radisu, descriptor.shape.height);
+        colShape = new Ammo.btConeShape(shape.radius, shape.height);
+        break;
+      case 'compound':
+        colShape = this._createCompoundShape(shape);
         break;
       default:
-        return console.error('Unknown shape: ' + descriptor.shape.shape);
+        return console.error('Unknown shape: ' + shape.shape);
       }
       return colShape;
     },
@@ -250,7 +199,7 @@ AmmoWorld.prototype.postRender = function(delta) {
           body = this.bodies[descriptor.bodyId],
           vehicle;
 
-      if (!body) { 
+      if (!body) {
         return console.error('could not find body');
       }
 
@@ -270,7 +219,8 @@ AmmoWorld.prototype.postRender = function(delta) {
       var idx = this.vehicles.push(vehicle) - 1;
 
       if (typeof fn === 'function') {
-        fn(idx);  
+        console.log('added');
+        fn(idx);
       }
     },
 
@@ -294,7 +244,7 @@ AmmoWorld.prototype.postRender = function(delta) {
             wheelAxle = new Ammo.btVector3(descriptor.wheelAxle.x,
                                            descriptor.wheelAxle.y,
                                            descriptor.wheelAxle.z);
-        var wheel = vehicle.addWheel(
+        vehicle.addWheel(
           connectionPoint,
           wheelDirection,
           wheelAxle,
@@ -303,14 +253,14 @@ AmmoWorld.prototype.postRender = function(delta) {
           tuning,
           descriptor.isFrontWheel
         );
-      }
 
-      if (typeof fn === 'function') {
-        fn();
+        if (typeof fn === 'function') {
+          fn(vehicle.getNumWheels() - 1);
+        }
       }
     },
 
-    setSteering: function(descriptor) {
+    setSteeringValue: function(descriptor) {
       if (this.vehicles[descriptor.vehicleId] !== undefined) {
         this.vehicles[descriptor.vehicleId].setSteeringValue(descriptor.steering, descriptor.wheel);
       }
@@ -322,17 +272,43 @@ AmmoWorld.prototype.postRender = function(delta) {
       }
     },
 
+    setWheelInfo: function(descriptor) {
+      if (this.vehicles[descriptor.vehicleId] !== undefined) {
+        var info = this.vehicles[descriptor.vehicleId].getWheelInfo(descriptor.wheel);
+
+        if (descriptor.suspensionStiffness) {
+          info.set_m_suspensionStiffness(descriptor.suspensionStiffness);
+        }
+
+        if (descriptor.wheelsDampingRelaxation) {
+          info.set_m_wheelsDampingRelaxation(descriptor.wheelsDampingRelaxation);
+        }
+
+        if (descriptor.wheelsDampingCompression) {
+          info.set_m_wheelsDampingCompression(descriptor.wheelsDampingCompression);
+        }
+
+        if (descriptor.frictionSlip) {
+          info.set_m_frictionSlip(descriptor.frictionSlip);
+        }
+
+        if (descriptor.rollInfluence) {
+          info.set_m_rollInfluence(descriptor.rollInfluence);
+        }
+      }
+    },
+
     applyEngineForce: function(descriptor) {
       if (this.vehicles[descriptor.vehicleId] !== undefined) {
+        //this.vehicles[descriptor.vehicleId].setBrake(0, descriptor.wheel);
         this.vehicles[descriptor.vehicleId].applyEngineForce(descriptor.force, descriptor.wheel);
-        //console.log('applying force', descriptor.force, descriptor.wheel);
       }
     },
 
     addRigidBody: function(descriptor, fn) {
       var colShape,
           startTransform = new Ammo.btTransform(),
-          isDynamic = (descriptor.mass != 0),
+          isDynamic = (descriptor.mass !== 0),
           localInertia = new Ammo.btVector3(0, 0, 0),
           myMotionState,
           rbInfo,
@@ -340,7 +316,7 @@ AmmoWorld.prototype.postRender = function(delta) {
 
       startTransform.setIdentity();
 
-      colShape = this._createShape(descriptor);
+      colShape = this._createShape(descriptor.shape);
 
       if (isDynamic) {
         colShape.calculateLocalInertia(descriptor.mass,localInertia);
@@ -353,15 +329,28 @@ AmmoWorld.prototype.postRender = function(delta) {
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
 
-      body.setRestitution(descriptor.restitution);
-      body.setFriction(descriptor.friction);
-
       this.dynamicsWorld.addRigidBody(body);
 
       var idx = this.bodies.push(body) - 1;
 
       if (typeof fn === 'function') {
         fn(idx);
+      }
+    },
+
+    setRestition: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        body.setRestitution(descriptor.restitution);
+      }
+    },
+
+    setFriction: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        body.setFriction(descriptor.friction);
       }
     },
 
@@ -378,7 +367,5 @@ AmmoWorld.prototype.postRender = function(delta) {
     }
   };
 
-  window.AmmoWorker = AmmoWorker;
-})();
-
-return AmmoWorld;
+  return AmmoWorkerAPI;
+});

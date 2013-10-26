@@ -1,16 +1,12 @@
 var DemoScene = function() {
-}
+};
 
 DemoScene.prototype.init = function() {
   this._initWorker();
 };
 
 DemoScene.prototype._initWorker = function() {
-  this.worker = new AmmoWorker();
-
-  this.worker.on('error', function(err) {
-    throw(err);
-  });
+  this.worker = new AmmoProxy();
 
   this.worker.on('update', function(data) {
     this.next = new Float64Array(data);
@@ -18,7 +14,6 @@ DemoScene.prototype._initWorker = function() {
 
   this.worker.on('ready', function() {
     this._initScene();
-
   }.bind(this));
 };
 
@@ -112,7 +107,11 @@ DemoScene.prototype.update = function(delta) {
     this.postUpdate(delta);
   }
 
+  if (this.worker && this.worker.swap) {
+    this.worker.swap();
+  }
+
   this.stats.end();
 
   requestAnimationFrame(this.update);
-}
+};
