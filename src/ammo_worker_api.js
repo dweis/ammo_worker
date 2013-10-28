@@ -16,8 +16,8 @@ define([], function() {
 
   AmmoWorkerAPI.prototype = {
     init: function() {
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      import Scripts('./js/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -35,6 +35,27 @@ define([], function() {
 
       this.bodies = [];
       this.vehicles = [];
+
+      if (!this.callback) {
+        console.log('creating aabb callback');
+        this.callback = {};
+
+        /*
+          process: function() {
+            console.log('CALLED', arguments);
+            return true;
+          }
+          */
+
+        Ammo.customizeVTable(this.callback, [{
+          original: Ammo.btBroadphaseAabbCallback,
+          replacement: function() {
+            console.log(arguments);  
+          }
+        }]);
+
+        this.callback = Ammo.wrapPointer(this.callback, Ammo.btBroadphaseAabbCallback);
+      }
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
@@ -233,17 +254,12 @@ define([], function() {
       this.tmpVec[1].setZ(descriptor.max.z);
 
 
-      var callback = {
-        process: function() {
-          console.log('CALLED', arguments);
-          return true;
-        }
-      };
       console.log(descriptor.min, descriptor.max);
 
       this.dynamicsWorld
         .getBroadphase()
-        .aabbTest(this.tmpVec[0], this.tmpVec[1], Ammo.wrapPointer(callback, Ammo.btBroadphaseAabbCallback));
+        .aabbTest(this.tmpVec[0], this.tmpVec[1],
+          this.callback);
 
 
       fn(bodies);

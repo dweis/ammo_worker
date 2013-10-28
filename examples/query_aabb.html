@@ -26,13 +26,14 @@
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
       this.bodies = [];
-      for (var i = 0; i < 100; i++) {
+      for (var i = 0; i < 20; i++) {
         var o = this._createBox(material);
         this.scene.add(o);
       }
 
       var aabbTest = function () {
-        this.proxy.aabbTest({ x: -2, y: -2, z: -2 }, { x: 2, y: 2, z: 2 })
+        this.proxy.aabbTest({ x: -20, y: -20, z: -20 }, 
+                            { x: 20, y: 20, z: 20 })
           .then(function(bodies) {
             console.log('bodies', bodies);
           });
