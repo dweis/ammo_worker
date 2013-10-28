@@ -3040,6 +3040,22 @@ define('ammo_worker_api',[], function() {
       }
     },
 
+    RigidBody_applyTorque: function(descriptor, fn) {
+      var body = this.bodies[descriptor.bodyId];
+      
+      if (body) {
+        this.tmpVec[0].setX(descriptor.torque.x);
+        this.tmpVec[0].setY(descriptor.torque.y);
+        this.tmpVec[0].setZ(descriptor.torque.z);
+        
+        body.applyTorque(this.tmpVec[0]);
+      }
+
+      if (typeof fn === 'function') {
+        fn();
+      }
+    },
+
     RigidBody_setRestitution: function(descriptor, fn) {
       var body = this.bodies[descriptor.bodyId];
 
@@ -3107,6 +3123,17 @@ define('ammo_rigid_body',[], function() {
     }
   };
 
+  AmmoRigidBody.prototype.applyTorque = function(torque) {
+    return this.proxy.execute('RigidBody_applyTorque', {
+      bodyId: this.bodyId,
+      torque: {
+        x: torque.x,
+        y: torque.y,
+        z: torque.z
+      }
+    });
+  };
+
   AmmoRigidBody.prototype.applyForce = function(force, relativePosition) {
     return this.proxy.execute('RigidBody_applyForce', {
       bodyId: this.bodyId,
@@ -3115,11 +3142,41 @@ define('ammo_rigid_body',[], function() {
     });
   };
 
+  AmmoRigidBody.prototype.applyCentralForce = function(force) {
+    return this.proxy.execute('RigidBody_applyCentralForce', {
+      bodyId: this.bodyId,
+      force: {
+        x: force.x,
+        y: force.y,
+        z: force.z
+      }
+    });
+  };
+
   AmmoRigidBody.prototype.applyImpulse = function(impulse, relativePosition) {
     return this.proxy.execute('RigidBody_applyImpulse', {
       bodyId: this.bodyId,
-      impulse: impulse,
-      relativePosition: relativePosition || { x: 0, y: 0, z: 0 }
+      impulse: {
+        x: impulse.x,
+        y: impulse.y,
+        z: impulse.z
+      },
+      relativePosition: relativePosition && {
+        x: relativePosition.x,
+        y: relativePosition.y,
+        z: relativePosition.z
+      } || { x: 0, y: 0, z: 0 }
+    });
+  };
+
+  AmmoRigidBody.prototype.applyCentralImpulse = function(impulse) {
+    return this.proxy.execute('RigidBody_applyCentralImpulse', {
+      bodyId: this.bodyId,
+      impulse: {
+        x: impulse.x,
+        y: impulse.y,
+        z: impulse.z
+      }
     });
   };
 

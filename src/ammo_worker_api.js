@@ -462,6 +462,22 @@ define([], function() {
       }
     },
 
+    RigidBody_applyTorque: function(descriptor, fn) {
+      var body = this.bodies[descriptor.bodyId];
+      
+      if (body) {
+        this.tmpVec[0].setX(descriptor.torque.x);
+        this.tmpVec[0].setY(descriptor.torque.y);
+        this.tmpVec[0].setZ(descriptor.torque.z);
+        
+        body.applyTorque(this.tmpVec[0]);
+      }
+
+      if (typeof fn === 'function') {
+        fn();
+      }
+    },
+
     RigidBody_setRestitution: function(descriptor, fn) {
       var body = this.bodies[descriptor.bodyId];
 
