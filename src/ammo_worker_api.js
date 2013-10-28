@@ -16,8 +16,8 @@ define([], function() {
 
   AmmoWorkerAPI.prototype = {
     init: function() {
-      importScripts('./js/ammo.js');
-      // import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      //import Scripts('./js/ammo.js');
+      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
