@@ -8,10 +8,6 @@ DemoScene.prototype.init = function() {
 DemoScene.prototype._initProxy = function() {
   this.proxy = new AmmoProxy();
 
-  this.proxy.on('update', function(data) {
-    this.next = new Float64Array(data);
-  }.bind(this));
-
   this.proxy.on('ready', function() {
     this._initScene();
   }.bind(this));
