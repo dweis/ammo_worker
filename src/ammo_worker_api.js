@@ -221,6 +221,34 @@ define([], function() {
       return colShape;
     },
 
+    Broadphase_aabbTest: function(descriptor, fn) {
+      var bodies = [];
+
+      this.tmpVec[0].setX(descriptor.min.x);
+      this.tmpVec[0].setY(descriptor.min.y);
+      this.tmpVec[0].setZ(descriptor.min.z);
+
+      this.tmpVec[1].setX(descriptor.max.x);
+      this.tmpVec[1].setY(descriptor.max.y);
+      this.tmpVec[1].setZ(descriptor.max.z);
+
+
+      var callback = {
+        process: function() {
+          console.log('CALLED', arguments);
+          return true;
+        }
+      };
+      console.log(descriptor.min, descriptor.max);
+
+      this.dynamicsWorld
+        .getBroadphase()
+        .aabbTest(this.tmpVec[0], this.tmpVec[1], Ammo.wrapPointer(callback, Ammo.btBroadphaseAabbCallback));
+
+
+      fn(bodies);
+    },
+
     Vehicle_create: function(descriptor, fn) {
       var vehicleTuning = new Ammo.btVehicleTuning(),
           body = this.bodies[descriptor.bodyId],

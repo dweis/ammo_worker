@@ -44,6 +44,20 @@ define([ 'when', 'underscore', 'ammo_worker_api',
     return this.worker[method](descriptor);
   };
 
+  AmmoProxy.prototype.aabbTest = function(min, max) {
+    return this.execute('Broadphase_aabbTest', { min: {
+        x: min.x,
+        y: min.y,
+        z: min.z
+      },
+      max: {
+        x: max.x,
+        y: max.y,
+        z: max.z
+      }
+    });
+  };
+
   AmmoProxy.prototype.addVehicle = function(descriptor) {
     var deferred = when.defer();
 
