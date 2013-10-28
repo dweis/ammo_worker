@@ -1,14 +1,13 @@
-define([ 'underscore', 'ammo_worker_api' ], function(_, AmmoWorkerAPI) {
-  function AmmoWorker(opts) {
+define([ 'when', 'underscore', 'ammo_worker_api', 
+    'ammo_rigid_body', 'ammo_vehicle' ], 
+      function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle) {
+  function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
-      'on', 'fire', 'addRigidBody', 'setStep', 
-      'setIterations', 'setGravity', 'startSimulation', 
-      'stopSimulation', 'addVehicle', 'removeVehicle', 
-      'addWheel', 'applyEngineForce', 'setBrake', 
-      'setSteeringValue', 'setWheelInfo'
+      'on', 'fire', 'setStep', 'setIterations', 'setGravity', 
+      'startSimulation', 'stopSimulation'
     ];
 
-    opts = opts || {};
+    opts = this.opts = opts || {};
     opts.gravity = opts.gravity || { x: 0, y: -9.82, z: 0};
     opts.iterations = opts.iterations || 10;
     opts.step = opts.step || 1/60;
@@ -19,6 +18,10 @@ define([ 'underscore', 'ammo_worker_api' ], function(_, AmmoWorkerAPI) {
     this.worker = cw(new AmmoWorkerAPI(opts));
 
     this.worker.on('update', _.bind(this.update, this));
+
+    this.worker.on('error', function(err) {
+      console.warn(err.message);
+    });
 
     function proxyMethod(method) {
       context[method] = function() {
@@ -37,7 +40,37 @@ define([ 'underscore', 'ammo_worker_api' ], function(_, AmmoWorkerAPI) {
     this.setGravity(opts.gravity);
   }
 
-  AmmoWorker.prototype.update = function(data) {
+  AmmoProxy.prototype.execute = function(method, descriptor) {
+    return this.worker[method](descriptor);
+  };
+
+  AmmoProxy.prototype.addVehicle = function(descriptor) {
+    var deferred = when.defer();
+
+    this.worker.Vehicle_create(descriptor).then(_.bind(function(vehicleId) {
+      var proxy = this;
+      setTimeout(function() {
+        deferred.resolve(new AmmoVehicle(proxy, vehicleId));
+      }, 0);
+    }, this));
+
+    return deferred.promise;
+  };
+
+  AmmoProxy.prototype.addRigidBody = function(descriptor) {
+    var deferred = when.defer();
+
+    this.worker.RigidBody_create(descriptor).then(_.bind(function(bodyId) {
+      var proxy = this;
+      setTimeout(function() {
+        deferred.resolve(new AmmoRigidBody(proxy, bodyId));
+      }, 0);
+    }, this));
+
+    return deferred.promise;
+  };
+
+  AmmoProxy.prototype.update = function(data) {
     if (this.next) {
       this.worker.swap(this.data && this.data.buffer);
       this.data = this.next;
@@ -45,7 +78,7 @@ define([ 'underscore', 'ammo_worker_api' ], function(_, AmmoWorkerAPI) {
     this.next = new Float64Array(data);
   };
 
-  AmmoWorker.prototype.addRigidBodyObject = function(o, mass, shape) {
+  AmmoProxy.prototype.addRigidBodyObject = function(o, mass, shape) {
     if (!shape) {
       shape = this.getShapeJSON(o);
     }
@@ -66,48 +99,18 @@ define([ 'underscore', 'ammo_worker_api' ], function(_, AmmoWorkerAPI) {
       }
     };
 
-    return this.worker.addRigidBody(descriptor);
+    return this.addRigidBody(descriptor);
   };
 
-  AmmoWorker.prototype.updateBody = function(object, idx) {
-    var position, quaternion, pos;
-
-    if (this.data) {
-      pos = idx * 7;
-
-      position = object.position;
-      quaternion = object.quaternion;
-
-      position.x = this.data[pos + 0];
-      position.y = this.data[pos + 1];
-      position.z = this.data[pos + 2];
-      quaternion.x = this.data[pos + 3];
-      quaternion.y = this.data[pos + 4];
-      quaternion.z = this.data[pos + 5];
-      quaternion.w = this.data[pos + 6];
-    }
+  AmmoProxy.prototype.getRigidBodyOffset = function(bodyId) {
+    return bodyId * 7;
   };
 
-  AmmoWorker.prototype.updateWheel = function(object, vehicleIdx, wheelIdx) {
-    var position, quaternion, pos;
-
-    if (this.data) {
-      pos = (1000 * 7) + (vehicleIdx * 8 * 7) + (wheelIdx * 7);
-
-      position = object.position;
-      quaternion = object.quaternion;  
-
-      position.x = this.data[pos + 0];
-      position.y = this.data[pos + 1];
-      position.z = this.data[pos + 2];
-      quaternion.x = this.data[pos + 3];
-      quaternion.y = this.data[pos + 4];
-      quaternion.z = this.data[pos + 5];
-      quaternion.w = this.data[pos + 6];
-    }
+  AmmoProxy.prototype.getWheelOffset = function(vehicleId, wheelIndex) {
+    return (this.opts.maxBodies * 7) + (vehicleId * 8 * 7) + (wheelIndex * 7);
   };
 
-  AmmoWorker.prototype.getShapeJSON = function(o) {
+  AmmoProxy.prototype.getShapeJSON = function(o) {
     var inverseParent = new THREE.Matrix4(),
         tmpMatrix = new THREE.Matrix4();
 
@@ -178,5 +181,5 @@ define([ 'underscore', 'ammo_worker_api' ], function(_, AmmoWorkerAPI) {
     return json;
   };
 
-  return AmmoWorker;
+  return AmmoProxy;
 });

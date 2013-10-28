@@ -13,29 +13,71 @@
   <script src="js/three.js"></script>
   <script src="js/stats.min.js"></script>
   <script src="js/OrbitControls.js"></script>
+  <script src="js/dat.gui.js"></script>
   <script src="../build/ammo_proxy.js"></script>
   <script src="js/demo_scene.js"></script>
   <script>
-    var gEngineForce = 0;
-    var gBreakingForce = 0;
+    var gui = new dat.GUI();
 
-    var maxEngineForce = 1000;//this should be engine/velocity dependent
-    var maxBreakingForce = 100;
+    function updateWheels() {
+      for (var i = 0; i < 4; i++) {
+        demo.vehicle.setWheelInfo(i, {
+          frictionSlip: config.frictionSlip,
+          rollInfluence: config.rollInfluence,
+          suspensionStiffness: config.suspensionStiffness,
+          wheelsRadius: config.wheelsRadius,
+          /*
+          suspensionDamping: config.suspensionDamping,
+          suspensionCompression: config.suspensionCompression,
+          connectionHeight: config.connectionHeight,
+          */
+          suspensionRestLength1: config.suspensionRestLength,
+          maxSuspensionTravelCm: config.maxSuspensionTravelCm,
+          maxSuspensionForce: config.maxSuspensionForce,
+          wheelsDampingCompression: config.wheelsDampingCompression,
+          wheelsDampingRelaxation: config.wheelsDampingRelaxation,
+        });
+      }
+    }
 
-    var gVehicleSteering = 0;
-    var steeringIncrement = 0.04;
-    var steeringClamp = 0.3;
-    var wheelRadius = 0.5;
-    var wheelWidth = 0.4;
-    var wheelFriction = 1000;//BT_LARGE_FLOAT;
-    var suspensionStiffness = 20;
-    var suspensionDamping = 2.3;
-    var suspensionCompression = 4.4;
-    var rollInfluence = 2;//1.0f;
-    var connectionHeight = 1.2;
+    var config = {
+      // Gas/brake/steering
+      maxEngineForce: 1000,
+      maxBreakingForce: 100,
+      steeringClamp: 0.3,
 
+      // Per wheel config
+      wheelsRadius: 0.75,
+      wheelWidth: 0.25,
+      rollInfluence: 1,
+      connectionHeight: 1.2,
+      suspensionRestLength: 0.8,
+      wheelsDampingCompression: 10,
+      wheelsDampingRelaxation: 5,
 
-    var suspensionRestLength = 0.2;
+      // Vehicle Tuning
+      suspensionDamping: 2.3,
+      suspensionCompression: 4.4,
+      suspensionStiffness: 20,
+      // Also set on  wheels
+      maxSuspensionTravelCm: 100,
+      frictionSlip: 1000,
+      maxSuspensionForce: 8000
+    };
+
+    gui.add(config, 'maxEngineForce');
+    gui.add(config, 'maxBreakingForce');
+    gui.add(config, 'steeringClamp');
+    gui.add(config, 'wheelsRadius').onChange(updateWheels);
+    gui.add(config, 'frictionSlip').onChange(updateWheels);
+    gui.add(config, 'suspensionStiffness').onChange(updateWheels);
+    gui.add(config, 'suspensionDamping').onChange(updateWheels);
+    gui.add(config, 'suspensionCompression').onChange(updateWheels);
+    gui.add(config, 'rollInfluence').onChange(updateWheels);
+    gui.add(config, 'connectionHeight').onChange(updateWheels);
+    gui.add(config, 'suspensionRestLength').onChange(updateWheels);
+    gui.add(config, 'maxSuspensionForce').onChange(updateWheels);
+    gui.add(config, 'maxSuspensionTravelCm').onChange(updateWheels);
 
     function VehicleTest() {
     }
@@ -58,7 +100,7 @@
         o.castShadow = true;
       });
 
-      this.body = o;
+      this.chasis = o;
 
       this.wheels = [];
 
@@ -68,39 +110,47 @@
 
       this.scene.updateMatrixWorld(true);
 
-      this.worker.addRigidBodyObject(o, 800).then(function(bodyIndex) {
-        o.bodyIndex = bodyIndex;
-        console.log(bodyIndex);
+      var that = this;
 
-        this.worker.addVehicle({
-          bodyId: bodyIndex,
-          suspensionsStiffness: 5.88,
-          suspensionCompression: 0.83,
-          suspensionDamping: 0.88,
-          maxSuspensionLevel: 500,
-          maxSuspensionForce: 6000
-        }).then(function(vehicleId) {
-          console.log('vehicle added:', vehicleId);
+      var tuning =  {
+        suspensionsStiffness: config.suspensionStiffness,
+        suspensionCompression: config.suspensionCompression,
+        suspensionDamping: config.suspensionDamping,
+        maxSuspensionTravelCm: config.maxSuspensionTravelCm,
+        maxSuspensionForce: config.maxSuspensionForce,
+        frictionSlip: config.frictionSlip
+      };
 
-          var wheel, cylinder, euler = new THREE.Euler();
+      this.proxy.addRigidBodyObject(o, 2000).then(function(rigidBody) {
+        this.body = rigidBody;
+        rigidBody.setObject(o);
+
+        that.proxy.addVehicle({
+          bodyId: rigidBody.bodyId,
+          tuning: tuning
+        }).then(function(vehicle) {
+          var wheel, cylinder, euler = new THREE.Euler(),
+              wheelDirection = { x: 0, y: -1, z: 0 },
+              wheelAxle = { x: -1, y: 0, z: 0 };
+
           euler.set(0, 0, Math.PI/2);
+          this.vehicle = vehicle;
 
           for ( var i = 0; i < 4; i++ ) {
-            this.worker.addWheel({
-              vehicleId: vehicleId,
-              connectionPoint: {
+            vehicle.addWheel({
                 x: i % 2 === 0 ? -1.6 : 1.6,
-                y: connectionHeight,
+                y: config.connectionHeight,
                 z: i < 2 ? 2 : -2
               },
-              wheelDirection: { x: 0, y: -1, z: 0 },
-              wheelAxle: { x: -1, y: 0, z: 0 },
-              suspensionRestLength: 0.4,
-              wheelRadius: 0.75,
-              isFrontWheel: i < 2 ? false : true
-            }).then(function(wheelIndex) {
+              wheelDirection,
+              wheelAxle,
+              config.suspensionRestLength,
+              config.wheelsRadius,
+              i < 2 ? false : true, tuning)
+            .then(function(wheelIndex) {
               wheel = new THREE.Object3D();
-              cylinder = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.25), material);
+              cylinder = new THREE.Mesh(new THREE.CylinderGeometry(config.wheelsRadius, 
+                  config.wheelsRadius, config.wheelsRadius/3), material);
               cylinder.quaternion.setFromEuler(euler);
               wheel.wheelIndex = wheelIndex;
               this.wheels[wheelIndex] = wheel;
@@ -108,49 +158,50 @@
 
               this.scene.add(wheel);
 
-              this.worker.setWheelInfo({ vehicleId: 0, wheel: wheelIndex, 
-                suspensionStiffness: suspensionStiffness,
-                wheelsDampingRelaxation: suspensionDamping,
-                wheelsDampingCompression: suspensionCompression,
-                frictionSlip: wheelFriction,
-                rollInfluence: rollInfluence
+              vehicle.setWheelInfo(wheelIndex, {
+                suspensionStiffness: config.suspensionStiffness,
+                /*
+                suspensionDamping: config.suspensionDamping,
+                suspensionCompression: config.suspensionCompression,
+                */
+                frictionSlip: config.frictionSlip,
+                rollInfluence: config.rollInfluence,
+                maxSuspensionTravelCm: config.maxSuspensionTravelCm,
+                maxSuspensionForce: config.maxSuspensionForce
               });
+
+              vehicle.addWheelObject(wheelIndex, wheel);
             }.bind(this));
           }
         }.bind(this));
       }.bind(this));
     };
 
-    VehicleTest.prototype._updateBody = function() {
-     var object, bodyIndex, pos;
+    VehicleTest.prototype.updateBody = function() {
+      var bodyIndex, pos;
 
-      var updateBody = function(object) {
-        bodyIndex = object.bodyIndex;
+      if (this.body) {
+        this.body.update();
+      }
 
-        this.worker.updateBody(object, bodyIndex);
-
-        if (this.wheels.length === 4) {
-          for (var i = 0; i < 4; i++) {
-            this.worker.updateWheel(this.wheels[i], 0, i);  
-          }
-        }
-      }.bind(this);
-
-      updateBody(this.body);
+      if (this.vehicle) {
+        this.vehicle.update();
+      }
     };
 
     VehicleTest.prototype.preUpdate = function() {
- 
-      for (var i = 0; i < 4; i++) {
-        //this.worker.setBrake({ vehicleId: 0, wheel: i, brake: 0 });
-        this.worker.applyEngineForce({ vehicleId: 0, wheel: i, force: 500 });
+      if (this.vehicle) {
+        for (var i = 0; i < 4; i++) {
+          this.vehicle.setBrake(i, 0);
+          this.vehicle.applyEngineForce(i, config.maxEngineForce);
 
-        if (i < 2) {
-          this.worker.setSteeringValue({ vehicleId: 0, wheel: i, steering: 0.3 });
+          if (i < 2) {
+            this.vehicle.setSteeringValue(i, config.steeringClamp);
+          }
         }
       }
 
-      this._updateBody();
+      this.updateBody();
     };
 
     var demo = new VehicleTest();

@@ -2,17 +2,17 @@ var DemoScene = function() {
 };
 
 DemoScene.prototype.init = function() {
-  this._initWorker();
+  this._initProxy();
 };
 
-DemoScene.prototype._initWorker = function() {
-  this.worker = new AmmoProxy();
+DemoScene.prototype._initProxy = function() {
+  this.proxy = new AmmoProxy();
 
-  this.worker.on('update', function(data) {
+  this.proxy.on('update', function(data) {
     this.next = new Float64Array(data);
   }.bind(this));
 
-  this.worker.on('ready', function() {
+  this.proxy.on('ready', function() {
     this._initScene();
   }.bind(this));
 };
@@ -58,7 +58,7 @@ DemoScene.prototype._initScene = function() {
   camera.position.x = 10;
   camera.lookAt(new THREE.Vector3(0,2.5,0));
 
-  var controls = this.controls = new THREE.OrbitControls(camera);
+  var controls = this.controls = new THREE.OrbitControls(camera, renderer.domElement);
 
   // start the renderer
   renderer.setSize(WIDTH, HEIGHT);
@@ -75,7 +75,10 @@ DemoScene.prototype._initScene = function() {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  this.worker.addRigidBodyObject(ground, 0);
+  this.proxy.addRigidBodyObject(ground, 0).then(_.bind(function(rigidBody) {
+    this.groundBody = rigidBody;
+  }, this));
+
   scene.add(camera);
 
   var light = new THREE.DirectionalLight( 0xCCCCCC );
@@ -88,7 +91,7 @@ DemoScene.prototype._initScene = function() {
     this.initDemo();
   }
 
-  this.worker.startSimulation();
+  this.proxy.startSimulation();
 
   this.update = this.update.bind(this);
   requestAnimationFrame(this.update);
@@ -107,8 +110,8 @@ DemoScene.prototype.update = function(delta) {
     this.postUpdate(delta);
   }
 
-  if (this.worker && this.worker.swap) {
-    this.worker.swap();
+  if (this.proxy && this.proxy.swap) {
+    this.proxy.swap();
   }
 
   this.stats.end();

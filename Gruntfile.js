@@ -13,7 +13,8 @@ module.exports = function(grunt) {
           inlineText: true,
 
           paths: {
-            underscore: 'vendor/underscore'
+            underscore: 'vendor/underscore',
+            when: 'vendor/when'
           },
 
           wrap: {
@@ -34,7 +35,8 @@ module.exports = function(grunt) {
           inlineText: true,
 
           paths: {
-            underscore: 'vendor/underscore'
+            underscore: 'vendor/underscore',
+            when: 'vendor/when'
           },
 
           wrap: {

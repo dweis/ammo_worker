@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Performance Test</title>
+  <title>ApplyForce Test</title>
   <style>
   html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
   </style>
@@ -24,10 +24,13 @@
     SimpleDemo.prototype.initDemo = function() {
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
+      this.objects = [];
       this.bodies = [];
-      for (var i = 0; i < 500; i++) {
+
+      for (var i = 0; i < 100; i++) {
         var o = this._createBox(material);
         this.scene.add(o);
+        this.objects.push(o);
       }
     };
 
@@ -40,7 +43,7 @@
       o.position.y = 10 + (Math.random() * 20) - 10;
       o.position.z = (Math.random() * 30) - 15;
 
-      this.proxy.addRigidBodyObject(o, 0.1, {
+      this.proxy.addRigidBodyObject(o, 10, {
         shape: 'box',
         halfExtents: {
           x: 1,
@@ -61,7 +64,9 @@
 
     SimpleDemo.prototype.updateBodies = function() {
       for (var i in this.bodies) {
-        this.bodies[i].update();
+        this.bodies[i].update(this.objects[i]);
+        this.bodies[i].applyForce({x: Math.random() * 1000 - 500, y: Math.random() * 2000 - 900, z: Math.random() * 1000 - 500 },
+          {x: 0, y: 0, z: 0 });
       }
     };
 

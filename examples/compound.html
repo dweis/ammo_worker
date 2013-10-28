@@ -23,6 +23,7 @@
 
   CompoundDemo.prototype.initDemo = function() {
     this.objects=[];
+    this.bodies=[];
     this._createShapes();
     this.scene.updateMatrixWorld(true);
     this._createBodies();
@@ -80,11 +81,12 @@
   };
 
   CompoundDemo.prototype._createBody = function(object) {
-    this.worker
+    this.proxy
       .addRigidBodyObject(object, 1)
-      .then(function(id) {
-        object.bodyIndex = id;
-      });
+      .then(function(rigidBody) {
+        rigidBody.setObject(object);
+        this.bodies.push(rigidBody);
+      }.bind(this));
   };
 
   CompoundDemo.prototype._createBodies = function() {
@@ -93,22 +95,14 @@
     }
   };
 
-  CompoundDemo.prototype._updateBodies = function() {
-    var object, bodyIndex;
-
-    var updateBody = function(object) {
-      bodyIndex = object.bodyIndex;
-
-      this.worker.updateBody(object, bodyIndex);
-    }.bind(this);
-
-    for (var i in this.objects) {
-      updateBody(this.objects[i]);
+  CompoundDemo.prototype.updateBodies = function() {
+    for (var i in this.bodies) {
+      this.bodies[i].update();
     }
   };
 
   CompoundDemo.prototype.preUpdate = function() {
-    this._updateBodies();
+    this.updateBodies();
   };
 
   var demo = new CompoundDemo();
