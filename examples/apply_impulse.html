@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ApplyForce Test</title>
+  <title>ApplyImpulse Test</title>
   <style>
   html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
   </style>
@@ -59,7 +59,7 @@
     SimpleDemo.prototype.updateBodies = function() {
       for (var i in this.bodies) {
         this.bodies[i].update(this.objects[i]);
-        this.bodies[i].applyForce({x: Math.random() * 1000 - 500, y: Math.random() * 2000 - 900, z: Math.random() * 1000 - 500 },
+        this.bodies[i].applyImpulse({x: Math.random() * 50 - 25, y: Math.random() * 100 - 45, z: Math.random() * 50 - 25 },
           {x: 0, y: 0, z: 0 });
       }
     };

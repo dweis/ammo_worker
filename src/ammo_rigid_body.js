@@ -6,21 +6,21 @@ define([], function() {
   } 
 
   AmmoRigidBody.prototype.update = function() {
-    var position, quaternion, pos, data = this.proxy.data;
+    var position, quaternion, pos;
 
-    if (this.object && data) {
+    if (this.object && this.proxy && this.proxy.data) {
       pos = this.proxy.getRigidBodyOffset(this.bodyId);
 
       position = this.object.position;
       quaternion = this.object.quaternion;
 
-      position.x = data[pos + 0];
-      position.y = data[pos + 1];
-      position.z = data[pos + 2];
-      quaternion.x = data[pos + 3];
-      quaternion.y = data[pos + 4];
-      quaternion.z = data[pos + 5];
-      quaternion.w = data[pos + 6];
+      position.x = this.proxy.data[pos + 0];
+      position.y = this.proxy.data[pos + 1];
+      position.z = this.proxy.data[pos + 2];
+      quaternion.x = this.proxy.data[pos + 3];
+      quaternion.y = this.proxy.data[pos + 4];
+      quaternion.z = this.proxy.data[pos + 5];
+      quaternion.w = this.proxy.data[pos + 6];
     }
   };
 
@@ -28,7 +28,15 @@ define([], function() {
     return this.proxy.execute('RigidBody_applyForce', {
       bodyId: this.bodyId,
       force: force,
-      relativePosition: relativePosition
+      relativePosition: relativePosition || { x: 0, y: 0, z: 0 }
+    });
+  };
+
+  AmmoRigidBody.prototype.applyImpulse = function(impulse, relativePosition) {
+    return this.proxy.execute('RigidBody_applyImpulse', {
+      bodyId: this.bodyId,
+      impulse: impulse,
+      relativePosition: relativePosition || { x: 0, y: 0, z: 0 }
     });
   };
 

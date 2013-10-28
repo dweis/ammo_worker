@@ -443,6 +443,25 @@ define([], function() {
       }
     },
 
+    RigidBody_applyImpulse: function(descriptor, fn) {
+      var body = this.bodies[descriptor.bodyId];
+      
+      if (body) {
+        this.tmpVec[0].setX(descriptor.impulse.x);
+        this.tmpVec[0].setY(descriptor.impulse.y);
+        this.tmpVec[0].setZ(descriptor.impulse.z);
+        this.tmpVec[1].setX(descriptor.relativePosition.x);
+        this.tmpVec[1].setY(descriptor.relativePosition.y);
+        this.tmpVec[1].setZ(descriptor.relativePosition.z);
+
+        body.applyImpulse(this.tmpVec[0], this.tmpVec[1]);
+      } 
+
+      if (typeof fn === 'function') {
+        fn();
+      }
+    },
+
     RigidBody_setRestitution: function(descriptor, fn) {
       var body = this.bodies[descriptor.bodyId];
 
