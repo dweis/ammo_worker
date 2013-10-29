@@ -2743,6 +2743,49 @@ define('ammo_worker_api',[], function() {
       return compound;
     },
 
+    _createTriangleMeshShape: function(shape, type) {
+      var i, mesh, className;
+
+      if (!shape.triangles) {
+        throw new Error('You must supply a list of triangles!');
+      }
+
+      switch (type) {
+        case 'bvh':
+          className = 'btBvhTriangleMeshShape';
+          break;
+
+        case 'convex':
+          className = 'btConvexTriangleMeshShape';
+          break;
+
+        default:
+          throw new Error('You must supply a valid mesh type!');
+      }
+
+      mesh = new Ammo.btTriangleMesh(true, true);
+
+      for (i = 0; i < shape.triangles.length; i += 3) {
+        this.tmpVec[0].setX(shape.triangles[i * 9 + 0]);
+        this.tmpVec[0].setY(shape.triangles[i * 9 + 1]);
+        this.tmpVec[0].setZ(shape.triangles[i * 9 + 2]);
+
+        this.tmpVec[1].setX(shape.triangles[i * 9 + 3]);
+        this.tmpVec[1].setY(shape.triangles[i * 9 + 4]);
+        this.tmpVec[1].setZ(shape.triangles[i * 9 + 5]);
+
+        this.tmpVec[2].setX(shape.triangles[i * 9 + 6]);
+        this.tmpVec[2].setY(shape.triangles[i * 9 + 7]);
+        this.tmpVec[2].setZ(shape.triangles[i * 9 + 8]);
+
+        mesh.addTriangle(this.tmpVec[0], this.tmpVec[1], this.tmpVec[2], true);
+      }
+
+      var shape = new Ammo[className](mesh, true, true);
+
+      return shape;
+    },
+
     _createShape: function(shape) {
       var colShape;
       switch(shape.shape) {
@@ -2775,6 +2818,12 @@ define('ammo_worker_api',[], function() {
         break;
       case 'compound':
         colShape = this._createCompoundShape(shape);
+        break;
+      case 'convex_triangle_mesh':
+        colShape = this._createTriangleMeshShape(shape, 'convex');
+        break;
+      case 'bvh_triangle_mesh':
+        colShape = this._createTriangleMeshShape(shape, 'bvh');
         break;
       default:
         return console.error('Unknown shape: ' + shape.shape);
@@ -2998,6 +3047,10 @@ define('ammo_worker_api',[], function() {
       localInertia.setZero();
 
       colShape = this._createShape(descriptor.shape);
+
+      if (!colShape) {
+        throw('Invalid collision shape!');
+      }
 
       if (isDynamic) {
         colShape.calculateLocalInertia(descriptor.mass,localInertia);
