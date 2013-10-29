@@ -3,6 +3,14 @@ var DemoScene = function() {
 
 DemoScene.prototype.init = function() {
   this._initProxy();
+
+  window.addEventListener('blur', function() { 
+    this.proxy.stopSimulation();
+  }.bind(this));
+
+  window.addEventListener('focus', function() { 
+    this.proxy.startSimulation();
+  }.bind(this));
 };
 
 DemoScene.prototype._initProxy = function() {
