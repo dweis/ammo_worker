@@ -2626,8 +2626,6 @@ define('ammo_worker_api',[], function() {
 
     startSimulation: function() {
       var that = this,
-          meanDt = 0, meanDt2 = 0, frame = 1,
-          last,
           bufferSize = (this.maxBodies * 7 * 8) +
                        (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
@@ -2637,27 +2635,20 @@ define('ammo_worker_api',[], function() {
         new ArrayBuffer(bufferSize)
       ];
 
-      last = Date.now();
+      var last = Date.now();
+
       this.simulationTimerId = setInterval(function() {
-        var vehicle;
-        var update;
-        var now = Date.now();
-        var dt = now - last || 1;
-        var i, j;
-        var pos;
-        that.dynamicsWorld.stepSimulation(that.step, that.iterations);
+        var vehicle,
+            update,
+            i,
+            j,
+            pos,
+            now = Date.now(),
+            delta = (now - last) / 1000;
 
-        var alpha;
-        if (meanDt > 0) {
-          alpha = Math.min(0.1, dt/1000);
-        } else {
-          alpha = 0.1; // first run
-        }
-        meanDt = alpha*dt + (1-alpha)*meanDt;
+        last = now;
 
-        var alpha2 = 1/frame++;
-        meanDt2 = alpha2*dt + (1-alpha2)*meanDt2;
-        last = Date.now();
+        that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations);
 
         if (that.buffers.length > 0) {
           update = new Float64Array(that.buffers.pop());
@@ -2699,7 +2690,6 @@ define('ammo_worker_api',[], function() {
           }
 
           that.fire('update', update.buffer, [update.buffer]);
-          that.fire('stats', { currFPS: Math.round(1000/meanDt), allFPS: Math.round(1000/meanDt2) });
         }
       }, this.step * 1000);
     },
