@@ -204,6 +204,48 @@ define([], function() {
       return colShape;
     },
 
+    Broadphase_aabbTest: function(descriptor, fn) {
+      var that = this;
+
+      if (!this.aabbCallback) {
+        this.aabbCallback = new Ammo.ConcreteBroadphaseAabbCallback();
+        this.aabbCallback.bodies = [];
+
+        (function() {
+          Ammo.customizeVTable(that.aabbCallback, [{
+            original: Ammo.ConcreteBroadphaseAabbCallback.prototype.process,
+            replacement: function(thisPtr, proxyPtr) {
+              var proxy = Ammo.wrapPointer(proxyPtr, Ammo.btBroadphaseProxy);
+              var clientObject = Ammo.wrapPointer(proxy.get_m_clientObject(), Ammo.btRigidBody);
+              var _this = Ammo.wrapPointer(thisPtr, Ammo.ConcreteBroadphaseAabbCallback);
+
+              if (clientObject.id) {
+                _this.bodies.push(clientObject.id);
+              }
+
+              return true;
+            }
+          }]);
+        })();
+      }
+
+      this.tmpVec[0].setX(descriptor.min.x);
+      this.tmpVec[0].setY(descriptor.min.y);
+      this.tmpVec[0].setZ(descriptor.min.z);
+
+      this.tmpVec[1].setX(descriptor.max.x);
+      this.tmpVec[1].setY(descriptor.max.y);
+      this.tmpVec[1].setZ(descriptor.max.z);
+
+      this.aabbCallback.bodies = [];
+      this.dynamicsWorld
+        .getBroadphase()
+        .aabbTest(this.tmpVec[0], this.tmpVec[1],
+          this.aabbCallback);
+
+      fn(this.aabbCallback.bodies);
+    },
+
     Vehicle_create: function(descriptor, fn) {
       var vehicleTuning = new Ammo.btVehicleTuning(),
           body = this.bodies[descriptor.bodyId],
@@ -247,6 +289,7 @@ define([], function() {
 
       this.dynamicsWorld.addVehicle(vehicle);
       var idx = this.vehicles.push(vehicle) - 1;
+      vehicle.id = idx;
 
       if (typeof fn === 'function') {
         fn(idx);
@@ -401,6 +444,7 @@ define([], function() {
       this.dynamicsWorld.addRigidBody(body);
 
       var idx = this.bodies.push(body) - 1;
+      body.id = idx;
 
       if (typeof fn === 'function') {
         fn(idx);

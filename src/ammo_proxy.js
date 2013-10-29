@@ -3,8 +3,8 @@ define([ 'when', 'underscore', 'ammo_worker_api',
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
-      'on', 'fire', 'setStep', 'setIterations', 'setGravity', 
-      'startSimulation', 'stopSimulation'
+      'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
+      'stopSimulation'
     ];
 
     opts = this.opts = opts || {};
@@ -42,6 +42,20 @@ define([ 'when', 'underscore', 'ammo_worker_api',
 
   AmmoProxy.prototype.execute = function(method, descriptor) {
     return this.worker[method](descriptor);
+  };
+
+  AmmoProxy.prototype.aabbTest = function(min, max) {
+    return this.execute('Broadphase_aabbTest', { min: {
+        x: min.x,
+        y: min.y,
+        z: min.z
+      },
+      max: {
+        x: max.x,
+        y: max.y,
+        z: max.z
+      }
+    });
   };
 
   AmmoProxy.prototype.addVehicle = function(descriptor) {
