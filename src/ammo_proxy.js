@@ -3,8 +3,8 @@ define([ 'when', 'underscore', 'ammo_worker_api',
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
-      'on', 'fire', 'setStep', 'setIterations', 'setGravity', 
-      'startSimulation', 'stopSimulation'
+      'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
+      'stopSimulation'
     ];
 
     opts = this.opts = opts || {};

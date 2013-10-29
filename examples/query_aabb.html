@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Performance Test</title>
+  <title>Query AABB Test</title>
   <style>
   html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
   </style>
@@ -26,19 +26,21 @@
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
       this.bodies = [];
-      for (var i = 0; i < 20; i++) {
+      for (var i = 0; i < 100; i++) {
         var o = this._createBox(material);
         this.scene.add(o);
       }
 
       var aabbTest = function () {
-        this.proxy.aabbTest({ x: -20, y: -20, z: -20 }, 
-                            { x: 20, y: 20, z: 20 })
+        console.time('queryAabb');
+        this.proxy.aabbTest({ x: -1, y: -1, z: -1 }, 
+                            { x: 1, y: 1, z: 1 })
           .then(function(bodies) {
-            console.log('bodies', bodies);
+            console.log('bodies', bodies.length);
+            console.timeEnd('queryAabb');
           });
 
-        setTimeout(aabbTest, 5000);
+        setTimeout(aabbTest, 500);
       }.bind(this);
 
       aabbTest();

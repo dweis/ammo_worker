@@ -2594,8 +2594,7 @@ define('ammo_worker_api',[], function() {
 
   AmmoWorkerAPI.prototype = {
     init: function() {
-      importScripts('https://raw.github.com/playcanvas/ammo.js/master/builds/ammo.js');
-      //import Scripts('./js/ammo.js');
+      importScripts('./js/ammo.js');
       //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
@@ -2614,27 +2613,6 @@ define('ammo_worker_api',[], function() {
 
       this.bodies = [];
       this.vehicles = [];
-
-      if (!this.callback) {
-        console.log('creating aabb callback');
-        this.callback = {};
-
-        /*
-          process: function() {
-            console.log('CALLED', arguments);
-            return true;
-          }
-          */
-
-        Ammo.customizeVTable(this.callback, [{
-          original: Ammo.btBroadphaseAabbCallback,
-          replacement: function() {
-            console.log(arguments);  
-          }
-        }]);
-
-        this.callback = Ammo.wrapPointer(this.callback, Ammo.btBroadphaseAabbCallback);
-      }
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
@@ -2822,7 +2800,29 @@ define('ammo_worker_api',[], function() {
     },
 
     Broadphase_aabbTest: function(descriptor, fn) {
-      var bodies = [];
+      var that = this;
+
+      if (!this.aabbCallback) {
+        this.aabbCallback = new Ammo.ConcreteBroadphaseAabbCallback();
+        this.aabbCallback.bodies = [];
+
+        (function() {
+          Ammo.customizeVTable(that.aabbCallback, [{
+            original: Ammo.ConcreteBroadphaseAabbCallback.prototype.process,
+            replacement: function(thisPtr, proxyPtr) {
+              var proxy = Ammo.wrapPointer(proxyPtr, Ammo.btBroadphaseProxy);
+              var clientObject = Ammo.wrapPointer(proxy.get_m_clientObject(), Ammo.btRigidBody);
+              var _this = Ammo.wrapPointer(thisPtr, Ammo.ConcreteBroadphaseAabbCallback);
+
+              if (clientObject.id) {
+                _this.bodies.push(clientObject.id);
+              }
+
+              return true;
+            }
+          }]);
+        })();
+      }
 
       this.tmpVec[0].setX(descriptor.min.x);
       this.tmpVec[0].setY(descriptor.min.y);
@@ -2832,16 +2832,13 @@ define('ammo_worker_api',[], function() {
       this.tmpVec[1].setY(descriptor.max.y);
       this.tmpVec[1].setZ(descriptor.max.z);
 
-
-      console.log(descriptor.min, descriptor.max);
-
+      this.aabbCallback.bodies = [];
       this.dynamicsWorld
         .getBroadphase()
         .aabbTest(this.tmpVec[0], this.tmpVec[1],
-          this.callback);
+          this.aabbCallback);
 
-
-      fn(bodies);
+      fn(this.aabbCallback.bodies);
     },
 
     Vehicle_create: function(descriptor, fn) {
@@ -2887,6 +2884,7 @@ define('ammo_worker_api',[], function() {
 
       this.dynamicsWorld.addVehicle(vehicle);
       var idx = this.vehicles.push(vehicle) - 1;
+      vehicle.id = idx;
 
       if (typeof fn === 'function') {
         fn(idx);
@@ -3041,6 +3039,7 @@ define('ammo_worker_api',[], function() {
       this.dynamicsWorld.addRigidBody(body);
 
       var idx = this.bodies.push(body) - 1;
+      body.id = idx;
 
       if (typeof fn === 'function') {
         fn(idx);
@@ -3361,8 +3360,8 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api',
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
-      'on', 'fire', 'setStep', 'setIterations', 'setGravity', 
-      'startSimulation', 'stopSimulation'
+      'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
+      'stopSimulation'
     ];
 
     opts = this.opts = opts || {};
