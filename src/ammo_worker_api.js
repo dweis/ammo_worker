@@ -16,8 +16,10 @@ define([], function() {
 
   AmmoWorkerAPI.prototype = {
     init: function() {
-      importScripts('./js/ammo.js');
-      // import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
+
+      //import Scripts('./js/ammo.js');
+      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -43,43 +45,25 @@ define([], function() {
       this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(this.dispatcher,
           this.overlappingPairCache, this.solver, this.collisionConfiguration);
 
-      this.fire('ready');
-    },
-
-    startSimulation: function() {
-      var that = this,
-          meanDt = 0, meanDt2 = 0, frame = 1,
-          last,
-          bufferSize = (this.maxBodies * 7 * 8) +
-                       (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
-
       this.buffers = [
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize)
       ];
 
-      last = Date.now();
+      this.fire('ready');
+    },
+
+    startSimulation: function() {
+      var that = this, last = Date.now();
+
       this.simulationTimerId = setInterval(function() {
-        var vehicle;
-        var update;
-        var now = Date.now();
-        var dt = now - last || 1;
-        var i, j;
-        var pos;
-        that.dynamicsWorld.stepSimulation(that.step, that.iterations);
+        var vehicle, update, i, j, pos, now = Date.now(),
+            delta = (now - last) / 1000;
 
-        var alpha;
-        if (meanDt > 0) {
-          alpha = Math.min(0.1, dt/1000);
-        } else {
-          alpha = 0.1; // first run
-        }
-        meanDt = alpha*dt + (1-alpha)*meanDt;
+        last = now;
 
-        var alpha2 = 1/frame++;
-        meanDt2 = alpha2*dt + (1-alpha2)*meanDt2;
-        last = Date.now();
+        that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations);
 
         if (that.buffers.length > 0) {
           update = new Float64Array(that.buffers.pop());
@@ -121,7 +105,6 @@ define([], function() {
           }
 
           that.fire('update', update.buffer, [update.buffer]);
-          that.fire('stats', { currFPS: Math.round(1000/meanDt), allFPS: Math.round(1000/meanDt2) });
         }
       }, this.step * 1000);
     },
@@ -182,6 +165,49 @@ define([], function() {
       return compound;
     },
 
+    _createTriangleMeshShape: function(shape, type) {
+      var i, mesh, className;
+
+      if (!shape.triangles) {
+        throw new Error('You must supply a list of triangles!');
+      }
+
+      switch (type) {
+        case 'bvh':
+          className = 'btBvhTriangleMeshShape';
+          break;
+
+        case 'convex':
+          className = 'btConvexTriangleMeshShape';
+          break;
+
+        default:
+          throw new Error('You must supply a valid mesh type!');
+      }
+
+      mesh = new Ammo.btTriangleMesh(true, true);
+
+      for (i = 0; i < shape.triangles.length; i += 3) {
+        this.tmpVec[0].setX(shape.triangles[i * 9 + 0]);
+        this.tmpVec[0].setY(shape.triangles[i * 9 + 1]);
+        this.tmpVec[0].setZ(shape.triangles[i * 9 + 2]);
+
+        this.tmpVec[1].setX(shape.triangles[i * 9 + 3]);
+        this.tmpVec[1].setY(shape.triangles[i * 9 + 4]);
+        this.tmpVec[1].setZ(shape.triangles[i * 9 + 5]);
+
+        this.tmpVec[2].setX(shape.triangles[i * 9 + 6]);
+        this.tmpVec[2].setY(shape.triangles[i * 9 + 7]);
+        this.tmpVec[2].setZ(shape.triangles[i * 9 + 8]);
+
+        mesh.addTriangle(this.tmpVec[0], this.tmpVec[1], this.tmpVec[2], true);
+      }
+
+      var shape = new Ammo[className](mesh, true, true);
+
+      return shape;
+    },
+
     _createShape: function(shape) {
       var colShape;
       switch(shape.shape) {
@@ -215,10 +241,58 @@ define([], function() {
       case 'compound':
         colShape = this._createCompoundShape(shape);
         break;
+      case 'convex_triangle_mesh':
+        colShape = this._createTriangleMeshShape(shape, 'convex');
+        break;
+      case 'bvh_triangle_mesh':
+        colShape = this._createTriangleMeshShape(shape, 'bvh');
+        break;
       default:
         return console.error('Unknown shape: ' + shape.shape);
       }
       return colShape;
+    },
+
+    Broadphase_aabbTest: function(descriptor, fn) {
+      var that = this;
+
+      if (!this.aabbCallback) {
+        this.aabbCallback = new Ammo.ConcreteBroadphaseAabbCallback();
+        this.aabbCallback.bodies = [];
+
+        (function() {
+          Ammo.customizeVTable(that.aabbCallback, [{
+            original: Ammo.ConcreteBroadphaseAabbCallback.prototype.process,
+            replacement: function(thisPtr, proxyPtr) {
+              var proxy = Ammo.wrapPointer(proxyPtr, Ammo.btBroadphaseProxy);
+              var clientObject = Ammo.wrapPointer(proxy.get_m_clientObject(), Ammo.btRigidBody);
+              var _this = Ammo.wrapPointer(thisPtr, Ammo.ConcreteBroadphaseAabbCallback);
+
+              if (clientObject.id) {
+                _this.bodies.push(clientObject.id);
+              }
+
+              return true;
+            }
+          }]);
+        })();
+      }
+
+      this.tmpVec[0].setX(descriptor.min.x);
+      this.tmpVec[0].setY(descriptor.min.y);
+      this.tmpVec[0].setZ(descriptor.min.z);
+
+      this.tmpVec[1].setX(descriptor.max.x);
+      this.tmpVec[1].setY(descriptor.max.y);
+      this.tmpVec[1].setZ(descriptor.max.z);
+
+      this.aabbCallback.bodies = [];
+      this.dynamicsWorld
+        .getBroadphase()
+        .aabbTest(this.tmpVec[0], this.tmpVec[1],
+          this.aabbCallback);
+
+      fn(this.aabbCallback.bodies);
     },
 
     Vehicle_create: function(descriptor, fn) {
@@ -264,6 +338,7 @@ define([], function() {
 
       this.dynamicsWorld.addVehicle(vehicle);
       var idx = this.vehicles.push(vehicle) - 1;
+      vehicle.id = idx;
 
       if (typeof fn === 'function') {
         fn(idx);
@@ -395,6 +470,10 @@ define([], function() {
 
       colShape = this._createShape(descriptor.shape);
 
+      if (!colShape) {
+        throw('Invalid collision shape!');
+      }
+
       if (isDynamic) {
         colShape.calculateLocalInertia(descriptor.mass,localInertia);
       }
@@ -418,6 +497,7 @@ define([], function() {
       this.dynamicsWorld.addRigidBody(body);
 
       var idx = this.bodies.push(body) - 1;
+      body.id = idx;
 
       if (typeof fn === 'function') {
         fn(idx);

@@ -100,7 +100,17 @@ define([], function() {
   };
 
   AmmoRigidBody.prototype.setObject = function(object) {
+    var topParent;
+
     this.object = object;
+
+    topParent = object;
+
+    while (topParent.parent) {
+      topParent = topParent.parent;
+    }
+
+    topParent.add(object);
   };
 
   return AmmoRigidBody;

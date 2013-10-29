@@ -1,4 +1,4 @@
-define([ ], function() {
+define([ ],function() {
   function AmmoVehicle(proxy, vehicleId) {
     this.proxy = proxy;
     this.vehicleId = vehicleId;
@@ -71,7 +71,17 @@ define([ ], function() {
   };
 
   AmmoVehicle.prototype.addWheelObject = function(wheelIndex, object) {
+    var topParent = object;
+    
     this.wheelObjects[wheelIndex] = object;
+
+    topParent = object;
+
+    while (topParent.parent) {
+      topParent = topParent.parent;
+    }
+
+    topParent.add(object); 
   };
 
   AmmoVehicle.prototype.update = function() {
