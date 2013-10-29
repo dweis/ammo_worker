@@ -33,28 +33,40 @@
 
     SimpleDemo.prototype._createTriangleMesh = function(material) {
       var o = new THREE.Object3D();
-      var geometry = new THREE.SphereGeometry(2);
+      var geometry;
+      switch (Math.floor(Math.random() * 3)) {
+        case 0:
+          geometry = new THREE.SphereGeometry(2);
+          break;
+        case 1:
+          geometry = new THREE.CubeGeometry(4, 4, 4);
+          break;
+        case 2:
+          geometry = new THREE.CylinderGeometry(2, 2, 4);
+          break;
+      }
+      var geometry 
       var mesh = new THREE.Mesh(geometry, material)
 
       o.add(mesh);
 
       var face;
-      var triangles = [];
+      var triangles = new Float64Array(geometry.faces.length * 9);
 
       for (var faceIdx in geometry.faces) {
         face = geometry.faces[faceIdx];
 
-        triangles.push(geometry.vertices[face.a].x);
-        triangles.push(geometry.vertices[face.a].y);
-        triangles.push(geometry.vertices[face.a].z);
+        triangles[faceIdx * 9 + 0] = geometry.vertices[face.a].x;
+        triangles[faceIdx * 9 + 1] = geometry.vertices[face.a].y;
+        triangles[faceIdx * 9 + 2] = geometry.vertices[face.a].z;
 
-        triangles.push(geometry.vertices[face.b].x);
-        triangles.push(geometry.vertices[face.b].y);
-        triangles.push(geometry.vertices[face.b].z);
+        triangles[faceIdx * 9 + 3] = geometry.vertices[face.b].x;
+        triangles[faceIdx * 9 + 4] = geometry.vertices[face.b].y;
+        triangles[faceIdx * 9 + 5] = geometry.vertices[face.b].z;
 
-        triangles.push(geometry.vertices[face.c].x);
-        triangles.push(geometry.vertices[face.c].y);
-        triangles.push(geometry.vertices[face.c].z);
+        triangles[faceIdx * 9 + 6] = geometry.vertices[face.c].x;
+        triangles[faceIdx * 9 + 7] = geometry.vertices[face.c].y;
+        triangles[faceIdx * 9 + 8] = geometry.vertices[face.c].z;
       }
 
       o.position.x = (Math.random() * 30) - 15;
