@@ -2594,6 +2594,8 @@ define('ammo_worker_api',[], function() {
 
   AmmoWorkerAPI.prototype = {
     init: function() {
+      var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
+
       //import Scripts('./js/ammo.js');
       importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
@@ -2621,29 +2623,20 @@ define('ammo_worker_api',[], function() {
       this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(this.dispatcher,
           this.overlappingPairCache, this.solver, this.collisionConfiguration);
 
-      this.fire('ready');
-    },
-
-    startSimulation: function() {
-      var that = this,
-          bufferSize = (this.maxBodies * 7 * 8) +
-                       (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
-
       this.buffers = [
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize)
       ];
 
-      var last = Date.now();
+      this.fire('ready');
+    },
+
+    startSimulation: function() {
+      var that = this, last = Date.now();
 
       this.simulationTimerId = setInterval(function() {
-        var vehicle,
-            update,
-            i,
-            j,
-            pos,
-            now = Date.now(),
+        var vehicle, update, i, j, pos, now = Date.now(),
             delta = (now - last) / 1000;
 
         last = now;

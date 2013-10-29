@@ -58,12 +58,7 @@ define([], function() {
       var that = this, last = Date.now();
 
       this.simulationTimerId = setInterval(function() {
-        var vehicle,
-            update,
-            i,
-            j,
-            pos,
-            now = Date.now(),
+        var vehicle, update, i, j, pos, now = Date.now(),
             delta = (now - last) / 1000;
 
         last = now;
