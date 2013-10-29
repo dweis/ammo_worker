@@ -3199,13 +3199,23 @@ define('ammo_rigid_body',[], function() {
   };
 
   AmmoRigidBody.prototype.setObject = function(object) {
+    var topParent;
+
     this.object = object;
+
+    topParent = object;
+
+    while (topParent.parent) {
+      topParent = topParent.parent;
+    }
+
+    topParent.add(object);
   };
 
   return AmmoRigidBody;
 });
 
-define('ammo_vehicle',[ ], function() {
+define('ammo_vehicle',[ ],function() {
   function AmmoVehicle(proxy, vehicleId) {
     this.proxy = proxy;
     this.vehicleId = vehicleId;
@@ -3278,7 +3288,17 @@ define('ammo_vehicle',[ ], function() {
   };
 
   AmmoVehicle.prototype.addWheelObject = function(wheelIndex, object) {
+    var topParent = object;
+    
     this.wheelObjects[wheelIndex] = object;
+
+    topParent = object;
+
+    while (topParent.parent) {
+      topParent = topParent.parent;
+    }
+
+    topParent.add(object); 
   };
 
   AmmoVehicle.prototype.update = function() {
