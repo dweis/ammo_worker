@@ -25,7 +25,7 @@
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
       this.bodies = [];
-      for (var i = 0; i < 25; i++) {
+      for (var i = 0; i < 100; i++) {
         var o = this._createTriangleMesh(material);
       }
     };
@@ -41,16 +41,16 @@
 
       switch (Math.floor(Math.random() * 4)) {
         case 0:
-        geometry = new THREE.TorusGeometry(2, 1, 8, 6);
+          geometry = new THREE.TorusGeometry(2, 1, 8, 6);
           break;
         case 1:
-          geometry = new THREE.CubeGeometry(4, 4, 4);
+          geometry = new THREE.CubeGeometry(4, 4, 4, 12, 12, 12);
           break;
         case 2:
-          geometry = new THREE.CylinderGeometry(2, 2, 4);
+          geometry = new THREE.CylinderGeometry(2, 2, 4, 10, 10);
           break;
         case 3:
-          geometry = new THREE.SphereGeometry(2);
+          geometry = new THREE.SphereGeometry(2, 12, 12);
           break;
       }
 
