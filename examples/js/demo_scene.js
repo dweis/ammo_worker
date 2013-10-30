@@ -3,6 +3,10 @@ var DemoScene = function() {
 
 DemoScene.prototype.init = function() {
   this._initProxy();
+  /*
+  this.proxy.setStep(1/120);
+  this.proxy.setIterations(10);
+  */
 
   window.addEventListener('blur', function() { 
     this.proxy.stopSimulation();
@@ -74,7 +78,7 @@ DemoScene.prototype._initScene = function() {
     color: 0x666666
   });
 
-  var ground = new THREE.Mesh(new THREE.CubeGeometry(1000,0.001, 1000),groundMaterial); 
+  var ground = new THREE.Mesh(new THREE.CubeGeometry(1000,0.01, 1000),groundMaterial); 
   //ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
   ground.receiveShadow = true;
   scene.add(ground);

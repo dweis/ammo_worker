@@ -165,6 +165,25 @@ define([], function() {
       return compound;
     },
 
+    _createConvexHullMeshShape: function(shape) {
+      var colShape;
+
+      if (!shape.vertices) {
+        throw new Error('You must supply a list of vertices!');
+      }
+
+      colShape = new Ammo.btConvexHullShape();
+
+      for (var i = 0; i < shape.vertices.length/3; i+=3) {
+        this.tmpVec[0].setX(shape.vertices[i*3+0]);
+        this.tmpVec[0].setY(shape.vertices[i*3+1]);
+        this.tmpVec[0].setZ(shape.vertices[i*3+2]);
+        colShape.addPoint(this.tmpVec[0]); 
+      }
+
+      return colShape;
+    },
+
     _createTriangleMeshShape: function(shape, type) {
       var i, mesh, className;
 
@@ -187,7 +206,7 @@ define([], function() {
 
       mesh = new Ammo.btTriangleMesh(true, true);
 
-      for (i = 0; i < shape.triangles.length; i += 3) {
+      for (i = 0; i < shape.triangles.length/9; i += 3) {
         this.tmpVec[0].setX(shape.triangles[i * 9 + 0]);
         this.tmpVec[0].setY(shape.triangles[i * 9 + 1]);
         this.tmpVec[0].setZ(shape.triangles[i * 9 + 2]);
@@ -203,9 +222,7 @@ define([], function() {
         mesh.addTriangle(this.tmpVec[0], this.tmpVec[1], this.tmpVec[2], true);
       }
 
-      var shape = new Ammo[className](mesh, true, true);
-
-      return shape;
+      return new Ammo[className](mesh, true, true);
     },
 
     _createShape: function(shape) {
@@ -240,6 +257,9 @@ define([], function() {
         break;
       case 'compound':
         colShape = this._createCompoundShape(shape);
+        break;
+      case 'convex_hull_mesh':
+        colShape = this._createConvexHullMeshShape(shape);
         break;
       case 'convex_triangle_mesh':
         colShape = this._createTriangleMeshShape(shape, 'convex');

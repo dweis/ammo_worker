@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Triangle Mesh Test</title>
+  <title>Convex Hull Mesh Test</title>
   <style>
   html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
   </style>
@@ -25,7 +25,7 @@
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
       this.bodies = [];
-      for (var i = 0; i < 5; i++) {
+      for (var i = 0; i < 25; i++) {
         var o = this._createTriangleMesh(material);
       }
     };
@@ -35,19 +35,22 @@
           geometry,
           mesh,
           face,
-          triangles,
+          vertices,
           scale = new THREE.Vector3(),
           tmpVector3 = new THREE.Vector3();
 
-      switch (Math.floor(Math.random() * 3)) {
+      switch (Math.floor(Math.random() * 4)) {
         case 0:
-          geometry = new THREE.SphereGeometry(2);
+        geometry = new THREE.TorusGeometry(2, 1, 8, 6);
           break;
         case 1:
           geometry = new THREE.CubeGeometry(4, 4, 4);
           break;
         case 2:
           geometry = new THREE.CylinderGeometry(2, 2, 4);
+          break;
+        case 3:
+          geometry = new THREE.SphereGeometry(2);
           break;
       }
 
@@ -57,43 +60,27 @@
       o.add(mesh);
       this.scene.add(o);
 
-      triangles = new Float64Array(geometry.faces.length * 9);
+      vertices = new Float64Array(geometry.vertices.length * 3);
 
       this.scene.updateMatrixWorld();
       scale.getScaleFromMatrix(mesh.matrixWorld);
 
-      for (var faceIdx in geometry.faces) {
-        face = geometry.faces[faceIdx];
-
-        tmpVector3.copy(geometry.vertices[face.a]);
+      for (var vertexIdx in geometry.vertices) {
+        tmpVector3.copy(geometry.vertices[vertexIdx]);
         tmpVector3.multiply(scale);
 
-        triangles[faceIdx * 9 + 0] = tmpVector3.x;
-        triangles[faceIdx * 9 + 1] = tmpVector3.y;
-        triangles[faceIdx * 9 + 2] = tmpVector3.z;
-
-        tmpVector3.copy(geometry.vertices[face.b]);
-        tmpVector3.multiply(scale);
-
-        triangles[faceIdx * 9 + 3] = tmpVector3.x;
-        triangles[faceIdx * 9 + 4] = tmpVector3.y;
-        triangles[faceIdx * 9 + 5] = tmpVector3.z;
-
-        tmpVector3.copy(geometry.vertices[face.c]);
-        tmpVector3.multiply(scale);
-
-        triangles[faceIdx * 9 + 6] = tmpVector3.x;
-        triangles[faceIdx * 9 + 7] = tmpVector3.y;
-        triangles[faceIdx * 9 + 8] = tmpVector3.z;
+        vertices[vertexIdx * 3 + 0] = tmpVector3.x;
+        vertices[vertexIdx * 3 + 1] = tmpVector3.y;
+        vertices[vertexIdx * 3 + 2] = tmpVector3.z;
       }
 
       o.position.x = (Math.random() * 30) - 15;
-      o.position.y = 10 + (Math.random() * 20) - 5;
+      o.position.y = 10 + (Math.random() * 40) - 5;
       o.position.z = (Math.random() * 30) - 15;
 
       this.proxy.addRigidBodyObject(o, 0.1, {
-        shape: 'convex_triangle_mesh',
-        triangles: triangles
+        shape: 'convex_hull_mesh',
+        vertices: vertices
       }).then(function(rigidBody) {
         rigidBody.setObject(o);
         this.bodies.push(rigidBody);
