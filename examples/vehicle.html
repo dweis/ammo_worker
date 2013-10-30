@@ -151,6 +151,9 @@
               wheel = new THREE.Object3D();
               cylinder = new THREE.Mesh(new THREE.CylinderGeometry(config.wheelsRadius, 
                   config.wheelsRadius, config.wheelsRadius/3), material);
+              cylinder.add(
+                new THREE.Mesh(new THREE.CylinderGeometry(config.wheelsRadius * 0.5, 
+                  config.wheelsRadius* 0.5, config.wheelsRadius/2), material));
               cylinder.quaternion.setFromEuler(euler);
               wheel.wheelIndex = wheelIndex;
               this.wheels[wheelIndex] = wheel;

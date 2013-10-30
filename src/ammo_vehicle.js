@@ -1,4 +1,7 @@
 define([ ],function() {
+  var tmpVector3 = new THREE.Vector3();
+  var tmpQuaternion = new THREE.Quaternion();
+
   function AmmoVehicle(proxy, vehicleId) {
     this.proxy = proxy;
     this.vehicleId = vehicleId;
@@ -71,17 +74,12 @@ define([ ],function() {
   };
 
   AmmoVehicle.prototype.addWheelObject = function(wheelIndex, object) {
-    var topParent = object;
-    
+    object.updateMatrixWorld();
+    object.originalScale = new THREE.Vector3();
+    object.originalScale.getScaleFromMatrix(object.matrixWorld);
+    object.matrixAutoUpdate = false;
+
     this.wheelObjects[wheelIndex] = object;
-
-    topParent = object;
-
-    while (topParent.parent) {
-      topParent = topParent.parent;
-    }
-
-    topParent.add(object); 
   };
 
   AmmoVehicle.prototype.update = function() {
@@ -98,16 +96,17 @@ define([ ],function() {
     if (data) {
       pos = this.proxy.getWheelOffset(this.vehicleId, wheelIndex);
 
-      position = object.position;
-      quaternion = object.quaternion;  
+      tmpVector3.x = this.proxy.data[pos + 0];
+      tmpVector3.y = this.proxy.data[pos + 1];
+      tmpVector3.z = this.proxy.data[pos + 2];
+      tmpQuaternion.x = this.proxy.data[pos + 3];
+      tmpQuaternion.y = this.proxy.data[pos + 4];
+      tmpQuaternion.z = this.proxy.data[pos + 5];
+      tmpQuaternion.w = this.proxy.data[pos + 6];
 
-      position.x = data[pos + 0];
-      position.y = data[pos + 1];
-      position.z = data[pos + 2];
-      quaternion.x = data[pos + 3];
-      quaternion.y = data[pos + 4];
-      quaternion.z = data[pos + 5];
-      quaternion.w = data[pos + 6];
+      object.matrixWorld.makeRotationFromQuaternion(tmpQuaternion);
+      object.matrixWorld.scale(object.originalScale);
+      object.matrixWorld.setPosition(tmpVector3);
     }
   };
 
