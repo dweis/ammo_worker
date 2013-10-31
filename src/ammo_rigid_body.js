@@ -2,7 +2,6 @@ define([], function() {
   function AmmoRigidBody(proxy, bodyId) {
     this.proxy = proxy;
     this.bodyId = bodyId;
-    this.object = undefined;
     this.binding = undefined;
   } 
 
@@ -84,7 +83,13 @@ define([], function() {
   };
 
   AmmoRigidBody.prototype.destroy = function() {
-    return this.proxy.execute('RigidBody_destroy', { bodyId: this.bodyId });
+    var deferred = this.proxy.execute('RigidBody_destroy', { bodyId: this.bodyId });
+
+    this.bodyId = undefined;
+
+    this.binding.destroy();
+
+    return deferred;
   };
 
   return AmmoRigidBody;

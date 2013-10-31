@@ -59,21 +59,32 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
     });
   };
 
-  AmmoProxy.prototype.addVehicle = function(descriptor) {
+  AmmoProxy.prototype.createVehicle = function(rigidBody, tuning) {
+    var descriptor = {
+      bodyId: rigidBody instanceof AmmoRigidBody ? rigidBody.bodyId : rigidBody,
+      tuning: tuning
+    };
+
     var deferred = when.defer();
 
     this.worker.Vehicle_create(descriptor).then(_.bind(function(vehicleId) {
       var proxy = this;
       setTimeout(function() {
-        deferred.resolve(new AmmoVehicle(proxy, vehicleId));
+        deferred.resolve(new AmmoVehicle(proxy, vehicleId, rigidBody));
       }, 0);
     }, this));
 
     return deferred.promise;
   };
 
-  AmmoProxy.prototype.createRigidBody = function(descriptor) {
-    var deferred = when.defer();
+  AmmoProxy.prototype.createRigidBody = function(shape, mass, position, quaternion) {
+    var descriptor = {
+        shape: shape,
+        mass: mass,
+        position: position,
+        quaternion: quaternion
+      },
+      deferred = when.defer();
 
     this.worker.RigidBody_create(descriptor).then(_.bind(function(bodyId) {
       var proxy = this;

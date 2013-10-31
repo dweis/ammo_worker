@@ -3201,7 +3201,6 @@ define('ammo_rigid_body',[], function() {
   function AmmoRigidBody(proxy, bodyId) {
     this.proxy = proxy;
     this.bodyId = bodyId;
-    this.object = undefined;
     this.binding = undefined;
   } 
 
@@ -3283,17 +3282,24 @@ define('ammo_rigid_body',[], function() {
   };
 
   AmmoRigidBody.prototype.destroy = function() {
-    return this.proxy.execute('RigidBody_destroy', { bodyId: this.bodyId });
+    var deferred = this.proxy.execute('RigidBody_destroy', { bodyId: this.bodyId });
+
+    this.bodyId = undefined;
+
+    this.binding.destroy();
+
+    return deferred;
   };
 
   return AmmoRigidBody;
 });
 
-define('ammo_vehicle',[],function() {
-  function AmmoVehicle(proxy, vehicleId) {
+define('ammo_vehicle',[ 'underscore' ],function(_) {
+  function AmmoVehicle(proxy, vehicleId, rigidBody) {
     this.proxy = proxy;
     this.vehicleId = vehicleId;
     this.wheelBindings = [];
+    this.rigidBody = rigidBody;
   } 
 
   AmmoVehicle.prototype.addWheel = function(connectionPoint, wheelDirection, wheelAxle, 
@@ -3358,49 +3364,29 @@ define('ammo_vehicle',[],function() {
       vehicleId: this.vehicleId
     };
 
+    _.each(this.wheelBindings, function(binding) {
+      binding.destroy();
+    });
+
+    this.rigidBody.destroy();
+
     return this.proxy.execute('Vehicle_destroy', descriptor);
   };
 
   AmmoVehicle.prototype.addWheelObject = function(wheelIndex, object) {
-    // object.updateMatrixWorld();
-    // object.originalScale = new THREE.Vector3();
-    // object.originalScale.getScaleFromMatrix(object.matrixWorld);
-    // object.matrixAutoUpdate = false;
     this.wheelBindings[wheelIndex] = this.proxy.adapter.createBinding(object, 
         this.proxy.getWheelOffset(this.vehicleId, wheelIndex));  
   };
 
   AmmoVehicle.prototype.update = function() {
-    for (var i in this.wheelBindings) {
-      if (this.wheelBindings.hasOwnProperty(i)) {
-        this.wheelBindings[i].update();
-        //this._updateWheel(i);//this.wheelObjects[i], i);  
-      }
+    if (this.rigidBody) {
+      this.rigidBody.update();
     }
+
+    _.each(this.wheelBindings, function(binding) {
+      binding.update();
+    });
   };
-
-  //AmmoVehicle.prototype._updateWheel = function(wheelIndex) {
-    //this.wheelBindings[wheelIndex].update();
-    /*
-    var pos;
-
-    if (this.proxy && this.proxy.data) {
-      pos = this.proxy.getWheelOffset(this.vehicleId, wheelIndex);
-
-      tmpVector3.x = this.proxy.data[pos + 0];
-      tmpVector3.y = this.proxy.data[pos + 1];
-      tmpVector3.z = this.proxy.data[pos + 2];
-      tmpQuaternion.x = this.proxy.data[pos + 3];
-      tmpQuaternion.y = this.proxy.data[pos + 4];
-      tmpQuaternion.z = this.proxy.data[pos + 5];
-      tmpQuaternion.w = this.proxy.data[pos + 6];
-
-      object.matrixWorld.makeRotationFromQuaternion(tmpQuaternion);
-      object.matrixWorld.scale(object.originalScale);
-      object.matrixWorld.setPosition(tmpVector3);
-    }
-    */
-  //};
 
   return AmmoVehicle;
 });
@@ -3434,6 +3420,12 @@ define('three/three_binding',[], function() {
       this.object.matrixWorld.scale(this.originalScale);
       this.object.matrixWorld.setPosition(tmpVector3);
     }
+
+  };
+
+  THREEBinding.prototype.destroy = function() {
+    this.object = undefined;
+    this.offset = undefined;
   };
 
   return THREEBinding;
@@ -3453,23 +3445,19 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
       shape = this._getShapeJSON(object);
     }
 
-    var descriptor = {
-      mass: mass,
-      shape: shape,
-      position: {
+    var position = {
         x: object.position.x,
         y: object.position.y,
         z: object.position.z
       },
-      quaternion: {
+      quaternion = {
         x: object.quaternion.x,
         y: object.quaternion.y,
         z: object.quaternion.z,
         w: object.quaternion.w
-      }
-    };
+      };
 
-    var deferred = this.proxy.createRigidBody(descriptor);
+    var deferred = this.proxy.createRigidBody(shape, mass, position, quaternion);
 
     deferred.then(_.bind(function(rigidBody) {
       rigidBody.binding = this.createBinding(object, this.proxy.getRigidBodyOffset(rigidBody.bodyId));
@@ -3626,21 +3614,32 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     });
   };
 
-  AmmoProxy.prototype.addVehicle = function(descriptor) {
+  AmmoProxy.prototype.createVehicle = function(rigidBody, tuning) {
+    var descriptor = {
+      bodyId: rigidBody instanceof AmmoRigidBody ? rigidBody.bodyId : rigidBody,
+      tuning: tuning
+    };
+
     var deferred = when.defer();
 
     this.worker.Vehicle_create(descriptor).then(_.bind(function(vehicleId) {
       var proxy = this;
       setTimeout(function() {
-        deferred.resolve(new AmmoVehicle(proxy, vehicleId));
+        deferred.resolve(new AmmoVehicle(proxy, vehicleId, rigidBody));
       }, 0);
     }, this));
 
     return deferred.promise;
   };
 
-  AmmoProxy.prototype.createRigidBody = function(descriptor) {
-    var deferred = when.defer();
+  AmmoProxy.prototype.createRigidBody = function(shape, mass, position, quaternion) {
+    var descriptor = {
+        shape: shape,
+        mass: mass,
+        position: position,
+        quaternion: quaternion
+      },
+      deferred = when.defer();
 
     this.worker.RigidBody_create(descriptor).then(_.bind(function(bodyId) {
       var proxy = this;

@@ -12,23 +12,19 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
       shape = this._getShapeJSON(object);
     }
 
-    var descriptor = {
-      mass: mass,
-      shape: shape,
-      position: {
+    var position = {
         x: object.position.x,
         y: object.position.y,
         z: object.position.z
       },
-      quaternion: {
+      quaternion = {
         x: object.quaternion.x,
         y: object.quaternion.y,
         z: object.quaternion.z,
         w: object.quaternion.w
-      }
-    };
+      };
 
-    var deferred = this.proxy.createRigidBody(descriptor);
+    var deferred = this.proxy.createRigidBody(shape, mass, position, quaternion);
 
     deferred.then(_.bind(function(rigidBody) {
       rigidBody.binding = this.createBinding(object, this.proxy.getRigidBodyOffset(rigidBody.bodyId));

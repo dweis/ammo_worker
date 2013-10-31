@@ -27,6 +27,12 @@ define([], function() {
       this.object.matrixWorld.scale(this.originalScale);
       this.object.matrixWorld.setPosition(tmpVector3);
     }
+
+  };
+
+  THREEBinding.prototype.destroy = function() {
+    this.object = undefined;
+    this.offset = undefined;
   };
 
   return THREEBinding;

@@ -122,12 +122,7 @@
       };
 
       this.proxy.createRigidBodyFromObject(o, 2000).then(function(rigidBody) {
-        this.body = rigidBody;
-        
-        that.proxy.addVehicle({
-          bodyId: rigidBody.bodyId,
-          tuning: tuning
-        }).then(function(vehicle) {
+        that.proxy.createVehicle(rigidBody, tuning).then(function(vehicle) {
           var wheel, cylinder, euler = new THREE.Euler(),
               wheelDirection = { x: 0, y: -1, z: 0 },
               wheelAxle = { x: -1, y: 0, z: 0 };
@@ -173,7 +168,10 @@
               });
 
               vehicle.addWheelObject(wheelIndex, wheel);
-            }.bind(this));
+            }.bind(this)),
+            function(err) {
+              console.error(err);  
+            }
           }
         }.bind(this));
       }.bind(this));
@@ -181,10 +179,6 @@
 
     VehicleTest.prototype.updateBody = function() {
       var bodyIndex, pos;
-
-      if (this.body) {
-        this.body.update();
-      }
 
       if (this.vehicle) {
        this.vehicle.update();

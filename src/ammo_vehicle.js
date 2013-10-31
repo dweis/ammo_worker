@@ -1,8 +1,9 @@
-define([],function() {
-  function AmmoVehicle(proxy, vehicleId) {
+define([ 'underscore' ],function(_) {
+  function AmmoVehicle(proxy, vehicleId, rigidBody) {
     this.proxy = proxy;
     this.vehicleId = vehicleId;
     this.wheelBindings = [];
+    this.rigidBody = rigidBody;
   } 
 
   AmmoVehicle.prototype.addWheel = function(connectionPoint, wheelDirection, wheelAxle, 
@@ -67,49 +68,29 @@ define([],function() {
       vehicleId: this.vehicleId
     };
 
+    _.each(this.wheelBindings, function(binding) {
+      binding.destroy();
+    });
+
+    this.rigidBody.destroy();
+
     return this.proxy.execute('Vehicle_destroy', descriptor);
   };
 
   AmmoVehicle.prototype.addWheelObject = function(wheelIndex, object) {
-    // object.updateMatrixWorld();
-    // object.originalScale = new THREE.Vector3();
-    // object.originalScale.getScaleFromMatrix(object.matrixWorld);
-    // object.matrixAutoUpdate = false;
     this.wheelBindings[wheelIndex] = this.proxy.adapter.createBinding(object, 
         this.proxy.getWheelOffset(this.vehicleId, wheelIndex));  
   };
 
   AmmoVehicle.prototype.update = function() {
-    for (var i in this.wheelBindings) {
-      if (this.wheelBindings.hasOwnProperty(i)) {
-        this.wheelBindings[i].update();
-        //this._updateWheel(i);//this.wheelObjects[i], i);  
-      }
+    if (this.rigidBody) {
+      this.rigidBody.update();
     }
+
+    _.each(this.wheelBindings, function(binding) {
+      binding.update();
+    });
   };
-
-  //AmmoVehicle.prototype._updateWheel = function(wheelIndex) {
-    //this.wheelBindings[wheelIndex].update();
-    /*
-    var pos;
-
-    if (this.proxy && this.proxy.data) {
-      pos = this.proxy.getWheelOffset(this.vehicleId, wheelIndex);
-
-      tmpVector3.x = this.proxy.data[pos + 0];
-      tmpVector3.y = this.proxy.data[pos + 1];
-      tmpVector3.z = this.proxy.data[pos + 2];
-      tmpQuaternion.x = this.proxy.data[pos + 3];
-      tmpQuaternion.y = this.proxy.data[pos + 4];
-      tmpQuaternion.z = this.proxy.data[pos + 5];
-      tmpQuaternion.w = this.proxy.data[pos + 6];
-
-      object.matrixWorld.makeRotationFromQuaternion(tmpQuaternion);
-      object.matrixWorld.scale(object.originalScale);
-      object.matrixWorld.setPosition(tmpVector3);
-    }
-    */
-  //};
 
   return AmmoVehicle;
 });
