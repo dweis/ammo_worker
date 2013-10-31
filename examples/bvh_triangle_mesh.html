@@ -98,11 +98,10 @@
           o.position.z = (Math.random() * 30) - 15;
           */
 
-          that.proxy.addRigidBodyObject(child, 0, {
+          that.proxy.createRigidBodyFromObject(child, 0, {
             shape: 'bvh_triangle_mesh',
             triangles: triangles
           }).then(function(rigidBody) {
-            rigidBody.setObject(child);
             this.bodies.push(rigidBody);
           }.bind(this));
             }
@@ -137,7 +136,7 @@
       o.position.y = 60 + (Math.random() * 20) - 5;
       o.position.z = (Math.random() * 100) - 50;
 
-      this.proxy.addRigidBodyObject(o, 1, {
+      this.proxy.createRigidBodyFromObject(o, 1, {
         shape: 'sphere',
         radius: 2
       }).then(function(rigidBody) {

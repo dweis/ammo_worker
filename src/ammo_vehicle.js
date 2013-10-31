@@ -1,11 +1,8 @@
-define([ ],function() {
-  var tmpVector3 = new THREE.Vector3();
-  var tmpQuaternion = new THREE.Quaternion();
-
+define([],function() {
   function AmmoVehicle(proxy, vehicleId) {
     this.proxy = proxy;
     this.vehicleId = vehicleId;
-    this.wheelObjects = [];
+    this.wheelBindings = [];
   } 
 
   AmmoVehicle.prototype.addWheel = function(connectionPoint, wheelDirection, wheelAxle, 
@@ -74,26 +71,29 @@ define([ ],function() {
   };
 
   AmmoVehicle.prototype.addWheelObject = function(wheelIndex, object) {
-    object.updateMatrixWorld();
-    object.originalScale = new THREE.Vector3();
-    object.originalScale.getScaleFromMatrix(object.matrixWorld);
-    object.matrixAutoUpdate = false;
-
-    this.wheelObjects[wheelIndex] = object;
+    // object.updateMatrixWorld();
+    // object.originalScale = new THREE.Vector3();
+    // object.originalScale.getScaleFromMatrix(object.matrixWorld);
+    // object.matrixAutoUpdate = false;
+    this.wheelBindings[wheelIndex] = this.proxy.adapter.createBinding(object, 
+        this.proxy.getWheelOffset(this.vehicleId, wheelIndex));  
   };
 
   AmmoVehicle.prototype.update = function() {
-    for (var i in this.wheelObjects) {
-      if (this.wheelObjects.hasOwnProperty(i)) {
-        this._updateWheel(this.wheelObjects[i], i);  
+    for (var i in this.wheelBindings) {
+      if (this.wheelBindings.hasOwnProperty(i)) {
+        this.wheelBindings[i].update();
+        //this._updateWheel(i);//this.wheelObjects[i], i);  
       }
     }
   };
 
-  AmmoVehicle.prototype._updateWheel = function(object, wheelIndex) {
-    var position, quaternion, pos, data = this.proxy.data;
+  //AmmoVehicle.prototype._updateWheel = function(wheelIndex) {
+    //this.wheelBindings[wheelIndex].update();
+    /*
+    var pos;
 
-    if (data) {
+    if (this.proxy && this.proxy.data) {
       pos = this.proxy.getWheelOffset(this.vehicleId, wheelIndex);
 
       tmpVector3.x = this.proxy.data[pos + 0];
@@ -108,7 +108,8 @@ define([ ],function() {
       object.matrixWorld.scale(object.originalScale);
       object.matrixWorld.setPosition(tmpVector3);
     }
-  };
+    */
+  //};
 
   return AmmoVehicle;
 });

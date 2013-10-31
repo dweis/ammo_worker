@@ -121,10 +121,9 @@
         frictionSlip: config.frictionSlip
       };
 
-      this.proxy.addRigidBodyObject(o, 2000).then(function(rigidBody) {
+      this.proxy.createRigidBodyFromObject(o, 2000).then(function(rigidBody) {
         this.body = rigidBody;
-        rigidBody.setObject(o);
-
+        
         that.proxy.addVehicle({
           bodyId: rigidBody.bodyId,
           tuning: tuning
@@ -188,7 +187,7 @@
       }
 
       if (this.vehicle) {
-        this.vehicle.update();
+       this.vehicle.update();
       }
     };
 
