@@ -1,5 +1,7 @@
-define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 'three/three_adapter' ], 
-      function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, THREEAdapter) {
+define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 
+         'ammo_point2point_constraint', 'three/three_adapter' ], 
+      function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
+        THREEAdapter) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
@@ -95,6 +97,26 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
 
     return deferred.promise;
   };
+
+  AmmoProxy.prototype.createPoint2PointConstraint = function(bodyA, bodyB, pivotA, pivotB) {
+    var descriptor = {
+        rigidBodyIdA: bodyA.bodyId,
+        rigidBodyIdB: bodyB.bodyId,
+
+        pivotA: { x: pivotA.x, y: pivotA.y, z: pivotA.z },
+        pivotB: { x: pivotB.x, y: pivotB.y, z: pivotB.z }
+      },
+      deferred = when.defer();
+
+    this.execute('Point2PointContraint_create', descriptor).then(_.bind(function(constraintId) {
+      var proxy = this;
+      setTimeout(function() {
+        deferred.resolve(new AmmoPoint2PointConstraint(proxy, constraintId));
+      }, 0);
+    },this));
+
+    return deferred.promise;
+  }
 
   AmmoProxy.prototype.update = function(data) {
     if (this.next) {

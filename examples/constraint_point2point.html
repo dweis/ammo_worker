@@ -35,23 +35,7 @@
 
         this.bodies.forEach(function(body) {
           if (last) {
-            this.proxy.execute('Point2PointContraint_create', {
-              rigidBodyIdA: body.bodyId,
-              rigidBodyIdB: last.bodyId,
-
-              pivotA: { x: 0, y: -2, z: 0 },
-              pivotB: { x: 0, y: 2, z: 0 }
-
-
-              /*
-              pivotA: { x: body.binding.object.position.x, 
-                        y: body.binding.object.position.y, 
-                        z: body.binding.object.position.z },
-              pivotB: { x: last.binding.object.position.x, 
-                        y: last.binding.object.position.y, 
-                        z: last.binding.object.position.z }
-                        */
-            });         
+            this.proxy.createPoint2PointConstraint(body, last, { x: 0, y: -2, z: 0 }, { x: 0, y: 2, z: 0 });
           }
 
           last = body;

@@ -3448,6 +3448,15 @@ define('ammo_vehicle',[ 'underscore' ],function(_) {
   return AmmoVehicle;
 });
 
+define('ammo_point2point_constraint',[], function() {
+  function AmmoPoint2PointConstraint(proxy, constraintId) {
+    this.proxy = proxy;
+    this.constraintId = constraintId;
+  } 
+
+  return AmmoPoint2PointConstraint;
+});
+
 define('three/three_binding',[], function() {
   var tmpQuaternion = new THREE.Quaternion(),
       tmpVector3 = new THREE.Vector3();
@@ -3610,8 +3619,10 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
   return THREEAdapter;
 });
 
-define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 'three/three_adapter' ], 
-      function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, THREEAdapter) {
+define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 
+         'ammo_point2point_constraint', 'three/three_adapter' ], 
+      function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
+        THREEAdapter) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
@@ -3707,6 +3718,26 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
 
     return deferred.promise;
   };
+
+  AmmoProxy.prototype.createPoint2PointConstraint = function(bodyA, bodyB, pivotA, pivotB) {
+    var descriptor = {
+        rigidBodyIdA: bodyA.bodyId,
+        rigidBodyIdB: bodyB.bodyId,
+
+        pivotA: { x: pivotA.x, y: pivotA.y, z: pivotA.z },
+        pivotB: { x: pivotB.x, y: pivotB.y, z: pivotB.z }
+      },
+      deferred = when.defer();
+
+    this.execute('Point2PointContraint_create', descriptor).then(_.bind(function(constraintId) {
+      var proxy = this;
+      setTimeout(function() {
+        deferred.resolve(new AmmoPoint2PointConstraint(proxy, constraintId));
+      }, 0);
+    },this));
+
+    return deferred.promise;
+  }
 
   AmmoProxy.prototype.update = function(data) {
     if (this.next) {
