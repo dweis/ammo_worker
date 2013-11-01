@@ -2602,6 +2602,7 @@ define('ammo_worker_api',[], function() {
       this.tmpVec = [
         new Ammo.btVector3(),
         new Ammo.btVector3(),
+        new Ammo.btVector3(),
         new Ammo.btVector3()
       ];
 
@@ -3085,6 +3086,43 @@ define('ammo_worker_api',[], function() {
       }
     },
 
+    HingeContraint_create: function(descriptor, fn) {
+      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+          rigidBodyB,
+          contraint,
+          id;
+
+      if (rigidBodyA) {
+        this.tmpVec[0].setX(descriptor.pivotA.x);
+        this.tmpVec[0].setY(descriptor.pivotA.y);
+        this.tmpVec[0].setZ(descriptor.pivotA.z); 
+        this.tmpVec[1].setX(descriptor.axisA.x);
+        this.tmpVec[1].setX(descriptor.axisA.y);
+        this.tmpVec[1].setX(descriptor.axisA.z);
+
+        if (descriptor.rigidBodyIdB) {
+          rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
+          this.tmpVec[2].setX(descriptor.pivotB.x);
+          this.tmpVec[2].setY(descriptor.pivotB.y);
+          this.tmpVec[2].setZ(descriptor.pivotB.z); 
+          this.tmpVec[3].setX(descriptor.axisB.x);
+          this.tmpVec[3].setY(descriptor.axisB.y);
+          this.tmpVec[3].setZ(descriptor.axisB.z); 
+          constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
+              this.tmpVec[0], this.tmpVec[2], this.tmpVec[1], this.tmpVec[3]);
+        }
+
+        id = this.contraints.push(constraint) - 1;
+
+        this.dynamicsWorld.addConstraint(constraint);
+        constraint.enableFeedback();
+
+        if (typeof fn === 'function') {
+          fn(id);
+        }
+      }
+    },
+
     RigidBody_create: function(descriptor, fn) {
       var colShape,
           startTransform = this.tmpTrans[0],
@@ -3457,6 +3495,15 @@ define('ammo_point2point_constraint',[], function() {
   return AmmoPoint2PointConstraint;
 });
 
+define('ammo_hinge_constraint',[], function() {
+  function AmmoHingeConstraint(proxy, constraintId) {
+    this.proxy = proxy;
+    this.constraintId = constraintId;
+  } 
+
+  return AmmoHingeConstraint;
+});
+
 define('three/three_binding',[], function() {
   var tmpQuaternion = new THREE.Quaternion(),
       tmpVector3 = new THREE.Vector3();
@@ -3620,9 +3667,9 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
 });
 
 define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 
-         'ammo_point2point_constraint', 'three/three_adapter' ], 
+         'ammo_point2point_constraint', 'ammo_hinge_constraint', 'three/three_adapter' ], 
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
-        THREEAdapter) {
+        AmmoHingeConstraint, THREEAdapter) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
@@ -3733,6 +3780,27 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
       var proxy = this;
       setTimeout(function() {
         deferred.resolve(new AmmoPoint2PointConstraint(proxy, constraintId));
+      }, 0);
+    },this));
+
+    return deferred.promise;
+  }
+
+  AmmoProxy.prototype.createHingeConstraint = function(bodyA, bodyB, pivotA, pivotB, axisA, axisB) {
+    var descriptor = {
+        rigidBodyIdA: bodyA.bodyId,
+        rigidBodyIdB: bodyB.bodyId,
+        pivotA: { x: pivotA.x, y: pivotA.y, z: pivotA.z },
+        pivotB: { x: pivotB.x, y: pivotB.y, z: pivotB.z },
+        axisA: { x: axisA.x, y: axisA.y, z: axisA.y },
+        axisB: { x: axisA.x, y: axisA.y, z: axisA.y }
+      },
+      deferred = when.defer();
+
+    this.execute('HingeContraint_create', descriptor).then(_.bind(function(constraintId) {
+      var proxy = this;
+      setTimeout(function() {
+        deferred.resolve(new AmmoHingeConstraint(proxy, constraintId));
       }, 0);
     },this));
 

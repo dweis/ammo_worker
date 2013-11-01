@@ -24,11 +24,45 @@
     SimpleDemo.prototype.initDemo = function() {
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
-      this.camera.position.x = this.camera.position.z = 200;
-      this.camera.position.y = 100;
+      this.camera.position.x = this.camera.position.z = 20;
+      this.camera.position.y = 10;
 
       this.bodies = [];
-      for (var i = 0; i < 100; i++) {
+
+      var hinge, door;
+
+      hinge = new THREE.Object3D();
+
+      hinge.add(new THREE.Mesh(new THREE.CubeGeometry(0.3, 4, 0.3), material));
+      hinge.position.y = 2.01;
+      hinge.position.x = -1.4;
+      hinge.children[0].castShadow = true;
+      this.scene.add(hinge);
+
+      this.proxy.createRigidBodyFromObject(hinge, 0).then(function(rigidBody) {
+        this.bodies.push(rigidBody); 
+
+        door = new THREE.Object3D();
+        door.add(new THREE.Mesh(new THREE.CubeGeometry(2, 4, 0.3), material));
+        door.position.y = 2.01;
+        door.children[0].castShadow = true;
+        this.scene.add(door);
+
+        this.proxy.createRigidBodyFromObject(door, 4).then(function(rigidBody) {
+          this.bodies.push(rigidBody); 
+
+          this.proxy.createHingeConstraint(this.bodies[0], this.bodies[1], 
+              { x: 0, y: 0, z: 0 },  // pivotA
+              { x: 1.35, y: 0, z: 0 },   // pivotB
+              { x: 0, y: 0, z: 1 },   // axisA
+              { x: 0, y: 0, z: 1 }    // axisB
+            );
+        }.bind(this));
+      }.bind(this));
+
+
+      /*
+      for (var i = 0; i < 10; i++) {
         var o = this._createBox(material);
         this.scene.add(o);
       }
@@ -38,17 +72,23 @@
 
         this.bodies.forEach(function(body) {
           if (last) {
-            this.proxy.createPoint2PointConstraint(body, last, { x: 0, y: -2, z: 0 }, { x: 0, y: 2, z: 0 });
+            this.proxy.createHingeConstraint(body,
+              last, 
+              { x: -2, y: 0, z: 0 },  // pivotA
+              { x: 2, y: 0, z: 0 },   // pivotB
+              { x: 0, y: 0, z: 1 },   // axisA
+              { x: 0, y: 0, z: 1 }    // axisB
+              );
           }
 
           last = body;
         }.bind(this));
       }.bind(this), 500);
+      */
     };
 
-    var y = 0;
+    /*
     SimpleDemo.prototype._createBox = function(material, last) {
-      y += 2;
       var o = new THREE.Object3D();
 
       o.add(new THREE.Mesh(new THREE.SphereGeometry(2.2), material));
@@ -66,12 +106,9 @@
         this.bodies.push(rigidBody);
       }.bind(this));
 
-      o.traverse(function(o) {
-        o.castShadow = true;
-      });
-
       return o;
     };
+    */
 
     SimpleDemo.prototype.updateBodies = function() {
       for (var i in this.bodies) {

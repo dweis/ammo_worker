@@ -24,6 +24,7 @@ define([], function() {
       this.tmpVec = [
         new Ammo.btVector3(),
         new Ammo.btVector3(),
+        new Ammo.btVector3(),
         new Ammo.btVector3()
       ];
 
@@ -494,6 +495,43 @@ define([], function() {
           constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB, this.tmpVec[0], this.tmpVec[1]);
         } else {
           constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB);
+        }
+
+        id = this.contraints.push(constraint) - 1;
+
+        this.dynamicsWorld.addConstraint(constraint);
+        constraint.enableFeedback();
+
+        if (typeof fn === 'function') {
+          fn(id);
+        }
+      }
+    },
+
+    HingeContraint_create: function(descriptor, fn) {
+      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+          rigidBodyB,
+          contraint,
+          id;
+
+      if (rigidBodyA) {
+        this.tmpVec[0].setX(descriptor.pivotA.x);
+        this.tmpVec[0].setY(descriptor.pivotA.y);
+        this.tmpVec[0].setZ(descriptor.pivotA.z); 
+        this.tmpVec[1].setX(descriptor.axisA.x);
+        this.tmpVec[1].setX(descriptor.axisA.y);
+        this.tmpVec[1].setX(descriptor.axisA.z);
+
+        if (descriptor.rigidBodyIdB) {
+          rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
+          this.tmpVec[2].setX(descriptor.pivotB.x);
+          this.tmpVec[2].setY(descriptor.pivotB.y);
+          this.tmpVec[2].setZ(descriptor.pivotB.z); 
+          this.tmpVec[3].setX(descriptor.axisB.x);
+          this.tmpVec[3].setY(descriptor.axisB.y);
+          this.tmpVec[3].setZ(descriptor.axisB.z); 
+          constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
+              this.tmpVec[0], this.tmpVec[2], this.tmpVec[1], this.tmpVec[3]);
         }
 
         id = this.contraints.push(constraint) - 1;

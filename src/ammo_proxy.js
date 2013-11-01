@@ -1,7 +1,7 @@
 define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 
-         'ammo_point2point_constraint', 'three/three_adapter' ], 
+         'ammo_point2point_constraint', 'ammo_hinge_constraint', 'three/three_adapter' ], 
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
-        THREEAdapter) {
+        AmmoHingeConstraint, THREEAdapter) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
@@ -112,6 +112,27 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
       var proxy = this;
       setTimeout(function() {
         deferred.resolve(new AmmoPoint2PointConstraint(proxy, constraintId));
+      }, 0);
+    },this));
+
+    return deferred.promise;
+  }
+
+  AmmoProxy.prototype.createHingeConstraint = function(bodyA, bodyB, pivotA, pivotB, axisA, axisB) {
+    var descriptor = {
+        rigidBodyIdA: bodyA.bodyId,
+        rigidBodyIdB: bodyB.bodyId,
+        pivotA: { x: pivotA.x, y: pivotA.y, z: pivotA.z },
+        pivotB: { x: pivotB.x, y: pivotB.y, z: pivotB.z },
+        axisA: { x: axisA.x, y: axisA.y, z: axisA.y },
+        axisB: { x: axisA.x, y: axisA.y, z: axisA.y }
+      },
+      deferred = when.defer();
+
+    this.execute('HingeContraint_create', descriptor).then(_.bind(function(constraintId) {
+      var proxy = this;
+      setTimeout(function() {
+        deferred.resolve(new AmmoHingeConstraint(proxy, constraintId));
       }, 0);
     },this));
 
