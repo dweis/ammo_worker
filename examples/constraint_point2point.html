@@ -24,8 +24,11 @@
     SimpleDemo.prototype.initDemo = function() {
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
+      this.camera.position.x = this.camera.position.z = 200;
+      this.camera.position.y = 100;
+
       this.bodies = [];
-      for (var i = 0; i < 200; i++) {
+      for (var i = 0; i < 500; i++) {
         var o = this._createBox(material);
         this.scene.add(o);
       }
