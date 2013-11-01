@@ -25,7 +25,7 @@
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
       this.bodies = [];
-      for (var i = 0; i < 50; i++) {
+      for (var i = 0; i < 200; i++) {
         var o = this._createBox(material);
         this.scene.add(o);
       }
@@ -38,8 +38,19 @@
             this.proxy.execute('Point2PointContraint_create', {
               rigidBodyIdA: body.bodyId,
               rigidBodyIdB: last.bodyId,
-              pivotA: { x: -1, y: -1, z: -1 },
-              pivotB: { x: 1, y: 1, z: 1 }
+
+              pivotA: { x: 0, y: -2, z: 0 },
+              pivotB: { x: 0, y: 2, z: 0 }
+
+
+              /*
+              pivotA: { x: body.binding.object.position.x, 
+                        y: body.binding.object.position.y, 
+                        z: body.binding.object.position.z },
+              pivotB: { x: last.binding.object.position.x, 
+                        y: last.binding.object.position.y, 
+                        z: last.binding.object.position.z }
+                        */
             });         
           }
 
@@ -48,23 +59,23 @@
       }.bind(this), 500);
     };
 
+    var y = 0;
     SimpleDemo.prototype._createBox = function(material, last) {
+      y += 2;
       var o = new THREE.Object3D();
 
-      o.add(new THREE.Mesh(new THREE.CubeGeometry(2, 2, 2), material));
+      o.add(new THREE.Mesh(new THREE.SphereGeometry(2.2), material));
 
       o.position.x = (Math.random() * 30) - 15;
-      o.position.y = 10 + (Math.random() * 20) - 10;
+      o.position.y = y;
       o.position.z = (Math.random() * 30) - 15;
 
-      this.proxy.createRigidBodyFromObject(o, 0.1, {
-        shape: 'box',
-        halfExtents: {
-          x: 1,
-          y: 1,
-          z: 1
-        }
+
+      this.proxy.createRigidBodyFromObject(o, 0.5, {
+        shape: 'sphere',
+        radius: 2
       }).then(function(rigidBody) {
+        rigidBody.setAngularFactor({ x: 0, y: 1, z: 1 });
         this.bodies.push(rigidBody);
       }.bind(this));
 

@@ -3135,7 +3135,7 @@ define('ammo_worker_api',[], function() {
       }
     },
 
-    RigidBody_applyForce: function(descriptor, fn) {
+    RigidBody_applyForce: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
       
       if (body) {
@@ -3148,13 +3148,9 @@ define('ammo_worker_api',[], function() {
 
         body.applyForce(this.tmpVec[0], this.tmpVec[1]);
       } 
-
-      if (typeof fn === 'function') {
-        fn();
-      }
     },
 
-    RigidBody_applyImpulse: function(descriptor, fn) {
+    RigidBody_applyImpulse: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
       
       if (body) {
@@ -3167,13 +3163,9 @@ define('ammo_worker_api',[], function() {
 
         body.applyImpulse(this.tmpVec[0], this.tmpVec[1]);
       } 
-
-      if (typeof fn === 'function') {
-        fn();
-      }
     },
 
-    RigidBody_applyTorque: function(descriptor, fn) {
+    RigidBody_applyTorque: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
       
       if (body) {
@@ -3183,33 +3175,43 @@ define('ammo_worker_api',[], function() {
         
         body.applyTorque(this.tmpVec[0]);
       }
-
-      if (typeof fn === 'function') {
-        fn();
-      }
     },
 
-    RigidBody_setRestitution: function(descriptor, fn) {
+    RigidBody_setRestitution: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
         body.setRestitution(descriptor.restitution);
       }
-
-      if (typeof fn === 'function') {
-        fn();
-      }
     },
 
-    RigidBody_setFriction: function(descriptor, fn) {
+    RigidBody_setFriction: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
         body.setFriction(descriptor.friction);
       }
+    },
 
-      if (typeof fn === 'function') {
-        fn();
+    RigidBody_setLinearFactor: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        this.tmpVec[0].setX(descriptor.linearFactor.x); 
+        this.tmpVec[0].setY(descriptor.linearFactor.y); 
+        this.tmpVec[0].setZ(descriptor.linearFactor.z); 
+        body.setLinearFactor(this.tmpVec[0]);
+      }
+    },
+
+    RigidBody_setAngularFactor: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        this.tmpVec[0].setX(descriptor.angularFactor.x); 
+        this.tmpVec[0].setY(descriptor.angularFactor.y); 
+        this.tmpVec[0].setZ(descriptor.angularFactor.z); 
+        body.setAngularFactor(this.tmpVec[0]);
       }
     },
 
@@ -3311,6 +3313,28 @@ define('ammo_rigid_body',[], function() {
     return this.proxy.execute('RigidBody_setRestitution', {
       bodyId: this.bodyId,
       restitution: restitution
+    });
+  };
+
+  AmmoRigidBody.prototype.setLinearFactor = function(linearFactor) {
+    return this.proxy.execute('RigidBody_setLinearFactor', {
+      bodyId: this.bodyId,
+      linearFactor: {
+        x: linearFactor.x,
+        y: linearFactor.y,
+        z: linearFactor.z
+      }
+    });
+  };
+
+  AmmoRigidBody.prototype.setAngularFactor = function(angularFactor) {
+    return this.proxy.execute('RigidBody_setAngularFactor', {
+      bodyId: this.bodyId,
+      angularFactor: {
+        x: angularFactor.x,
+        y: angularFactor.y,
+        z: angularFactor.z
+      }
     });
   };
 
