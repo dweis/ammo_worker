@@ -18,8 +18,8 @@ define([], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      importScripts('./js/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -37,6 +37,7 @@ define([], function() {
 
       this.bodies = [];
       this.vehicles = [];
+      this.contraints = [];
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
@@ -471,6 +472,38 @@ define([], function() {
       var vehicle = this.vehicles[descriptor.vehicleId];
       if (vehicle) {
         this.vehicles[descriptor.vehicleId].applyEngineForce(descriptor.force, descriptor.wheelIndex);
+      }
+    },
+
+    Point2PointContraint_create: function(descriptor, fn) {
+      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+          rigidBodyB,
+          contraint,
+          id;
+
+      if (rigidBodyA) {
+        this.tmpVec[0].setX(descriptor.pivotA.x);
+        this.tmpVec[0].setY(descriptor.pivotA.y);
+        this.tmpVec[0].setZ(descriptor.pivotA.z); 
+
+        if (descriptor.rigidBodyIdB) {
+          rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
+          this.tmpVec[1].setX(descriptor.pivotB.x);
+          this.tmpVec[1].setY(descriptor.pivotB.y);
+          this.tmpVec[1].setZ(descriptor.pivotB.z); 
+          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB, this.tmpVec[0], this.tmpVec[1]);
+        } else {
+          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB);
+        }
+
+        id = this.contraints.push(constraint) - 1;
+
+        this.dynamicsWorld.addConstraint(constraint);
+        constraint.enableFeedback();
+
+        if (typeof fn === 'function') {
+          fn(id);
+        }
       }
     },
 
