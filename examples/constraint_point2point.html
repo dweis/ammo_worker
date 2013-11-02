@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Performance Test</title>
+  <title>Point2Point Constraint Test</title>
   <style>
   html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
   </style>
@@ -29,7 +29,7 @@
 
       this.bodies = [];
       for (var i = 0; i < 100; i++) {
-        var o = this._createBox(material);
+        var o = this._createLink(material);
         this.scene.add(o);
       }
 
@@ -47,7 +47,7 @@
     };
 
     var y = 0;
-    SimpleDemo.prototype._createBox = function(material, last) {
+    SimpleDemo.prototype._createLink = function(material, last) {
       y += 2;
       var o = new THREE.Object3D();
 

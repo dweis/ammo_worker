@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Performance Test</title>
+  <title>Hinge Constraint Test</title>
   <style>
-  html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
+  html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; }
   </style>
 </head>
 <body>
   <div id="container">
+  Press up or down arrow to apply torque to the door
   </div>
   <script src="js/catiline.js"></script>
   <script src="js/three.js"></script>
@@ -17,6 +18,22 @@
   <script src="js/demo_scene.js"></script>
   <script type="text/javascript">
     function SimpleDemo() {
+      document.addEventListener('keydown', function(e) {
+        var torque = 0;
+
+        switch (e.keyCode) {
+          case 38:
+            torque = -10000;
+            break;
+          case 40:
+            torque = 10000;
+            break;
+        }
+
+        if (torque != 0) {
+          this.bodies[1].applyTorque({ x: 0, y: torque, z: 0 });
+        }
+      }.bind(this));
     }
 
     SimpleDemo.prototype = new DemoScene();
@@ -34,7 +51,7 @@
       hinge = new THREE.Object3D();
 
       hinge.add(new THREE.Mesh(new THREE.CubeGeometry(0.3, 4, 0.3), material));
-      hinge.position.y = 2.01;
+      hinge.position.y = 2.2;
       hinge.position.x = -1.4;
       hinge.children[0].castShadow = true;
       this.scene.add(hinge);
@@ -44,7 +61,7 @@
 
         door = new THREE.Object3D();
         door.add(new THREE.Mesh(new THREE.CubeGeometry(2, 4, 0.3), material));
-        door.position.y = 2.01;
+        door.position.y = 2.2;
         door.children[0].castShadow = true;
         this.scene.add(door);
 
@@ -53,62 +70,17 @@
 
           this.proxy.createHingeConstraint(this.bodies[0], this.bodies[1], 
               { x: 0, y: 0, z: 0 },  // pivotA
-              { x: 1.35, y: 0, z: 0 },   // pivotB
-              { x: 0, y: 0, z: 1 },   // axisA
-              { x: 0, y: 0, z: 1 }    // axisB
-            );
+              { x: -1.22, y: 0, z: 0 },   // pivotB
+              { x: 0, y: 1, z: 0 },   // axisA
+              { x: 0, y: 1, z: 0 }    // axisB
+            ).then(function(hingeConstraint) {
+              this.hingeConstraint = hingeConstraint;
+
+              hingeConstraint.setLimit(-Math.PI * 0.5, Math.PI * 0.5, 0.9, 1.0, 1.0);
+            }.bind(this));
         }.bind(this));
       }.bind(this));
-
-
-      /*
-      for (var i = 0; i < 10; i++) {
-        var o = this._createBox(material);
-        this.scene.add(o);
-      }
-
-      setTimeout(function() {
-        var last;
-
-        this.bodies.forEach(function(body) {
-          if (last) {
-            this.proxy.createHingeConstraint(body,
-              last, 
-              { x: -2, y: 0, z: 0 },  // pivotA
-              { x: 2, y: 0, z: 0 },   // pivotB
-              { x: 0, y: 0, z: 1 },   // axisA
-              { x: 0, y: 0, z: 1 }    // axisB
-              );
-          }
-
-          last = body;
-        }.bind(this));
-      }.bind(this), 500);
-      */
     };
-
-    /*
-    SimpleDemo.prototype._createBox = function(material, last) {
-      var o = new THREE.Object3D();
-
-      o.add(new THREE.Mesh(new THREE.SphereGeometry(2.2), material));
-
-      o.position.x = (Math.random() * 30) - 15;
-      o.position.y = y;
-      o.position.z = (Math.random() * 30) - 15;
-
-
-      this.proxy.createRigidBodyFromObject(o, 0.5, {
-        shape: 'sphere',
-        radius: 2
-      }).then(function(rigidBody) {
-        rigidBody.setAngularFactor({ x: 0, y: 1, z: 1 });
-        this.bodies.push(rigidBody);
-      }.bind(this));
-
-      return o;
-    };
-    */
 
     SimpleDemo.prototype.updateBodies = function() {
       for (var i in this.bodies) {

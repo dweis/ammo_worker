@@ -38,7 +38,7 @@ define([], function() {
 
       this.bodies = [];
       this.vehicles = [];
-      this.contraints = [];
+      this.constraints = [];
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
@@ -476,10 +476,10 @@ define([], function() {
       }
     },
 
-    Point2PointContraint_create: function(descriptor, fn) {
+    Point2PointConstraint_create: function(descriptor, fn) {
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
           rigidBodyB,
-          contraint,
+          constraint,
           id;
 
       if (rigidBodyA) {
@@ -497,7 +497,7 @@ define([], function() {
           constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB);
         }
 
-        id = this.contraints.push(constraint) - 1;
+        id = this.constraints.push(constraint) - 1;
 
         this.dynamicsWorld.addConstraint(constraint);
         constraint.enableFeedback();
@@ -508,10 +508,11 @@ define([], function() {
       }
     },
 
-    HingeContraint_create: function(descriptor, fn) {
+    HingeConstraint_create: function(descriptor, fn) {
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB,
-          contraint,
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+            this.bodies[descriptor.rigidBodyIdB],
+          constraint,
           id;
 
       if (rigidBodyA) {
@@ -522,7 +523,7 @@ define([], function() {
         this.tmpVec[1].setX(descriptor.axisA.y);
         this.tmpVec[1].setX(descriptor.axisA.z);
 
-        if (descriptor.rigidBodyIdB) {
+        if (rigidBodyB) {
           rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
           this.tmpVec[2].setX(descriptor.pivotB.x);
           this.tmpVec[2].setY(descriptor.pivotB.y);
@@ -532,9 +533,12 @@ define([], function() {
           this.tmpVec[3].setZ(descriptor.axisB.z); 
           constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
               this.tmpVec[0], this.tmpVec[2], this.tmpVec[1], this.tmpVec[3]);
+        } else {
+          constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
+              this.tmpVec[0], this.tmpVec[1]);
         }
 
-        id = this.contraints.push(constraint) - 1;
+        id = this.constraints.push(constraint) - 1;
 
         this.dynamicsWorld.addConstraint(constraint);
         constraint.enableFeedback();
@@ -542,6 +546,15 @@ define([], function() {
         if (typeof fn === 'function') {
           fn(id);
         }
+      }
+    },
+
+    HingeConstraint_setLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setLimit(descriptor.low, descriptor.high, descriptor.softness,
+              descriptor.biasFactor, descriptor.relaxationFactor);
       }
     },
 
