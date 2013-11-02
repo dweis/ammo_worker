@@ -82,9 +82,8 @@
 
   CompoundDemo.prototype._createBody = function(object) {
     this.proxy
-      .addRigidBodyObject(object, 1)
+      .createRigidBodyFromObject(object, 1)
       .then(function(rigidBody) {
-        rigidBody.setObject(object);
         this.bodies.push(rigidBody);
       }.bind(this));
   };

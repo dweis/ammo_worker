@@ -18,10 +18,11 @@ define([], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      importScripts('./js/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
+        new Ammo.btVector3(),
         new Ammo.btVector3(),
         new Ammo.btVector3(),
         new Ammo.btVector3()
@@ -37,6 +38,7 @@ define([], function() {
 
       this.bodies = [];
       this.vehicles = [];
+      this.constraints = [];
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
@@ -474,6 +476,88 @@ define([], function() {
       }
     },
 
+    Point2PointConstraint_create: function(descriptor, fn) {
+      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+          rigidBodyB,
+          constraint,
+          id;
+
+      if (rigidBodyA) {
+        this.tmpVec[0].setX(descriptor.pivotA.x);
+        this.tmpVec[0].setY(descriptor.pivotA.y);
+        this.tmpVec[0].setZ(descriptor.pivotA.z); 
+
+        if (descriptor.rigidBodyIdB) {
+          rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
+          this.tmpVec[1].setX(descriptor.pivotB.x);
+          this.tmpVec[1].setY(descriptor.pivotB.y);
+          this.tmpVec[1].setZ(descriptor.pivotB.z); 
+          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB, this.tmpVec[0], this.tmpVec[1]);
+        } else {
+          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB);
+        }
+
+        id = this.constraints.push(constraint) - 1;
+
+        this.dynamicsWorld.addConstraint(constraint);
+        constraint.enableFeedback();
+
+        if (typeof fn === 'function') {
+          fn(id);
+        }
+      }
+    },
+
+    HingeConstraint_create: function(descriptor, fn) {
+      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+            this.bodies[descriptor.rigidBodyIdB],
+          constraint,
+          id;
+
+      if (rigidBodyA) {
+        this.tmpVec[0].setX(descriptor.pivotA.x);
+        this.tmpVec[0].setY(descriptor.pivotA.y);
+        this.tmpVec[0].setZ(descriptor.pivotA.z); 
+        this.tmpVec[1].setX(descriptor.axisA.x);
+        this.tmpVec[1].setX(descriptor.axisA.y);
+        this.tmpVec[1].setX(descriptor.axisA.z);
+
+        if (rigidBodyB) {
+          rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
+          this.tmpVec[2].setX(descriptor.pivotB.x);
+          this.tmpVec[2].setY(descriptor.pivotB.y);
+          this.tmpVec[2].setZ(descriptor.pivotB.z); 
+          this.tmpVec[3].setX(descriptor.axisB.x);
+          this.tmpVec[3].setY(descriptor.axisB.y);
+          this.tmpVec[3].setZ(descriptor.axisB.z); 
+          constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
+              this.tmpVec[0], this.tmpVec[2], this.tmpVec[1], this.tmpVec[3]);
+        } else {
+          constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
+              this.tmpVec[0], this.tmpVec[1]);
+        }
+
+        id = this.constraints.push(constraint) - 1;
+
+        this.dynamicsWorld.addConstraint(constraint);
+        constraint.enableFeedback();
+
+        if (typeof fn === 'function') {
+          fn(id);
+        }
+      }
+    },
+
+    HingeConstraint_setLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setLimit(descriptor.low, descriptor.high, descriptor.softness,
+              descriptor.biasFactor, descriptor.relaxationFactor);
+      }
+    },
+
     RigidBody_create: function(descriptor, fn) {
       var colShape,
           startTransform = this.tmpTrans[0],
@@ -524,7 +608,7 @@ define([], function() {
       }
     },
 
-    RigidBody_applyForce: function(descriptor, fn) {
+    RigidBody_applyForce: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
       
       if (body) {
@@ -537,13 +621,9 @@ define([], function() {
 
         body.applyForce(this.tmpVec[0], this.tmpVec[1]);
       } 
-
-      if (typeof fn === 'function') {
-        fn();
-      }
     },
 
-    RigidBody_applyImpulse: function(descriptor, fn) {
+    RigidBody_applyImpulse: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
       
       if (body) {
@@ -556,13 +636,9 @@ define([], function() {
 
         body.applyImpulse(this.tmpVec[0], this.tmpVec[1]);
       } 
-
-      if (typeof fn === 'function') {
-        fn();
-      }
     },
 
-    RigidBody_applyTorque: function(descriptor, fn) {
+    RigidBody_applyTorque: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
       
       if (body) {
@@ -572,33 +648,43 @@ define([], function() {
         
         body.applyTorque(this.tmpVec[0]);
       }
-
-      if (typeof fn === 'function') {
-        fn();
-      }
     },
 
-    RigidBody_setRestitution: function(descriptor, fn) {
+    RigidBody_setRestitution: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
         body.setRestitution(descriptor.restitution);
       }
-
-      if (typeof fn === 'function') {
-        fn();
-      }
     },
 
-    RigidBody_setFriction: function(descriptor, fn) {
+    RigidBody_setFriction: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
         body.setFriction(descriptor.friction);
       }
+    },
 
-      if (typeof fn === 'function') {
-        fn();
+    RigidBody_setLinearFactor: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        this.tmpVec[0].setX(descriptor.linearFactor.x); 
+        this.tmpVec[0].setY(descriptor.linearFactor.y); 
+        this.tmpVec[0].setZ(descriptor.linearFactor.z); 
+        body.setLinearFactor(this.tmpVec[0]);
+      }
+    },
+
+    RigidBody_setAngularFactor: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        this.tmpVec[0].setX(descriptor.angularFactor.x); 
+        this.tmpVec[0].setY(descriptor.angularFactor.y); 
+        this.tmpVec[0].setZ(descriptor.angularFactor.z); 
+        body.setAngularFactor(this.tmpVec[0]);
       }
     },
 

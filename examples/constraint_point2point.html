@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ApplyForce Test</title>
+  <title>Point2Point Constraint Test</title>
   <style>
   html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
   </style>
@@ -24,29 +24,47 @@
     SimpleDemo.prototype.initDemo = function() {
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
-      this.objects = [];
-      this.bodies = [];
+      this.camera.position.x = this.camera.position.z = 200;
+      this.camera.position.y = 100;
 
+      this.bodies = [];
       for (var i = 0; i < 100; i++) {
-        var o = this._createBox(material);
+        var o = this._createLink(material);
         this.scene.add(o);
-        this.objects.push(o);
       }
+
+      setTimeout(function() {
+        var last;
+
+        this.bodies.forEach(function(body) {
+          if (last) {
+            this.proxy.createPoint2PointConstraint(body, last, { x: 0, y: -2, z: 0 }, { x: 0, y: 2, z: 0 });
+          }
+
+          last = body;
+        }.bind(this));
+      }.bind(this), 500);
     };
 
-    SimpleDemo.prototype._createBox = function(material) {
+    var y = 0;
+    SimpleDemo.prototype._createLink = function(material, last) {
+      y += 2;
       var o = new THREE.Object3D();
 
-      o.add(new THREE.Mesh(new THREE.CubeGeometry(2, 2, 2), material));
+      o.add(new THREE.Mesh(new THREE.SphereGeometry(2.2), material));
 
       o.position.x = (Math.random() * 30) - 15;
-      o.position.y = 10 + (Math.random() * 20) - 10;
+      o.position.y = y;
       o.position.z = (Math.random() * 30) - 15;
 
-      this.proxy.createRigidBodyFromObject(o, 10)
-        .then(function(rigidBody) {
-          this.bodies.push(rigidBody);
-        }.bind(this));
+
+      this.proxy.createRigidBodyFromObject(o, 0.5, {
+        shape: 'sphere',
+        radius: 2
+      }).then(function(rigidBody) {
+        rigidBody.setAngularFactor({ x: 0, y: 1, z: 1 });
+        this.bodies.push(rigidBody);
+      }.bind(this));
 
       o.traverse(function(o) {
         o.castShadow = true;
@@ -57,9 +75,7 @@
 
     SimpleDemo.prototype.updateBodies = function() {
       for (var i in this.bodies) {
-        this.bodies[i].update(this.objects[i]);
-        this.bodies[i].applyForce({x: Math.random() * 1000 - 500, y: Math.random() * 2000 - 900, z: Math.random() * 1000 - 500 },
-          {x: 0, y: 0, z: 0 });
+        this.bodies[i].update();
       }
     };
 

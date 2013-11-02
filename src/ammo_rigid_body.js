@@ -2,25 +2,12 @@ define([], function() {
   function AmmoRigidBody(proxy, bodyId) {
     this.proxy = proxy;
     this.bodyId = bodyId;
-    this.object = undefined;
+    this.binding = undefined;
   } 
 
   AmmoRigidBody.prototype.update = function() {
-    var position, quaternion, pos;
-
-    if (this.object && this.proxy && this.proxy.data) {
-      pos = this.proxy.getRigidBodyOffset(this.bodyId);
-
-      position = this.object.position;
-      quaternion = this.object.quaternion;
-
-      position.x = this.proxy.data[pos + 0];
-      position.y = this.proxy.data[pos + 1];
-      position.z = this.proxy.data[pos + 2];
-      quaternion.x = this.proxy.data[pos + 3];
-      quaternion.y = this.proxy.data[pos + 4];
-      quaternion.z = this.proxy.data[pos + 5];
-      quaternion.w = this.proxy.data[pos + 6];
+    if (this.binding && this.binding.update) {
+      this.binding.update();
     }
   };
 
@@ -95,22 +82,36 @@ define([], function() {
     });
   };
 
-  AmmoRigidBody.prototype.destroy = function() {
-    return this.proxy.execute('RigidBody_destroy', { bodyId: this.bodyId });
+  AmmoRigidBody.prototype.setLinearFactor = function(linearFactor) {
+    return this.proxy.execute('RigidBody_setLinearFactor', {
+      bodyId: this.bodyId,
+      linearFactor: {
+        x: linearFactor.x,
+        y: linearFactor.y,
+        z: linearFactor.z
+      }
+    });
   };
 
-  AmmoRigidBody.prototype.setObject = function(object) {
-    var topParent;
+  AmmoRigidBody.prototype.setAngularFactor = function(angularFactor) {
+    return this.proxy.execute('RigidBody_setAngularFactor', {
+      bodyId: this.bodyId,
+      angularFactor: {
+        x: angularFactor.x,
+        y: angularFactor.y,
+        z: angularFactor.z
+      }
+    });
+  };
 
-    this.object = object;
+  AmmoRigidBody.prototype.destroy = function() {
+    var deferred = this.proxy.execute('RigidBody_destroy', { bodyId: this.bodyId });
 
-    topParent = object;
+    this.bodyId = undefined;
 
-    while (topParent.parent) {
-      topParent = topParent.parent;
-    }
+    this.binding.destroy();
 
-    topParent.add(object);
+    return deferred;
   };
 
   return AmmoRigidBody;

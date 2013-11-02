@@ -1,8 +1,9 @@
-define([ ],function() {
-  function AmmoVehicle(proxy, vehicleId) {
+define([ 'underscore' ],function(_) {
+  function AmmoVehicle(proxy, vehicleId, rigidBody) {
     this.proxy = proxy;
     this.vehicleId = vehicleId;
-    this.wheelObjects = [];
+    this.wheelBindings = [];
+    this.rigidBody = rigidBody;
   } 
 
   AmmoVehicle.prototype.addWheel = function(connectionPoint, wheelDirection, wheelAxle, 
@@ -67,48 +68,28 @@ define([ ],function() {
       vehicleId: this.vehicleId
     };
 
+    _.each(this.wheelBindings, function(binding) {
+      binding.destroy();
+    });
+
+    this.rigidBody.destroy();
+
     return this.proxy.execute('Vehicle_destroy', descriptor);
   };
 
   AmmoVehicle.prototype.addWheelObject = function(wheelIndex, object) {
-    var topParent = object;
-    
-    this.wheelObjects[wheelIndex] = object;
-
-    topParent = object;
-
-    while (topParent.parent) {
-      topParent = topParent.parent;
-    }
-
-    topParent.add(object); 
+    this.wheelBindings[wheelIndex] = this.proxy.adapter.createBinding(object, 
+        this.proxy.getWheelOffset(this.vehicleId, wheelIndex));  
   };
 
   AmmoVehicle.prototype.update = function() {
-    for (var i in this.wheelObjects) {
-      if (this.wheelObjects.hasOwnProperty(i)) {
-        this._updateWheel(this.wheelObjects[i], i);  
-      }
+    if (this.rigidBody) {
+      this.rigidBody.update();
     }
-  };
 
-  AmmoVehicle.prototype._updateWheel = function(object, wheelIndex) {
-    var position, quaternion, pos, data = this.proxy.data;
-
-    if (data) {
-      pos = this.proxy.getWheelOffset(this.vehicleId, wheelIndex);
-
-      position = object.position;
-      quaternion = object.quaternion;  
-
-      position.x = data[pos + 0];
-      position.y = data[pos + 1];
-      position.z = data[pos + 2];
-      quaternion.x = data[pos + 3];
-      quaternion.y = data[pos + 4];
-      quaternion.z = data[pos + 5];
-      quaternion.w = data[pos + 6];
-    }
+    _.each(this.wheelBindings, function(binding) {
+      binding.update();
+    });
   };
 
   return AmmoVehicle;

@@ -83,7 +83,7 @@ DemoScene.prototype._initScene = function() {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  this.proxy.addRigidBodyObject(ground, 0).then(_.bind(function(rigidBody) {
+  this.proxy.adapter.createRigidBodyFromObject(ground, 0).then(_.bind(function(rigidBody) {
     this.groundBody = rigidBody;
   }, this));
 
