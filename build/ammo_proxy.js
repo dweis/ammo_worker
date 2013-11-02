@@ -3135,6 +3135,38 @@ define('ammo_worker_api',[], function() {
       }
     },
 
+    SliderConstraint_setLowerLinLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setLowerLinLimit(descriptor.limit);
+      }
+    },
+
+    SliderConstraint_setUpperLinLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setUpperLinLimit(descriptor.limit);
+      }
+    },
+
+    SliderConstraint_setLowerAngLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setLowerAngLimit(descriptor.limit);
+      }
+    },
+
+    SliderConstraint_setUpperAngLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setUpperAngLimit(descriptor.limit);
+      }
+    },
+
     HingeConstraint_create: function(descriptor, fn) {
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
           rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
@@ -3584,6 +3616,34 @@ define('ammo_slider_constraint',[], function() {
     this.proxy = proxy;
     this.constraintId = constraintId;
   } 
+
+  AmmoSliderConstraint.prototype.setLowerLinLimit = function(limit) {
+    return this.proxy.execute('SliderConstraint_setLowerLinLimit', {
+      constraintId: this.constraintId,
+      limit: limit
+    });
+  };
+
+  AmmoSliderConstraint.prototype.setUpperLinLimit = function(limit) {
+    return this.proxy.execute('SliderConstraint_setUpperLinLimit', {
+      constraintId: this.constraintId,
+      limit: limit
+    });
+  };
+
+  AmmoSliderConstraint.prototype.setLowerAngLimit = function(limit) {
+    return this.proxy.execute('SliderConstraint_setLowerAngLimit', {
+      constraintId: this.constraintId,
+      limit: limit
+    });
+  };
+
+  AmmoSliderConstraint.prototype.setUpperAngLimit = function(limit) {
+    return this.proxy.execute('SliderConstraint_setUpperAngLimit', {
+      constraintId: this.constraintId,
+      limit: limit
+    });
+  };
 
   return AmmoSliderConstraint;
 });

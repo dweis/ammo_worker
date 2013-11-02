@@ -517,8 +517,6 @@ define([], function() {
           constraint,
           id;
 
-          console.log(descriptor);
-
       if (rigidBodyA) {
         this.tmpTrans[0].setIdentity();
         this.tmpTrans[0].getOrigin().setX(descriptor.frameInA.position.x);
@@ -554,6 +552,38 @@ define([], function() {
         if (typeof fn === 'function') {
           fn(id);
         }
+      }
+    },
+
+    SliderConstraint_setLowerLinLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setLowerLinLimit(descriptor.limit);
+      }
+    },
+
+    SliderConstraint_setUpperLinLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setUpperLinLimit(descriptor.limit);
+      }
+    },
+
+    SliderConstraint_setLowerAngLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setLowerAngLimit(descriptor.limit);
+      }
+    },
+
+    SliderConstraint_setUpperAngLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setUpperAngLimit(descriptor.limit);
       }
     },
 

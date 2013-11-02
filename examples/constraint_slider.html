@@ -46,7 +46,13 @@
               { 
                 position: last.binding.object.position,
                 rotation: body.binding.object.quaternion
-              });
+              }).then(function(sliderConstraint) {
+                console.log(sliderConstraint);
+                sliderConstraint.setLowerLinLimit(-1);
+                sliderConstraint.setUpperLinLimit(1);
+                sliderConstraint.setLowerAngLimit(-Math.PI/3.0);
+                sliderConstraint.setUpperAngLimit(Math.PI/3.0);
+              }.bind(this));
           } else {
             last = body;
           }
