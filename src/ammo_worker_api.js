@@ -33,6 +33,7 @@ define([], function() {
       ];
 
       this.tmpTrans = [
+        new Ammo.btTransform(),
         new Ammo.btTransform()
       ];
 
@@ -478,7 +479,8 @@ define([], function() {
 
     Point2PointConstraint_create: function(descriptor, fn) {
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB,
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+            this.bodies[descriptor.rigidBodyIdB],
           constraint,
           id;
 
@@ -487,7 +489,7 @@ define([], function() {
         this.tmpVec[0].setY(descriptor.pivotA.y);
         this.tmpVec[0].setZ(descriptor.pivotA.z); 
 
-        if (descriptor.rigidBodyIdB) {
+        if (rigidBodyB) {
           rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
           this.tmpVec[1].setX(descriptor.pivotB.x);
           this.tmpVec[1].setY(descriptor.pivotB.y);
@@ -495,6 +497,53 @@ define([], function() {
           constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB, this.tmpVec[0], this.tmpVec[1]);
         } else {
           constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB);
+        }
+
+        id = this.constraints.push(constraint) - 1;
+
+        this.dynamicsWorld.addConstraint(constraint);
+        constraint.enableFeedback();
+
+        if (typeof fn === 'function') {
+          fn(id);
+        }
+      }
+    },
+
+    SliderConstraint_create: function(descriptor, fn) {
+      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+            this.bodies[descriptor.rigidBodyIdB],
+          constraint,
+          id;
+
+          console.log(descriptor);
+
+      if (rigidBodyA) {
+        this.tmpTrans[0].setIdentity();
+        this.tmpTrans[0].getOrigin().setX(descriptor.frameInA.position.x);
+        this.tmpTrans[0].getOrigin().setY(descriptor.frameInA.position.y);
+        this.tmpTrans[0].getOrigin().setZ(descriptor.frameInA.position.z);
+        this.tmpTrans[0].getRotation().setX(descriptor.frameInA.rotation.x);
+        this.tmpTrans[0].getRotation().setY(descriptor.frameInA.rotation.y);
+        this.tmpTrans[0].getRotation().setZ(descriptor.frameInA.rotation.z);
+        this.tmpTrans[0].getRotation().setW(descriptor.frameInA.rotation.w);
+
+        if (rigidBodyB) {
+          this.tmpTrans[1].setIdentity();
+
+          this.tmpTrans[1].getOrigin().setX(descriptor.frameInB.position.x);
+          this.tmpTrans[1].getOrigin().setY(descriptor.frameInB.position.y);
+          this.tmpTrans[1].getOrigin().setZ(descriptor.frameInB.position.z);
+          this.tmpTrans[1].getRotation().setX(descriptor.frameInB.rotation.x);
+          this.tmpTrans[1].getRotation().setY(descriptor.frameInB.rotation.y);
+          this.tmpTrans[1].getRotation().setZ(descriptor.frameInB.rotation.z);
+          this.tmpTrans[1].getRotation().setW(descriptor.frameInB.rotation.w);
+
+          constraint = new Ammo.btSliderConstraint(rigidBodyA, rigidBodyB, 
+            this.tmpTrans[0], this.tmpTrans[1]);
+        } else {
+
         }
 
         id = this.constraints.push(constraint) - 1;

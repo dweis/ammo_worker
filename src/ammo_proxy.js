@@ -1,7 +1,8 @@
 define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 
-         'ammo_point2point_constraint', 'ammo_hinge_constraint', 'three/three_adapter' ], 
+         'ammo_point2point_constraint', 'ammo_hinge_constraint', 'ammo_slider_constraint',
+         'three/three_adapter' ], 
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
-        AmmoHingeConstraint, THREEAdapter) {
+        AmmoHingeConstraint, AmmoSliderConstraint, THREEAdapter) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
@@ -112,6 +113,49 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
       var proxy = this;
       setTimeout(function() {
         deferred.resolve(new AmmoPoint2PointConstraint(proxy, constraintId));
+      }, 0);
+    },this));
+
+    return deferred.promise;
+  };
+
+  AmmoProxy.prototype.createSliderConstraint = function(bodyA, bodyB, frameInA, frameInB) {
+    var descriptor = {
+        rigidBodyIdA: bodyA.bodyId,
+        rigidBodyIdB: bodyB.bodyId,
+        frameInA: {
+          position: {
+            x: frameInA.position.x,
+            y: frameInA.position.y,
+            z: frameInA.position.z
+          },
+          rotation: {
+            x: frameInA.rotation.x,
+            y: frameInA.rotation.y,
+            z: frameInA.rotation.z,
+            w: frameInA.rotation.w
+          }
+        },
+        frameInB: {
+          position: {
+            x: frameInB.position.x,
+            y: frameInB.position.y,
+            z: frameInB.position.z
+          },
+          rotation: {
+            x: frameInB.rotation.x,
+            y: frameInB.rotation.y,
+            z: frameInB.rotation.z,
+            w: frameInB.rotation.w
+          }
+        }
+      },
+      deferred = when.defer();
+
+    this.execute('SliderConstraint_create', descriptor).then(_.bind(function(constraintId) {
+      var proxy = this;
+      setTimeout(function() {
+        deferred.resolve(new AmmoSliderConstraint(proxy, constraintId));
       }, 0);
     },this));
 
