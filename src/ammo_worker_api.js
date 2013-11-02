@@ -583,21 +583,17 @@ define([], function() {
 
     SliderConstraint_setLowerAngLimit: function(descriptor) {
       var constraint = this.constraints[descriptor.constraintId];
-      console.log('Setting', descriptor);
 
       if (constraint) {
         constraint.setLowerAngLimit(descriptor.limit);
-        console.log('set', descriptor.limit);
       }
     },
 
     SliderConstraint_setUpperAngLimit: function(descriptor) {
       var constraint = this.constraints[descriptor.constraintId];
-      console.log('Setting', descriptor);
 
       if (constraint) {
         constraint.setUpperAngLimit(descriptor.limit);
-        console.log('set', descriptor.limit);
       }
     },
 

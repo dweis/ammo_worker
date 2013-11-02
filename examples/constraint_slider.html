@@ -34,33 +34,31 @@
       }
 
       setTimeout(function() {
-        var last, first;
+        var first;
         var quat = new THREE.Quaternion();
 
         quat.setFromAxisAngle({x: 0, y: 0, z: -Math.PI/4}, 1);
-        console.log(quat);
 
-       this.bodies.forEach(function(body,i) {
-        if (!first) { first= body;}
-          if (first) {
-            this.proxy.createSliderConstraint(first, body, 
-              {
-                position: new THREE.Vector3(),
-                rotation: quat
-              }, 
-              { 
-                position: new THREE.Vector3(),
-                rotation: quat
-              }).then(function(sliderConstraint) {
-                sliderConstraint.setLowerLinLimit(-50);
-                sliderConstraint.setUpperLinLimit(50);
-                sliderConstraint.setLowerAngLimit(-Math.PI/3);
-                sliderConstraint.setUpperAngLimit(Math.PI/3);
-              }.bind(this));
-          } else {
-            last = body;
-          }
-        }.bind(this));
+         this.bodies.forEach(function(body,i) {
+            if (first) {
+              this.proxy.createSliderConstraint(first, body, 
+                {
+                  position: new THREE.Vector3(),
+                  rotation: quat
+                }, 
+                { 
+                  position: new THREE.Vector3(),
+                  rotation: quat
+                }).then(function(sliderConstraint) {
+                  sliderConstraint.setLowerLinLimit(-50);
+                  sliderConstraint.setUpperLinLimit(50);
+                  sliderConstraint.setLowerAngLimit(-Math.PI);
+                  sliderConstraint.setUpperAngLimit(Math.PI);
+                }.bind(this));
+            } else {
+              first = body;
+            }
+          }.bind(this));
       }.bind(this), 500);
     };
 
