@@ -28,7 +28,7 @@
       this.camera.position.y = 100;
 
       this.bodies = [];
-      for (var i = 0; i < 10; i++) {
+      for (var i = 0; i < 5; i++) {
         var o = this._createLink(i, material);
         this.scene.add(o);
       }
@@ -37,28 +37,28 @@
         var first;
         var quat = new THREE.Quaternion();
 
-        quat.setFromAxisAngle({x: 0, y: 0, z: -Math.PI/4}, 1);
+        quat.setFromAxisAngle({x: 0, y: 0, z: 1}, Math.PI/2);
 
-         this.bodies.forEach(function(body,i) {
-            if (first) {
-              this.proxy.createSliderConstraint(first, body, 
-                {
-                  position: new THREE.Vector3(),
-                  rotation: quat
-                }, 
-                { 
-                  position: new THREE.Vector3(),
-                  rotation: quat
-                }).then(function(sliderConstraint) {
-                  sliderConstraint.setLowerLinLimit(-50);
-                  sliderConstraint.setUpperLinLimit(50);
-                  sliderConstraint.setLowerAngLimit(-Math.PI);
-                  sliderConstraint.setUpperAngLimit(Math.PI);
-                }.bind(this));
-            } else {
-              first = body;
-            }
-          }.bind(this));
+        this.bodies.forEach(function(body,i) {
+          if (first) {
+            this.proxy.createSliderConstraint(first, body, 
+              {
+                position: new THREE.Vector3(),
+                rotation: quat
+              }, 
+              { 
+                position: new THREE.Vector3(),
+                rotation: quat
+              }).then(function(sliderConstraint) {
+                sliderConstraint.setLowerLinLimit(-60);
+                sliderConstraint.setUpperLinLimit(20);
+                sliderConstraint.setLowerAngLimit(-Math.PI/4);
+                sliderConstraint.setUpperAngLimit(Math.PI/4);
+              }.bind(this));
+          } else {
+            first = body;
+          }
+        }.bind(this));
       }.bind(this), 500);
     };
 
@@ -67,16 +67,20 @@
       y -= 2;
       var o = new THREE.Object3D();
 
-      o.add(new THREE.Mesh(new THREE.SphereGeometry(2.2), material));
+      o.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material));
 
-      o.position.x = 0;//(Math.random() * 30) - 15;
-      o.position.y = 20 + y;
-      o.position.z = 0;//(Math.random() * 30) - 15;
+      o.position.x = 0;
+      o.position.y = 40 + y;
+      o.position.z = 0;
 
 
       this.proxy.createRigidBodyFromObject(o, i == 0 ? 0 : 0.5, {
-        shape: 'sphere',
-        radius: 2
+        shape: 'box',
+        halfExtents: {
+          x: 2,
+          y: 2,
+          z: 2
+        }
       }).then(function(rigidBody) {
         this.bodies.push(rigidBody);
       }.bind(this));
