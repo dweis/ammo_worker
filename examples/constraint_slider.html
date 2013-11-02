@@ -28,30 +28,34 @@
       this.camera.position.y = 100;
 
       this.bodies = [];
-      for (var i = 0; i < 20; i++) {
+      for (var i = 0; i < 10; i++) {
         var o = this._createLink(i, material);
         this.scene.add(o);
       }
 
       setTimeout(function() {
-        var last;
+        var last, first;
+        var quat = new THREE.Quaternion();
+
+        quat.setFromAxisAngle({x: 0, y: 0, z: -Math.PI/4}, 1);
+        console.log(quat);
 
        this.bodies.forEach(function(body,i) {
-          if (last) {
-            this.proxy.createSliderConstraint(body, last, 
+        if (!first) { first= body;}
+          if (first) {
+            this.proxy.createSliderConstraint(first, body, 
               {
-                position: body.binding.object.position,
-                rotation: body.binding.object.quaternion
+                position: new THREE.Vector3(),
+                rotation: quat
               }, 
               { 
-                position: last.binding.object.position,
-                rotation: body.binding.object.quaternion
+                position: new THREE.Vector3(),
+                rotation: quat
               }).then(function(sliderConstraint) {
-                console.log(sliderConstraint);
-                sliderConstraint.setLowerLinLimit(-1);
-                sliderConstraint.setUpperLinLimit(1);
-                sliderConstraint.setLowerAngLimit(-Math.PI/3.0);
-                sliderConstraint.setUpperAngLimit(Math.PI/3.0);
+                sliderConstraint.setLowerLinLimit(-50);
+                sliderConstraint.setUpperLinLimit(50);
+                sliderConstraint.setLowerAngLimit(-Math.PI/3);
+                sliderConstraint.setUpperAngLimit(Math.PI/3);
               }.bind(this));
           } else {
             last = body;
@@ -67,16 +71,15 @@
 
       o.add(new THREE.Mesh(new THREE.SphereGeometry(2.2), material));
 
-      o.position.x = (Math.random() * 30) - 15;
-      o.position.y = y;
-      o.position.z = (Math.random() * 30) - 15;
+      o.position.x = 0;//(Math.random() * 30) - 15;
+      o.position.y = 20 + y;
+      o.position.z = 0;//(Math.random() * 30) - 15;
 
 
       this.proxy.createRigidBodyFromObject(o, i == 0 ? 0 : 0.5, {
         shape: 'sphere',
         radius: 2
       }).then(function(rigidBody) {
-        rigidBody.setAngularFactor({ x: 0, y: 1, z: 1 });
         this.bodies.push(rigidBody);
       }.bind(this));
 

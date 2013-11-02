@@ -29,6 +29,7 @@ define([], function() {
       ];
 
       this.tmpQuaternion = [
+        new Ammo.btQuaternion(),
         new Ammo.btQuaternion()
       ];
 
@@ -518,28 +519,37 @@ define([], function() {
           id;
 
       if (rigidBodyA) {
-        this.tmpTrans[0].setIdentity();
-        this.tmpTrans[0].getOrigin().setX(descriptor.frameInA.position.x);
-        this.tmpTrans[0].getOrigin().setY(descriptor.frameInA.position.y);
-        this.tmpTrans[0].getOrigin().setZ(descriptor.frameInA.position.z);
-        this.tmpTrans[0].getRotation().setX(descriptor.frameInA.rotation.x);
-        this.tmpTrans[0].getRotation().setY(descriptor.frameInA.rotation.y);
-        this.tmpTrans[0].getRotation().setZ(descriptor.frameInA.rotation.z);
-        this.tmpTrans[0].getRotation().setW(descriptor.frameInA.rotation.w);
+        var transformA = new Ammo.btTransform();
+
+        this.tmpVec[0].setX(descriptor.frameInA.position.x);
+        this.tmpVec[0].setY(descriptor.frameInA.position.y);
+        this.tmpVec[0].setZ(descriptor.frameInA.position.z);
+
+        this.tmpQuaternion[0].setX(descriptor.frameInA.rotation.x);
+        this.tmpQuaternion[0].setY(descriptor.frameInA.rotation.y);
+        this.tmpQuaternion[0].setZ(descriptor.frameInA.rotation.z);
+        this.tmpQuaternion[0].setW(descriptor.frameInA.rotation.w);
+
+        transformA.setOrigin(this.tmpVec[0]);
+        transformA.setRotation(this.tmpQuaternion[0]);
 
         if (rigidBodyB) {
-          this.tmpTrans[1].setIdentity();
+          var transformB = new Ammo.btTransform();
 
-          this.tmpTrans[1].getOrigin().setX(descriptor.frameInB.position.x);
-          this.tmpTrans[1].getOrigin().setY(descriptor.frameInB.position.y);
-          this.tmpTrans[1].getOrigin().setZ(descriptor.frameInB.position.z);
-          this.tmpTrans[1].getRotation().setX(descriptor.frameInB.rotation.x);
-          this.tmpTrans[1].getRotation().setY(descriptor.frameInB.rotation.y);
-          this.tmpTrans[1].getRotation().setZ(descriptor.frameInB.rotation.z);
-          this.tmpTrans[1].getRotation().setW(descriptor.frameInB.rotation.w);
+          this.tmpVec[1].setX(descriptor.frameInB.position.x);
+          this.tmpVec[1].setY(descriptor.frameInB.position.y);
+          this.tmpVec[1].setZ(descriptor.frameInB.position.z);
+
+          this.tmpQuaternion[1].setX(descriptor.frameInB.rotation.x);
+          this.tmpQuaternion[1].setY(descriptor.frameInB.rotation.y);
+          this.tmpQuaternion[1].setZ(descriptor.frameInB.rotation.z);
+          this.tmpQuaternion[1].setW(descriptor.frameInB.rotation.w);
+
+          transformB.setOrigin(this.tmpVec[1]);
+          transformB.setRotation(this.tmpQuaternion[1]);
 
           constraint = new Ammo.btSliderConstraint(rigidBodyA, rigidBodyB, 
-            this.tmpTrans[0], this.tmpTrans[1]);
+            transformA, transformB);
         } else {
 
         }
@@ -573,17 +583,21 @@ define([], function() {
 
     SliderConstraint_setLowerAngLimit: function(descriptor) {
       var constraint = this.constraints[descriptor.constraintId];
+      console.log('Setting', descriptor);
 
       if (constraint) {
         constraint.setLowerAngLimit(descriptor.limit);
+        console.log('set', descriptor.limit);
       }
     },
 
     SliderConstraint_setUpperAngLimit: function(descriptor) {
       var constraint = this.constraints[descriptor.constraintId];
+      console.log('Setting', descriptor);
 
       if (constraint) {
         constraint.setUpperAngLimit(descriptor.limit);
+        console.log('set', descriptor.limit);
       }
     },
 
