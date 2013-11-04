@@ -2596,8 +2596,8 @@ define('ammo_worker_api',[], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      importScripts('./js/ammo.js');
-      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      //import Scripts('./js/ammo.js');
+      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -2607,10 +2607,12 @@ define('ammo_worker_api',[], function() {
       ];
 
       this.tmpQuaternion = [
+        new Ammo.btQuaternion(),
         new Ammo.btQuaternion()
       ];
 
       this.tmpTrans = [
+        new Ammo.btTransform(),
         new Ammo.btTransform()
       ];
 
@@ -3056,7 +3058,8 @@ define('ammo_worker_api',[], function() {
 
     Point2PointConstraint_create: function(descriptor, fn) {
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB,
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+            this.bodies[descriptor.rigidBodyIdB],
           constraint,
           id;
 
@@ -3065,7 +3068,7 @@ define('ammo_worker_api',[], function() {
         this.tmpVec[0].setY(descriptor.pivotA.y);
         this.tmpVec[0].setZ(descriptor.pivotA.z); 
 
-        if (descriptor.rigidBodyIdB) {
+        if (rigidBodyB) {
           rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
           this.tmpVec[1].setX(descriptor.pivotB.x);
           this.tmpVec[1].setY(descriptor.pivotB.y);
@@ -3083,6 +3086,92 @@ define('ammo_worker_api',[], function() {
         if (typeof fn === 'function') {
           fn(id);
         }
+      }
+    },
+
+    SliderConstraint_create: function(descriptor, fn) {
+      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+            this.bodies[descriptor.rigidBodyIdB],
+          constraint,
+          id;
+
+      if (rigidBodyA) {
+        var transformA = new Ammo.btTransform();
+
+        this.tmpVec[0].setX(descriptor.frameInA.position.x);
+        this.tmpVec[0].setY(descriptor.frameInA.position.y);
+        this.tmpVec[0].setZ(descriptor.frameInA.position.z);
+
+        this.tmpQuaternion[0].setX(descriptor.frameInA.rotation.x);
+        this.tmpQuaternion[0].setY(descriptor.frameInA.rotation.y);
+        this.tmpQuaternion[0].setZ(descriptor.frameInA.rotation.z);
+        this.tmpQuaternion[0].setW(descriptor.frameInA.rotation.w);
+
+        transformA.setOrigin(this.tmpVec[0]);
+        transformA.setRotation(this.tmpQuaternion[0]);
+
+        if (rigidBodyB) {
+          var transformB = new Ammo.btTransform();
+
+          this.tmpVec[1].setX(descriptor.frameInB.position.x);
+          this.tmpVec[1].setY(descriptor.frameInB.position.y);
+          this.tmpVec[1].setZ(descriptor.frameInB.position.z);
+
+          this.tmpQuaternion[1].setX(descriptor.frameInB.rotation.x);
+          this.tmpQuaternion[1].setY(descriptor.frameInB.rotation.y);
+          this.tmpQuaternion[1].setZ(descriptor.frameInB.rotation.z);
+          this.tmpQuaternion[1].setW(descriptor.frameInB.rotation.w);
+
+          transformB.setOrigin(this.tmpVec[1]);
+          transformB.setRotation(this.tmpQuaternion[1]);
+
+          constraint = new Ammo.btSliderConstraint(rigidBodyA, rigidBodyB, 
+            transformA, transformB);
+        } else {
+
+        }
+
+        id = this.constraints.push(constraint) - 1;
+
+        this.dynamicsWorld.addConstraint(constraint);
+        constraint.enableFeedback();
+
+        if (typeof fn === 'function') {
+          fn(id);
+        }
+      }
+    },
+
+    SliderConstraint_setLowerLinLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setLowerLinLimit(descriptor.limit);
+      }
+    },
+
+    SliderConstraint_setUpperLinLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setUpperLinLimit(descriptor.limit);
+      }
+    },
+
+    SliderConstraint_setLowerAngLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setLowerAngLimit(descriptor.limit);
+      }
+    },
+
+    SliderConstraint_setUpperAngLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setUpperAngLimit(descriptor.limit);
       }
     },
 
@@ -3530,6 +3619,44 @@ define('ammo_hinge_constraint',[], function() {
   return AmmoHingeConstraint;
 });
 
+define('ammo_slider_constraint',[], function() {
+  function AmmoSliderConstraint(proxy, constraintId) {
+    this.proxy = proxy;
+    this.constraintId = constraintId;
+  } 
+
+  AmmoSliderConstraint.prototype.setLowerLinLimit = function(limit) {
+    return this.proxy.execute('SliderConstraint_setLowerLinLimit', {
+      constraintId: this.constraintId,
+      limit: limit
+    });
+  };
+
+  AmmoSliderConstraint.prototype.setUpperLinLimit = function(limit) {
+    return this.proxy.execute('SliderConstraint_setUpperLinLimit', {
+      constraintId: this.constraintId,
+      limit: limit
+    });
+  };
+
+  AmmoSliderConstraint.prototype.setLowerAngLimit = function(limit) {
+    console.log('setting limit');
+    return this.proxy.execute('SliderConstraint_setLowerAngLimit', {
+      constraintId: this.constraintId,
+      limit: limit
+    });
+  };
+
+  AmmoSliderConstraint.prototype.setUpperAngLimit = function(limit) {
+    return this.proxy.execute('SliderConstraint_setUpperAngLimit', {
+      constraintId: this.constraintId,
+      limit: limit
+    });
+  };
+
+  return AmmoSliderConstraint;
+});
+
 define('three/three_binding',[], function() {
   var tmpQuaternion = new THREE.Quaternion(),
       tmpVector3 = new THREE.Vector3();
@@ -3693,9 +3820,10 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
 });
 
 define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 
-         'ammo_point2point_constraint', 'ammo_hinge_constraint', 'three/three_adapter' ], 
+         'ammo_point2point_constraint', 'ammo_hinge_constraint', 'ammo_slider_constraint',
+         'three/three_adapter' ], 
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
-        AmmoHingeConstraint, THREEAdapter) {
+        AmmoHingeConstraint, AmmoSliderConstraint, THREEAdapter) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
@@ -3806,6 +3934,49 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
       var proxy = this;
       setTimeout(function() {
         deferred.resolve(new AmmoPoint2PointConstraint(proxy, constraintId));
+      }, 0);
+    },this));
+
+    return deferred.promise;
+  };
+
+  AmmoProxy.prototype.createSliderConstraint = function(bodyA, bodyB, frameInA, frameInB) {
+    var descriptor = {
+        rigidBodyIdA: bodyA.bodyId,
+        rigidBodyIdB: bodyB.bodyId,
+        frameInA: {
+          position: {
+            x: frameInA.position.x,
+            y: frameInA.position.y,
+            z: frameInA.position.z
+          },
+          rotation: {
+            x: frameInA.rotation.x,
+            y: frameInA.rotation.y,
+            z: frameInA.rotation.z,
+            w: frameInA.rotation.w
+          }
+        },
+        frameInB: {
+          position: {
+            x: frameInB.position.x,
+            y: frameInB.position.y,
+            z: frameInB.position.z
+          },
+          rotation: {
+            x: frameInB.rotation.x,
+            y: frameInB.rotation.y,
+            z: frameInB.rotation.z,
+            w: frameInB.rotation.w
+          }
+        }
+      },
+      deferred = when.defer();
+
+    this.execute('SliderConstraint_create', descriptor).then(_.bind(function(constraintId) {
+      var proxy = this;
+      setTimeout(function() {
+        deferred.resolve(new AmmoSliderConstraint(proxy, constraintId));
       }, 0);
     },this));
 

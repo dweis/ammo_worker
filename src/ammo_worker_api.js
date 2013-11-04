@@ -18,8 +18,8 @@ define([], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      importScripts('./js/ammo.js');
-      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      //import Scripts('./js/ammo.js');
+      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -29,10 +29,12 @@ define([], function() {
       ];
 
       this.tmpQuaternion = [
+        new Ammo.btQuaternion(),
         new Ammo.btQuaternion()
       ];
 
       this.tmpTrans = [
+        new Ammo.btTransform(),
         new Ammo.btTransform()
       ];
 
@@ -478,7 +480,8 @@ define([], function() {
 
     Point2PointConstraint_create: function(descriptor, fn) {
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB,
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+            this.bodies[descriptor.rigidBodyIdB],
           constraint,
           id;
 
@@ -487,7 +490,7 @@ define([], function() {
         this.tmpVec[0].setY(descriptor.pivotA.y);
         this.tmpVec[0].setZ(descriptor.pivotA.z); 
 
-        if (descriptor.rigidBodyIdB) {
+        if (rigidBodyB) {
           rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
           this.tmpVec[1].setX(descriptor.pivotB.x);
           this.tmpVec[1].setY(descriptor.pivotB.y);
@@ -505,6 +508,92 @@ define([], function() {
         if (typeof fn === 'function') {
           fn(id);
         }
+      }
+    },
+
+    SliderConstraint_create: function(descriptor, fn) {
+      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+            this.bodies[descriptor.rigidBodyIdB],
+          constraint,
+          id;
+
+      if (rigidBodyA) {
+        var transformA = new Ammo.btTransform();
+
+        this.tmpVec[0].setX(descriptor.frameInA.position.x);
+        this.tmpVec[0].setY(descriptor.frameInA.position.y);
+        this.tmpVec[0].setZ(descriptor.frameInA.position.z);
+
+        this.tmpQuaternion[0].setX(descriptor.frameInA.rotation.x);
+        this.tmpQuaternion[0].setY(descriptor.frameInA.rotation.y);
+        this.tmpQuaternion[0].setZ(descriptor.frameInA.rotation.z);
+        this.tmpQuaternion[0].setW(descriptor.frameInA.rotation.w);
+
+        transformA.setOrigin(this.tmpVec[0]);
+        transformA.setRotation(this.tmpQuaternion[0]);
+
+        if (rigidBodyB) {
+          var transformB = new Ammo.btTransform();
+
+          this.tmpVec[1].setX(descriptor.frameInB.position.x);
+          this.tmpVec[1].setY(descriptor.frameInB.position.y);
+          this.tmpVec[1].setZ(descriptor.frameInB.position.z);
+
+          this.tmpQuaternion[1].setX(descriptor.frameInB.rotation.x);
+          this.tmpQuaternion[1].setY(descriptor.frameInB.rotation.y);
+          this.tmpQuaternion[1].setZ(descriptor.frameInB.rotation.z);
+          this.tmpQuaternion[1].setW(descriptor.frameInB.rotation.w);
+
+          transformB.setOrigin(this.tmpVec[1]);
+          transformB.setRotation(this.tmpQuaternion[1]);
+
+          constraint = new Ammo.btSliderConstraint(rigidBodyA, rigidBodyB, 
+            transformA, transformB);
+        } else {
+
+        }
+
+        id = this.constraints.push(constraint) - 1;
+
+        this.dynamicsWorld.addConstraint(constraint);
+        constraint.enableFeedback();
+
+        if (typeof fn === 'function') {
+          fn(id);
+        }
+      }
+    },
+
+    SliderConstraint_setLowerLinLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setLowerLinLimit(descriptor.limit);
+      }
+    },
+
+    SliderConstraint_setUpperLinLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setUpperLinLimit(descriptor.limit);
+      }
+    },
+
+    SliderConstraint_setLowerAngLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setLowerAngLimit(descriptor.limit);
+      }
+    },
+
+    SliderConstraint_setUpperAngLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setUpperAngLimit(descriptor.limit);
       }
     },
 

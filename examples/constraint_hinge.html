@@ -8,6 +8,8 @@
 </head>
 <body>
   <div id="container">
+  </div>
+  <div style="position: absolute; top: 0; left: 0; color: white; font-family: tahoma, sans-serif; font-size: 24pt;">
   Press up or down arrow to apply torque to the door
   </div>
   <script src="js/catiline.js"></script>
@@ -52,7 +54,7 @@
 
       hinge.add(new THREE.Mesh(new THREE.CubeGeometry(0.3, 4, 0.3), material));
       hinge.position.y = 2.2;
-      hinge.position.x = -1.4;
+      hinge.position.x = -7.4;
       hinge.children[0].castShadow = true;
       this.scene.add(hinge);
 
@@ -62,6 +64,7 @@
         door = new THREE.Object3D();
         door.add(new THREE.Mesh(new THREE.CubeGeometry(2, 4, 0.3), material));
         door.position.y = 2.2;
+        door.position.x = -6;
         door.children[0].castShadow = true;
         this.scene.add(door);
 
