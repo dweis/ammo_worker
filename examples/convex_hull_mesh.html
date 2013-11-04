@@ -82,6 +82,7 @@
         shape: 'convex_hull_mesh',
         vertices: vertices
       }).then(function(rigidBody) {
+        rigidBody.addToWorld();
         this.bodies.push(rigidBody);
       }.bind(this));
 

@@ -84,6 +84,7 @@
     this.proxy
       .createRigidBodyFromObject(object, 1)
       .then(function(rigidBody) {
+        rigidBody.addToWorld();
         this.bodies.push(rigidBody);
       }.bind(this));
   };

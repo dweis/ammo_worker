@@ -59,6 +59,7 @@
       this.scene.add(hinge);
 
       this.proxy.createRigidBodyFromObject(hinge, 0).then(function(rigidBody) {
+        rigidBody.addToWorld();
         this.bodies.push(rigidBody); 
 
         door = new THREE.Object3D();
@@ -69,6 +70,7 @@
         this.scene.add(door);
 
         this.proxy.createRigidBodyFromObject(door, 4).then(function(rigidBody) {
+          rigidBody.addToWorld();
           this.bodies.push(rigidBody); 
 
           this.proxy.createHingeConstraint(this.bodies[0], this.bodies[1], 

@@ -102,6 +102,7 @@
             shape: 'bvh_triangle_mesh',
             triangles: triangles
           }).then(function(rigidBody) {
+            rigidBody.addToWorld();
             this.bodies.push(rigidBody);
           }.bind(this));
             }
@@ -140,6 +141,7 @@
         shape: 'sphere',
         radius: 2
       }).then(function(rigidBody) {
+        rigidBody.addToWorld();
         rigidBody.setObject(o);
         this.bodies.push(rigidBody);
       }.bind(this));

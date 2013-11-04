@@ -82,6 +82,7 @@
           z: 2
         }
       }).then(function(rigidBody) {
+        rigidBody.addToWorld();
         this.bodies.push(rigidBody);
       }.bind(this));
 

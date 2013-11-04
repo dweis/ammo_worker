@@ -114,5 +114,14 @@ define([], function() {
     return deferred;
   };
 
+
+  AmmoRigidBody.prototype.addToWorld = function(group, mask) {
+    return this.proxy.execute('DynamicsWorld_addRigidBody', {
+      bodyId: this.bodyId,
+      group: group,
+      mask: mask
+    });
+  };
+
   return AmmoRigidBody;
 });

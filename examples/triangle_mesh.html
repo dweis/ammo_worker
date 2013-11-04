@@ -95,6 +95,7 @@
         shape: 'convex_triangle_mesh',
         triangles: triangles
       }).then(function(rigidBody) {
+        rigidBody.addToWorld();
         this.bodies.push(rigidBody);
       }.bind(this));
 

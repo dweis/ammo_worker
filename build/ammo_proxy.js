@@ -2596,8 +2596,8 @@ define('ammo_worker_api',[], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      importScripts('./js/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -3225,6 +3225,14 @@ define('ammo_worker_api',[], function() {
       }
     },
 
+    DynamicsWorld_addRigidBody: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        this.dynamicsWorld.addRigidBody(body, descriptor.group, descriptor.mask);
+      }
+    },
+
     RigidBody_create: function(descriptor, fn) {
       var colShape,
           startTransform = this.tmpTrans[0],
@@ -3265,7 +3273,7 @@ define('ammo_worker_api',[], function() {
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
 
-      this.dynamicsWorld.addRigidBody(body);
+      //this.dynamicsWorld.addRigidBody(body);
 
       var idx = this.bodies.push(body) - 1;
       body.id = idx;
@@ -3486,6 +3494,15 @@ define('ammo_rigid_body',[], function() {
     this.binding.destroy();
 
     return deferred;
+  };
+
+
+  AmmoRigidBody.prototype.addToWorld = function(group, mask) {
+    return this.proxy.execute('DynamicsWorld_addRigidBody', {
+      bodyId: this.bodyId,
+      group: group,
+      mask: mask
+    });
   };
 
   return AmmoRigidBody;

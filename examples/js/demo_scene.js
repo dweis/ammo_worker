@@ -84,6 +84,7 @@ DemoScene.prototype._initScene = function() {
   scene.add(ground);
 
   this.proxy.adapter.createRigidBodyFromObject(ground, 0).then(_.bind(function(rigidBody) {
+    rigidBody.addToWorld(1,255);
     this.groundBody = rigidBody;
   }, this));
 
