@@ -2619,13 +2619,18 @@ define('ammo_worker_api',[], function() {
       this.bodies = [];
       this.vehicles = [];
       this.constraints = [];
+      this.ghosts = [];
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
       this.overlappingPairCache = new Ammo.btDbvtBroadphase();
+      
       this.solver = new Ammo.btSequentialImpulseConstraintSolver();
       this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(this.dispatcher,
           this.overlappingPairCache, this.solver, this.collisionConfiguration);
+
+      this.ghostPairCallback = new Ammo.btGhostPairCallback();
+      this.dynamicsWorld.getPairCache().setInternalGhostPairCallback(this.ghostPairCallback);
 
       this.buffers = [
         new ArrayBuffer(bufferSize),
@@ -2685,6 +2690,16 @@ define('ammo_worker_api',[], function() {
               }
             }
           }
+
+          that.ghosts.forEach(function(ghost/*, idx*/) {
+            var pairCache = Ammo.castObject(ghost.getOverlappingPairCache(), Ammo.btOverlappingPairCache);
+
+            var num = pairCache.getNumOverlappingPairs();
+
+            if (num > 0) {
+              // TODO: figure this out
+            }
+          }.bind(this));
 
           that.fire('update', update.buffer, [update.buffer]);
         }
@@ -3233,6 +3248,52 @@ define('ammo_worker_api',[], function() {
       }
     },
 
+    DynamicsWorld_addGhostObject: function(descriptor) {
+      var ghost = this.ghosts[descriptor.ghostId];
+
+      if (ghost) {
+        this.dynamicsWorld.addCollisionObject(ghost, descriptor.group, descriptor.mask);  
+      }
+    },
+
+    GhostObject_create: function(descriptor, fn) {
+      var colShape = this._createShape(descriptor.shape),
+          origin = this.tmpVec[0],
+          rotation = this.tmpQuaternion[0],
+          ghostObject;
+
+      if (!colShape) {
+        return console.error('Invalid collision shape!');
+      }
+
+      this.tmpTrans[0].setIdentity();
+
+      origin.setX(descriptor.position.x);
+      origin.setY(descriptor.position.y);
+      origin.setZ(descriptor.position.z);
+
+      rotation.setX(descriptor.quaternion.x);
+      rotation.setY(descriptor.quaternion.y);
+      rotation.setZ(descriptor.quaternion.z);
+      rotation.setW(descriptor.quaternion.w);
+
+      this.tmpTrans[0].setOrigin(origin);
+      this.tmpTrans[0].setRotation(rotation);
+
+      ghostObject = new Ammo.btPairCachingGhostObject();
+      ghostObject.setWorldTransform(this.tmpTrans[0]);
+
+      ghostObject.setCollisionShape(colShape);
+      ghostObject.setCollisionFlags(4); // no collision response 
+
+      var idx = this.ghosts.push(ghostObject) - 1;
+      ghostObject.id = idx;
+
+      if (typeof fn === 'function') {
+        fn(idx);
+      }
+    },
+
     RigidBody_create: function(descriptor, fn) {
       var colShape,
           startTransform = this.tmpTrans[0],
@@ -3272,8 +3333,6 @@ define('ammo_worker_api',[], function() {
       myMotionState = new Ammo.btDefaultMotionState(startTransform);
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
-
-      //this.dynamicsWorld.addRigidBody(body);
 
       var idx = this.bodies.push(body) - 1;
       body.id = idx;
@@ -3674,6 +3733,23 @@ define('ammo_slider_constraint',[], function() {
   return AmmoSliderConstraint;
 });
 
+define('ammo_ghost_object',[], function() {
+  function AmmoGhostObject(proxy, ghostId) {
+    this.proxy = proxy;
+    this.ghostId = ghostId;
+  }
+
+  AmmoGhostObject.prototype.addToWorld = function(group, mask) {
+    return this.proxy.execute('DynamicsWorld_addGhostObject', {
+      ghostId: this.ghostId,
+      group: group,
+      mask: mask
+    });
+  };
+
+  return AmmoGhostObject;
+});
+
 define('three/three_binding',[], function() {
   var tmpQuaternion = new THREE.Quaternion(),
       tmpVector3 = new THREE.Vector3();
@@ -3838,9 +3914,9 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
 
 define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 
          'ammo_point2point_constraint', 'ammo_hinge_constraint', 'ammo_slider_constraint',
-         'three/three_adapter' ], 
+         'ammo_ghost_object', 'three/three_adapter' ], 
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
-        AmmoHingeConstraint, AmmoSliderConstraint, THREEAdapter) {
+        AmmoHingeConstraint, AmmoSliderConstraint, AmmoGhostObject, THREEAdapter) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
@@ -3912,6 +3988,24 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
       var proxy = this;
       setTimeout(function() {
         deferred.resolve(new AmmoVehicle(proxy, vehicleId, rigidBody));
+      }, 0);
+    }, this));
+
+    return deferred.promise;
+  };
+
+  AmmoProxy.prototype.createGhostObject = function(shape, position, quaternion) {
+    var descriptor = {
+        shape: shape,
+        position: position,
+        quaternion: quaternion
+      },
+      deferred = when.defer();
+
+    this.worker.GhostObject_create(descriptor).then(_.bind(function(ghostId) {
+      var proxy = this;
+      setTimeout(function() {
+        deferred.resolve(new AmmoGhostObject(proxy, ghostId));
       }, 0);
     }, this));
 

@@ -1,8 +1,8 @@
 define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 
          'ammo_point2point_constraint', 'ammo_hinge_constraint', 'ammo_slider_constraint',
-         'three/three_adapter' ], 
+         'ammo_ghost_object', 'three/three_adapter' ], 
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
-        AmmoHingeConstraint, AmmoSliderConstraint, THREEAdapter) {
+        AmmoHingeConstraint, AmmoSliderConstraint, AmmoGhostObject, THREEAdapter) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
@@ -74,6 +74,24 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
       var proxy = this;
       setTimeout(function() {
         deferred.resolve(new AmmoVehicle(proxy, vehicleId, rigidBody));
+      }, 0);
+    }, this));
+
+    return deferred.promise;
+  };
+
+  AmmoProxy.prototype.createGhostObject = function(shape, position, quaternion) {
+    var descriptor = {
+        shape: shape,
+        position: position,
+        quaternion: quaternion
+      },
+      deferred = when.defer();
+
+    this.worker.GhostObject_create(descriptor).then(_.bind(function(ghostId) {
+      var proxy = this;
+      setTimeout(function() {
+        deferred.resolve(new AmmoGhostObject(proxy, ghostId));
       }, 0);
     }, this));
 

@@ -41,13 +41,18 @@ define([], function() {
       this.bodies = [];
       this.vehicles = [];
       this.constraints = [];
+      this.ghosts = [];
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
       this.overlappingPairCache = new Ammo.btDbvtBroadphase();
+      
       this.solver = new Ammo.btSequentialImpulseConstraintSolver();
       this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(this.dispatcher,
           this.overlappingPairCache, this.solver, this.collisionConfiguration);
+
+      this.ghostPairCallback = new Ammo.btGhostPairCallback();
+      this.dynamicsWorld.getPairCache().setInternalGhostPairCallback(this.ghostPairCallback);
 
       this.buffers = [
         new ArrayBuffer(bufferSize),
@@ -107,6 +112,16 @@ define([], function() {
               }
             }
           }
+
+          that.ghosts.forEach(function(ghost/*, idx*/) {
+            var pairCache = Ammo.castObject(ghost.getOverlappingPairCache(), Ammo.btOverlappingPairCache);
+
+            var num = pairCache.getNumOverlappingPairs();
+
+            if (num > 0) {
+              // TODO: figure this out
+            }
+          }.bind(this));
 
           that.fire('update', update.buffer, [update.buffer]);
         }
@@ -655,6 +670,52 @@ define([], function() {
       }
     },
 
+    DynamicsWorld_addGhostObject: function(descriptor) {
+      var ghost = this.ghosts[descriptor.ghostId];
+
+      if (ghost) {
+        this.dynamicsWorld.addCollisionObject(ghost, descriptor.group, descriptor.mask);  
+      }
+    },
+
+    GhostObject_create: function(descriptor, fn) {
+      var colShape = this._createShape(descriptor.shape),
+          origin = this.tmpVec[0],
+          rotation = this.tmpQuaternion[0],
+          ghostObject;
+
+      if (!colShape) {
+        return console.error('Invalid collision shape!');
+      }
+
+      this.tmpTrans[0].setIdentity();
+
+      origin.setX(descriptor.position.x);
+      origin.setY(descriptor.position.y);
+      origin.setZ(descriptor.position.z);
+
+      rotation.setX(descriptor.quaternion.x);
+      rotation.setY(descriptor.quaternion.y);
+      rotation.setZ(descriptor.quaternion.z);
+      rotation.setW(descriptor.quaternion.w);
+
+      this.tmpTrans[0].setOrigin(origin);
+      this.tmpTrans[0].setRotation(rotation);
+
+      ghostObject = new Ammo.btPairCachingGhostObject();
+      ghostObject.setWorldTransform(this.tmpTrans[0]);
+
+      ghostObject.setCollisionShape(colShape);
+      ghostObject.setCollisionFlags(4); // no collision response 
+
+      var idx = this.ghosts.push(ghostObject) - 1;
+      ghostObject.id = idx;
+
+      if (typeof fn === 'function') {
+        fn(idx);
+      }
+    },
+
     RigidBody_create: function(descriptor, fn) {
       var colShape,
           startTransform = this.tmpTrans[0],
@@ -694,8 +755,6 @@ define([], function() {
       myMotionState = new Ammo.btDefaultMotionState(startTransform);
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
-
-      //this.dynamicsWorld.addRigidBody(body);
 
       var idx = this.bodies.push(body) - 1;
       body.id = idx;
