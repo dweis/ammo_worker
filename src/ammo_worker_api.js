@@ -113,13 +113,42 @@ define([], function() {
             }
           }
 
+          //var manifoldArray = Ammo.castObject([], Ammo.btManifoldArray);
+          // = new Ammo.btManifoldArray();
           that.ghosts.forEach(function(ghost/*, idx*/) {
             var pairCache = Ammo.castObject(ghost.getOverlappingPairCache(), Ammo.btOverlappingPairCache);
 
             var num = pairCache.getNumOverlappingPairs();
+            var i, pair, collisionPair;
 
             if (num > 0) {
-              // TODO: figure this out
+              for (i = 0; i < num; i++) {
+                //manifoldArray.splice(0, manifoldArray.length);
+                //manifoldArray.clear();
+                pair = pairCache.getOverlappingPair(i);
+                //console.log(pairCache.getOverlappingPair(0).get_m_pProxy1().getUid());
+                // TODO: figure this out
+
+                collisionPair = that.dynamicsWorld.getPairCache().findPair(pair.get_m_pProxy0(), pair.get_m_pProxy1());
+                if (!collisionPair)
+                  continue;
+
+                if (collisionPair.get_m_algorithm()) {
+                  //collisionPair.get_m_algorithm()getAllContactManifolds(manifoldArray);
+                  var body = Ammo.wrapPointer(Ammo.wrapPointer(collisionPair.get_m_algorithm(), Ammo.ConcreteAlgorithm).getContact(i).getBody1(), Ammo.btRigidBody);
+
+                  that.tmpVec[0].setX(0);
+                  that.tmpVec[0].setY(-1000);
+                  that.tmpVec[0].setZ(0);
+
+                  body.applyCentralImpulse(that.tmpVec[0]); 
+                  console.log(1);
+                }
+                //console.log(manifoldArray.length);
+
+                //console.log('got collision pair');
+                //console.log(collisionPair);
+              }
             }
           }.bind(this));
 
