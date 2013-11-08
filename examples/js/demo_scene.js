@@ -84,6 +84,7 @@ DemoScene.prototype._initScene = function() {
   scene.add(ground);
 
   this.proxy.adapter.createRigidBodyFromObject(ground, 0).then(_.bind(function(rigidBody) {
+    rigidBody.setFriction(0.9);
     rigidBody.addToWorld(1,255);
     this.groundBody = rigidBody;
   }, this));
@@ -107,16 +108,18 @@ DemoScene.prototype._initScene = function() {
 };
 
 DemoScene.prototype.update = function(delta) {
+  var dt = delta - this.last;
+  this.last = delta;
   this.stats.begin();
   if (typeof this.preUpdate === 'function') {
-    this.preUpdate(delta);
+    this.preUpdate(dt);
   }
 
   this.controls.update();
   this.renderer.render(this.scene, this.camera);
 
   if (typeof this.postUpdate === 'function') {
-    this.postUpdate(delta);
+    this.postUpdate(dt);
   }
 
   if (this.proxy && this.proxy.swap) {

@@ -776,6 +776,7 @@ define([], function() {
         this.tmpVec[1].setZ(descriptor.relativePosition.z);
 
         body.applyForce(this.tmpVec[0], this.tmpVec[1]);
+        body.activate();
       } 
     },
 
@@ -791,6 +792,7 @@ define([], function() {
         this.tmpVec[1].setZ(descriptor.relativePosition.z);
 
         body.applyImpulse(this.tmpVec[0], this.tmpVec[1]);
+        body.activate();
       } 
     },
 
@@ -803,6 +805,7 @@ define([], function() {
         this.tmpVec[0].setZ(descriptor.torque.z);
         
         body.applyTorque(this.tmpVec[0]);
+        body.activate();
       }
     },
 
