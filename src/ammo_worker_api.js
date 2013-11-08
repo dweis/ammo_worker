@@ -822,6 +822,14 @@ define([], function() {
       }
     },
 
+    RigidBody_setDamping: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        body.setDamping(descriptor.linearDamping, descriptor.angularDamping);
+      }
+    },
+
     RigidBody_setLinearFactor: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
 

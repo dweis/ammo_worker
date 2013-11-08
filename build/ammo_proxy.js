@@ -3400,6 +3400,14 @@ define('ammo_worker_api',[], function() {
       }
     },
 
+    RigidBody_setDamping: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        body.setDamping(descriptor.linearDamping, descriptor.angularDamping);
+      }
+    },
+
     RigidBody_setLinearFactor: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
 
@@ -3450,6 +3458,14 @@ define('ammo_rigid_body',[], function() {
     if (this.binding && this.binding.update) {
       this.binding.update();
     }
+  };
+
+  AmmoRigidBody.prototype.setDamping = function(linearDamping, angularDamping) {
+    return this.proxy.execute('RigidBody_setDamping', {
+      bodyId: this.bodyId,
+      linearDamping: linearDamping,
+      angularDamping: angularDamping
+    });
   };
 
   AmmoRigidBody.prototype.applyTorque = function(torque) {
