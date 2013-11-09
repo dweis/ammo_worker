@@ -24,136 +24,50 @@
 
     SimpleDemo.prototype.initDemo = function() {
       var that = this,
-          material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
-          terrainMaterial = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+          material = new THREE.MeshLambertMaterial({ color: 0x33CC00 }),
+          terrainMaterial = new THREE.MeshLambertMaterial({ color: 0xFFFFFF }),
+          mesh;
 
-          this.camera.position.x = 200;
-          this.camera.position.y = 200;
-          this.camera.position.z = 200;
+      this.camera.position.x = 200;
+      this.camera.position.y = 200;
+      this.camera.position.z = 200;
 
       this.bodies = [];
-
-      var texture = new THREE.Texture();
-
-          var scale = new THREE.Vector3();
-          var mesh;
-          var tmpVector3 = new THREE.Vector3();
 
       var object = new THREE.Object3D();
 
       object.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, 0.1);
-      // object.add(new THREE.Mesh(new THREE.PlaneGeometry(100, 100, 25, 25), material));
+      //object.add(new THREE.Mesh(new THREE.PlaneGeometry(100, 100, 25, 25), material));
+      object.add(new THREE.Mesh(new THREE.TorusGeometry(25, 30, 25, 25, Math.PI * 2), material));
       object.add(new THREE.Mesh(new THREE.CubeGeometry(100, 10, 100, 1, 1, 1), material));
       object.children[0].scale.x = 0.5;
 
-      /*
-      var geometry = new THREE.BufferGeometry();
+      object.position.y = 25;
+      object.scale.x = object.scale.y = object.scale.z = 1;
 
-      object.add(new THREE.Mesh(geometry, material));
-      */
+      var geometry = null;
 
+      that.scene.add( object );
+      that.scene.updateMatrixWorld();
 
-          object.position.y = 25;
-          object.scale.x = object.scale.y = object.scale.z = 1;
+      that.proxy.createRigidBodyFromObject(object, 10000, {
+        shape: 'auto',
+        strategy: 'bvh_triangle_mesh',
+      }).then(function(rigidBody) {
+        rigidBody.addToWorld();
+        rigidBody.setAngularFactor({ x: 0, y: 0, z: 0 });
+        rigidBody.setLinearFactor({ x: 0, y: 0, z: 0 });
+        this.bodies.push(rigidBody);
+        console.log('adding bvh rigid body');
+      }.bind(this));
 
-          var geometry = null;
-
-          that.scene.add( object );
-          that.scene.updateMatrixWorld();
-
-              var inverseParent = new THREE.Matrix4(),
-        tmpMatrix = new THREE.Matrix4();
-
-          object.traverse( function ( child ) {
-            if ( child instanceof THREE.Mesh ) {
-              //child.material = terrainMaterial;
-              geometry = child.geometry;
-              mesh = child;
-              //child.material.map = texture;
-
-
-          triangles = [];//new Float64Array(geometry.faces.length * 9);
-        var min, max, halfExtents, tmpVec3 = new THREE.Vector3(),
-        position = new THREE.Vector3(),
-        rotation = new THREE.Quaternion(),
-        worldTransform = mesh.matrixWorld.clone(),
-        scale = new THREE.Vector3();
-
-        tmpMatrix.copy(inverseParent);
-        tmpMatrix.multiply(worldTransform);
-
-        position.getPositionFromMatrix(tmpMatrix);
-        scale.getScaleFromMatrix(worldTransform);
-        tmpMatrix.extractRotation(tmpMatrix);
-        rotation.setFromRotationMatrix(tmpMatrix);
-        console.log(scale);
-
-          for (var faceIdx in geometry.faces) {
-            face = geometry.faces[faceIdx];
-
-            tmpVector3.copy(geometry.vertices[face.a]);
-            tmpVector3.multiply(scale);
-
-            triangles[faceIdx * 9 + 0] = tmpVector3.x;
-            triangles[faceIdx * 9 + 1] = tmpVector3.y;
-            triangles[faceIdx * 9 + 2] = tmpVector3.z;
-
-            tmpVector3.copy(geometry.vertices[face.b]);
-            tmpVector3.multiply(scale);
-
-            triangles[faceIdx * 9 + 3] = tmpVector3.x;
-            triangles[faceIdx * 9 + 4] = tmpVector3.y;
-            triangles[faceIdx * 9 + 5] = tmpVector3.z;
-
-            tmpVector3.copy(geometry.vertices[face.c]);
-            tmpVector3.multiply(scale);
-
-            triangles[faceIdx * 9 + 6] = tmpVector3.x;
-            triangles[faceIdx * 9 + 7] = tmpVector3.y;
-            triangles[faceIdx * 9 + 8] = tmpVector3.z;
-          }
-
-          // for (var i = 0; i < triangles.length / 9; i++) {
-          //   console.log('x: ' + triangles[i * 9 + 0] + ' y: ' + triangles[i * 9 + 1] + ' z: ' + triangles[i * 9 + 2]);  
-          //   console.log('x: ' + triangles[i * 9 + 3] + ' y: ' + triangles[i * 9 + 4] + ' z: ' + triangles[i * 9 + 5]);  
-          //   console.log('x: ' + triangles[i * 9 + 6] + ' y: ' + triangles[i * 9 + 7] + ' z: ' + triangles[i * 9 + 8]);  
-          // }
-
-            /*
-          o.position.x = (Math.random() * 30) - 15;
-          o.position.y = 20 + (Math.random() * 20) - 5;
-          o.position.z = (Math.random() * 30) - 15;
-          */
-
-          that.proxy.adapter.createRigidBodyFromObject(object, 10000, {
-            shape: 'bvh_triangle_mesh',
-            triangles: triangles
-          }).then(function(rigidBody) {
-            rigidBody.addToWorld();
-            rigidBody.setAngularFactor({ x: 0, y: 0, z: 0 });
-            rigidBody.setLinearFactor({ x: 0, y: 0, z: 0 });
-            this.bodies.push(rigidBody);
-            console.log('adding bvh rigid body');
-          }.bind(this));
-            }
-
-         
-          }.bind(this), 0);
-
-
-      for (var i = 0; i < 400; i++) {
+      for (var i = 0; i < 100; i++) {
         var o = this._createObject(material);
       }
     };
 
     SimpleDemo.prototype._createObject = function(material) {
-      var o = new THREE.Object3D(),
-          geometry,
-          mesh,
-          face,
-          triangles,
-          scale = new THREE.Vector3(),
-          tmpVector3 = new THREE.Vector3();
+      var o = new THREE.Object3D();
 
       geometry = new THREE.SphereGeometry(2, 10, 10);
          mesh = new THREE.Mesh(geometry, material)

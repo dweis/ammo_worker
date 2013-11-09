@@ -244,7 +244,6 @@ define([], function() {
 
         mesh.addTriangle(this.tmpVec[0], this.tmpVec[1], this.tmpVec[2], false);
       }
-      console.log(className);
 
       return new Ammo[className](mesh, true, true);
     },
