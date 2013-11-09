@@ -41,7 +41,7 @@
 
       var object = new THREE.Object3D();
 
-      object.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, 0.5);
+      object.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, 0.1);
       // object.add(new THREE.Mesh(new THREE.PlaneGeometry(100, 100, 25, 25), material));
       object.add(new THREE.Mesh(new THREE.CubeGeometry(100, 10, 100, 1, 1, 1), material));
       object.children[0].scale.x = 0.5;
@@ -55,7 +55,14 @@
 
           object.position.y = 25;
           object.scale.x = object.scale.y = object.scale.z = 1;
+
           var geometry = null;
+
+          that.scene.add( object );
+          that.scene.updateMatrixWorld();
+
+              var inverseParent = new THREE.Matrix4(),
+        tmpMatrix = new THREE.Matrix4();
 
           object.traverse( function ( child ) {
             if ( child instanceof THREE.Mesh ) {
@@ -66,9 +73,20 @@
 
 
           triangles = [];//new Float64Array(geometry.faces.length * 9);
+        var min, max, halfExtents, tmpVec3 = new THREE.Vector3(),
+        position = new THREE.Vector3(),
+        rotation = new THREE.Quaternion(),
+        worldTransform = mesh.matrixWorld.clone(),
+        scale = new THREE.Vector3();
 
-          that.scene.updateMatrixWorld();
-          scale.getScaleFromMatrix(mesh.matrixWorld);
+        tmpMatrix.copy(inverseParent);
+        tmpMatrix.multiply(worldTransform);
+
+        position.getPositionFromMatrix(tmpMatrix);
+        scale.getScaleFromMatrix(worldTransform);
+        tmpMatrix.extractRotation(tmpMatrix);
+        rotation.setFromRotationMatrix(tmpMatrix);
+        console.log(scale);
 
           for (var faceIdx in geometry.faces) {
             face = geometry.faces[faceIdx];
@@ -118,10 +136,9 @@
             console.log('adding bvh rigid body');
           }.bind(this));
             }
-          }.bind(this) );
 
          
-          that.scene.add( object );
+          }.bind(this), 0);
 
 
       for (var i = 0; i < 400; i++) {
