@@ -2650,7 +2650,7 @@ define('ammo_worker_api',[], function() {
 
         last = now;
 
-        that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations);
+        that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);
 
         if (that.buffers.length > 0) {
           update = new Float64Array(that.buffers.pop());
@@ -2803,7 +2803,7 @@ define('ammo_worker_api',[], function() {
 
       mesh = new Ammo.btTriangleMesh(true, true);
 
-      for (i = 0; i < shape.triangles.length/9; i += 3) {
+      for (i = 0; i < shape.triangles.length/9; i ++) {
         this.tmpVec[0].setX(shape.triangles[i * 9 + 0]);
         this.tmpVec[0].setY(shape.triangles[i * 9 + 1]);
         this.tmpVec[0].setZ(shape.triangles[i * 9 + 2]);
@@ -2816,8 +2816,13 @@ define('ammo_worker_api',[], function() {
         this.tmpVec[2].setY(shape.triangles[i * 9 + 7]);
         this.tmpVec[2].setZ(shape.triangles[i * 9 + 8]);
 
-        mesh.addTriangle(this.tmpVec[0], this.tmpVec[1], this.tmpVec[2], true);
+            // console.log('x: ' + shape.triangles[i * 9 + 0] + ' y: ' + shape.triangles[i * 9 + 1] + ' z: ' + shape.triangles[i * 9 + 2]);  
+            // console.log('x: ' + shape.triangles[i * 9 + 3] + ' y: ' + shape.triangles[i * 9 + 4] + ' z: ' + shape.triangles[i * 9 + 5]);  
+            // console.log('x: ' + shape.triangles[i * 9 + 6] + ' y: ' + shape.triangles[i * 9 + 7] + ' z: ' + shape.triangles[i * 9 + 8]);  
+
+        mesh.addTriangle(this.tmpVec[0], this.tmpVec[1], this.tmpVec[2], false);
       }
+      console.log(className);
 
       return new Ammo[className](mesh, true, true);
     },

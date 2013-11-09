@@ -35,33 +35,37 @@
 
       var texture = new THREE.Texture();
 
-      var loader = new THREE.ImageLoader( );
-      loader.load( 'data/CastleMap/final_castle_texture.png', function ( image ) {
-        texture.image = image;
-        texture.needsUpdate = true;
-      });
-
-      loader = new THREE.OBJLoader();
-        loader.load( 'data/CastleMap/castle_map_complete.obj', function ( object ) {
           var scale = new THREE.Vector3();
           var mesh;
           var tmpVector3 = new THREE.Vector3();
 
-          object.position.y = 20;
-          object.scale.x = object.scale.y = object.scale.z = 5;
+      var object = new THREE.Object3D();
+
+      object.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, 0.5);
+      // object.add(new THREE.Mesh(new THREE.PlaneGeometry(100, 100, 25, 25), material));
+      object.add(new THREE.Mesh(new THREE.CubeGeometry(100, 10, 100, 1, 1, 1), material));
+      object.children[0].scale.x = 0.5;
+
+      /*
+      var geometry = new THREE.BufferGeometry();
+
+      object.add(new THREE.Mesh(geometry, material));
+      */
+
+
+          object.position.y = 25;
+          object.scale.x = object.scale.y = object.scale.z = 1;
           var geometry = null;
 
           object.traverse( function ( child ) {
-            console.log('test');
             if ( child instanceof THREE.Mesh ) {
-              console.log('mesh', child.geometry.vertices.length);
-              child.material = terrainMaterial;
+              //child.material = terrainMaterial;
               geometry = child.geometry;
               mesh = child;
-              child.material.map = texture;
+              //child.material.map = texture;
 
 
-          triangles = new Float64Array(geometry.faces.length * 9);
+          triangles = [];//new Float64Array(geometry.faces.length * 9);
 
           that.scene.updateMatrixWorld();
           scale.getScaleFromMatrix(mesh.matrixWorld);
@@ -90,7 +94,12 @@
             triangles[faceIdx * 9 + 7] = tmpVector3.y;
             triangles[faceIdx * 9 + 8] = tmpVector3.z;
           }
-          console.log(triangles.length);
+
+          // for (var i = 0; i < triangles.length / 9; i++) {
+          //   console.log('x: ' + triangles[i * 9 + 0] + ' y: ' + triangles[i * 9 + 1] + ' z: ' + triangles[i * 9 + 2]);  
+          //   console.log('x: ' + triangles[i * 9 + 3] + ' y: ' + triangles[i * 9 + 4] + ' z: ' + triangles[i * 9 + 5]);  
+          //   console.log('x: ' + triangles[i * 9 + 6] + ' y: ' + triangles[i * 9 + 7] + ' z: ' + triangles[i * 9 + 8]);  
+          // }
 
             /*
           o.position.x = (Math.random() * 30) - 15;
@@ -98,22 +107,24 @@
           o.position.z = (Math.random() * 30) - 15;
           */
 
-          that.proxy.createRigidBodyFromObject(child, 0, {
+          that.proxy.adapter.createRigidBodyFromObject(object, 10000, {
             shape: 'bvh_triangle_mesh',
             triangles: triangles
           }).then(function(rigidBody) {
             rigidBody.addToWorld();
+            rigidBody.setAngularFactor({ x: 0, y: 0, z: 0 });
+            rigidBody.setLinearFactor({ x: 0, y: 0, z: 0 });
             this.bodies.push(rigidBody);
+            console.log('adding bvh rigid body');
           }.bind(this));
             }
           }.bind(this) );
 
          
           that.scene.add( object );
-        } );
 
 
-      for (var i = 0; i < 25; i++) {
+      for (var i = 0; i < 400; i++) {
         var o = this._createObject(material);
       }
     };
@@ -134,15 +145,14 @@
       this.scene.add(o);
 
       o.position.x = (Math.random() * 100) - 50;
-      o.position.y = 60 + (Math.random() * 20) - 5;
+      o.position.y = 35;// + (Math.random() * 20) - 5;
       o.position.z = (Math.random() * 100) - 50;
 
-      this.proxy.createRigidBodyFromObject(o, 1, {
+      this.proxy.createRigidBodyFromObject(o, 100, {
         shape: 'sphere',
         radius: 2
       }).then(function(rigidBody) {
         rigidBody.addToWorld();
-        rigidBody.setObject(o);
         this.bodies.push(rigidBody);
       }.bind(this));
 
