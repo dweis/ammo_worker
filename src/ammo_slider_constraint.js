@@ -19,7 +19,6 @@ define([], function() {
   };
 
   AmmoSliderConstraint.prototype.setLowerAngLimit = function(limit) {
-    console.log('setting limit');
     return this.proxy.execute('SliderConstraint_setLowerAngLimit', {
       constraintId: this.constraintId,
       limit: limit

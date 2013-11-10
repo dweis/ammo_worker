@@ -238,10 +238,6 @@ define([], function() {
         this.tmpVec[2].setY(shape.triangles[i * 9 + 7]);
         this.tmpVec[2].setZ(shape.triangles[i * 9 + 8]);
 
-            // console.log('x: ' + shape.triangles[i * 9 + 0] + ' y: ' + shape.triangles[i * 9 + 1] + ' z: ' + shape.triangles[i * 9 + 2]);  
-            // console.log('x: ' + shape.triangles[i * 9 + 3] + ' y: ' + shape.triangles[i * 9 + 4] + ' z: ' + shape.triangles[i * 9 + 5]);  
-            // console.log('x: ' + shape.triangles[i * 9 + 6] + ' y: ' + shape.triangles[i * 9 + 7] + ' z: ' + shape.triangles[i * 9 + 8]);  
-
         mesh.addTriangle(this.tmpVec[0], this.tmpVec[1], this.tmpVec[2], false);
       }
 
@@ -484,7 +480,6 @@ define([], function() {
         for (var i in descriptor.properties) {
           if (descriptor.properties.hasOwnProperty(i)) {
             info['set_m_' + i](descriptor.properties[i]); 
-            //console.log('setting ' + i + ' to ' + descriptor.properties[i]);
           }
         }
       }

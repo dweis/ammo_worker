@@ -2816,10 +2816,6 @@ define('ammo_worker_api',[], function() {
         this.tmpVec[2].setY(shape.triangles[i * 9 + 7]);
         this.tmpVec[2].setZ(shape.triangles[i * 9 + 8]);
 
-            // console.log('x: ' + shape.triangles[i * 9 + 0] + ' y: ' + shape.triangles[i * 9 + 1] + ' z: ' + shape.triangles[i * 9 + 2]);  
-            // console.log('x: ' + shape.triangles[i * 9 + 3] + ' y: ' + shape.triangles[i * 9 + 4] + ' z: ' + shape.triangles[i * 9 + 5]);  
-            // console.log('x: ' + shape.triangles[i * 9 + 6] + ' y: ' + shape.triangles[i * 9 + 7] + ' z: ' + shape.triangles[i * 9 + 8]);  
-
         mesh.addTriangle(this.tmpVec[0], this.tmpVec[1], this.tmpVec[2], false);
       }
 
@@ -3062,7 +3058,6 @@ define('ammo_worker_api',[], function() {
         for (var i in descriptor.properties) {
           if (descriptor.properties.hasOwnProperty(i)) {
             info['set_m_' + i](descriptor.properties[i]); 
-            //console.log('setting ' + i + ' to ' + descriptor.properties[i]);
           }
         }
       }
@@ -3739,7 +3734,6 @@ define('ammo_slider_constraint',[], function() {
   };
 
   AmmoSliderConstraint.prototype.setLowerAngLimit = function(limit) {
-    console.log('setting limit');
     return this.proxy.execute('SliderConstraint_setLowerAngLimit', {
       constraintId: this.constraintId,
       limit: limit
@@ -3884,7 +3878,6 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
 
     o.traverse(function(child) {
       if (child instanceof THREE.Mesh) {
-        console.log(child);
         geometry = child.geometry;
         mesh = child;
 
@@ -3955,7 +3948,6 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
           }
         } else if (geometry instanceof THREE.Geometry) {
           for (i = 0; i < geometry.faces.length; i++) {
-            console.log(i);
             face = geometry.faces[i];
 
             tmpVector3.copy(geometry.vertices[face.a]);
@@ -3983,17 +3975,6 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
           }
         }
       }
-        // for (var i = 0; i < triangles.length / 9; i++) {
-        //   console.log('x: ' + triangles[i * 9 + 0] + ' y: ' + triangles[i * 9 + 1] + ' z: ' + triangles[i * 9 + 2]);  
-        //   console.log('x: ' + triangles[i * 9 + 3] + ' y: ' + triangles[i * 9 + 4] + ' z: ' + triangles[i * 9 + 5]);  
-        //   console.log('x: ' + triangles[i * 9 + 6] + ' y: ' + triangles[i * 9 + 7] + ' z: ' + triangles[i * 9 + 8]);  
-        // }
-
-          /*
-        o.position.x = (Math.random() * 30) - 15;
-        o.position.y = 20 + (Math.random() * 20) - 5;
-        o.position.z = (Math.random() * 30) - 15;
-        */
     });
 
     return json;
@@ -4107,7 +4088,7 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
           if (!geometry.attributes.position.array) {
             return console.warn('BufferGeometry has no position attribute. Was it unloaded?');
           }
-          
+
           var positions = geometry.attributes.position.array;
 
           for (i = 0; i < positions.length; i += 3) {

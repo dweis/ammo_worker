@@ -69,7 +69,6 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
 
     o.traverse(function(child) {
       if (child instanceof THREE.Mesh) {
-        console.log(child);
         geometry = child.geometry;
         mesh = child;
 
@@ -140,7 +139,6 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
           }
         } else if (geometry instanceof THREE.Geometry) {
           for (i = 0; i < geometry.faces.length; i++) {
-            console.log(i);
             face = geometry.faces[i];
 
             tmpVector3.copy(geometry.vertices[face.a]);
@@ -168,17 +166,6 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
           }
         }
       }
-        // for (var i = 0; i < triangles.length / 9; i++) {
-        //   console.log('x: ' + triangles[i * 9 + 0] + ' y: ' + triangles[i * 9 + 1] + ' z: ' + triangles[i * 9 + 2]);  
-        //   console.log('x: ' + triangles[i * 9 + 3] + ' y: ' + triangles[i * 9 + 4] + ' z: ' + triangles[i * 9 + 5]);  
-        //   console.log('x: ' + triangles[i * 9 + 6] + ' y: ' + triangles[i * 9 + 7] + ' z: ' + triangles[i * 9 + 8]);  
-        // }
-
-          /*
-        o.position.x = (Math.random() * 30) - 15;
-        o.position.y = 20 + (Math.random() * 20) - 5;
-        o.position.z = (Math.random() * 30) - 15;
-        */
     });
 
     return json;
@@ -292,7 +279,7 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
           if (!geometry.attributes.position.array) {
             return console.warn('BufferGeometry has no position attribute. Was it unloaded?');
           }
-          
+
           var positions = geometry.attributes.position.array;
 
           for (i = 0; i < positions.length; i += 3) {
