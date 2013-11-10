@@ -3902,10 +3902,11 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
         rotation.setFromRotationMatrix(tmpMatrix);
 
         if (geometry instanceof THREE.BufferGeometry) {
-          var positions = o.geometry.attributes.position.array;
+          var positions = geometry.attributes.position.array;
           var vA, vB, vC;
-          var indices = o.geometry.attributes.index.array;
-          var offsets = o.geometry.offsets;
+          var indices = geometry.attributes.index.array;
+          var offsets = geometry.offsets;
+          var il;
 
           for (var j = 0, jl = offsets.length; j < jl; ++ j ) {
             var start = offsets[ j ].start;
@@ -3929,23 +3930,23 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
               tmpVector3.x = positions[ vB * 3 ];
               tmpVector3.y = positions[ vB * 3 + 1];
               tmpVector3.z = positions[ vB * 3 + 2];
-              
+
               tmpVector3.multiply(scale);
-              
+
               json.triangles[idx * 9 + 3] = tmpVector3.x;
               json.triangles[idx * 9 + 4] = tmpVector3.y;
               json.triangles[idx * 9 + 5] = tmpVector3.z;
-              
+
               tmpVector3.x = positions[ vC * 3 ];
               tmpVector3.y = positions[ vC * 3 + 1];
               tmpVector3.z = positions[ vC * 3 + 2];
-              
+
               tmpVector3.multiply(scale);
-              
+
               json.triangles[idx * 9 + 6] = tmpVector3.x;
               json.triangles[idx * 9 + 7] = tmpVector3.y;
               json.triangles[idx * 9 + 8] = tmpVector3.z;
-              
+
               idx ++;
             }
           }
@@ -4085,21 +4086,22 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
 
   THREEAdapter.prototype._createConvexHullMeshShape = function(o) {
     var json = {
-          shape: 'convex_hull_mesh',
-          vertices: []
-        },
-        idx = 0;
+      shape: 'convex_hull_mesh',
+      vertices: []
+    },
+    idx = 0;
 
     o.traverse(function(child) {
       var geometry = child.geometry,
           scale = new THREE.Vector3(),
-          tmpVector3 = new THREE.Vector3();
+          tmpVector3 = new THREE.Vector3(),
+          i;
 
       if (child instanceof THREE.Mesh) {
         scale.getScaleFromMatrix(child.matrixWorld);
 
         if (geometry instanceof THREE.BufferGeometry) {
-          var positions = o.geometry.attributes.position.array;
+          var positions = geometry.attributes.position.array;
 
           for (i = 0; i < positions.length; i += 3) {
             tmpVector3.x = positions[ i + 0 ];
@@ -4107,11 +4109,11 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
             tmpVector3.z = positions[ i + 2];
 
             tmpVector3.multiply(scale);
-            
+
             json.vertices[idx * 9 + 0] = tmpVector3.x;
             json.vertices[idx * 9 + 1] = tmpVector3.y;
             json.vertices[idx * 9 + 2] = tmpVector3.z;
-            
+
             idx ++;
           }
         } else if (geometry instanceof THREE.Geometry) {
