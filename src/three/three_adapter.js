@@ -67,23 +67,15 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
         idx = 0,
         face;
 
+    inverseParent.getInverse(o.matrixWorld);
+
     o.traverse(function(child) {
       if (child instanceof THREE.Mesh) {
         geometry = child.geometry;
         mesh = child;
 
-        var position = new THREE.Vector3(),
-            rotation = new THREE.Quaternion(),
-            worldTransform = mesh.matrixWorld.clone(),
-            scale = new THREE.Vector3();
-
         tmpMatrix.copy(inverseParent);
-        tmpMatrix.multiply(worldTransform);
-
-        position.getPositionFromMatrix(tmpMatrix);
-        scale.getScaleFromMatrix(worldTransform);
-        tmpMatrix.extractRotation(tmpMatrix);
-        rotation.setFromRotationMatrix(tmpMatrix);
+        tmpMatrix.multiply(child.matrixWorld);
 
         if (geometry instanceof THREE.BufferGeometry) {
           if (!geometry.attributes.position.array) {
@@ -108,7 +100,8 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
               tmpVector3.y = positions[ vA * 3 + 1];
               tmpVector3.z = positions[ vA * 3 + 2];
 
-              tmpVector3.multiply(scale);
+              tmpVector3.applyMatrix4(tmpMatrix);
+              tmpVector3.multiply(o.scale);
 
               json.triangles[idx * 9 + 0] = tmpVector3.x;
               json.triangles[idx * 9 + 1] = tmpVector3.y;
@@ -118,7 +111,8 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
               tmpVector3.y = positions[ vB * 3 + 1];
               tmpVector3.z = positions[ vB * 3 + 2];
 
-              tmpVector3.multiply(scale);
+              tmpVector3.applyMatrix4(tmpMatrix);
+              tmpVector3.multiply(o.scale);
 
               json.triangles[idx * 9 + 3] = tmpVector3.x;
               json.triangles[idx * 9 + 4] = tmpVector3.y;
@@ -128,7 +122,8 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
               tmpVector3.y = positions[ vC * 3 + 1];
               tmpVector3.z = positions[ vC * 3 + 2];
 
-              tmpVector3.multiply(scale);
+              tmpVector3.applyMatrix4(tmpMatrix);
+              tmpVector3.multiply(o.scale);
 
               json.triangles[idx * 9 + 6] = tmpVector3.x;
               json.triangles[idx * 9 + 7] = tmpVector3.y;
@@ -142,21 +137,24 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
             face = geometry.faces[i];
 
             tmpVector3.copy(geometry.vertices[face.a]);
-            tmpVector3.multiply(scale);
+            tmpVector3.applyMatrix4(tmpMatrix);
+            tmpVector3.multiply(o.scale);
 
             json.triangles[idx * 9 + 0] = tmpVector3.x;
             json.triangles[idx * 9 + 1] = tmpVector3.y;
             json.triangles[idx * 9 + 2] = tmpVector3.z;
 
             tmpVector3.copy(geometry.vertices[face.b]);
-            tmpVector3.multiply(scale);
+            tmpVector3.applyMatrix4(tmpMatrix);
+            tmpVector3.multiply(o.scale);
 
             json.triangles[idx * 9 + 3] = tmpVector3.x;
             json.triangles[idx * 9 + 4] = tmpVector3.y;
             json.triangles[idx * 9 + 5] = tmpVector3.z;
 
             tmpVector3.copy(geometry.vertices[face.c]);
-            tmpVector3.multiply(scale);
+            tmpVector3.applyMatrix4(tmpMatrix);
+            tmpVector3.multiply(o.scale);
 
             json.triangles[idx * 9 + 6] = tmpVector3.x;
             json.triangles[idx * 9 + 7] = tmpVector3.y;
@@ -266,11 +264,20 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
     },
     idx = 0;
 
+    var inverseParent = new THREE.Matrix4(),
+        tmpMatrix = new THREE.Matrix4();
+        
+    inverseParent.getInverse(o.matrixWorld);
+
     o.traverse(function(child) {
       var geometry = child.geometry,
           scale = new THREE.Vector3(),
           tmpVector3 = new THREE.Vector3(),
           i;
+
+
+      tmpMatrix.copy(inverseParent);
+      tmpMatrix.multiply(child.matrixWorld);
 
       if (child instanceof THREE.Mesh) {
         scale.getScaleFromMatrix(child.matrixWorld);
@@ -287,7 +294,8 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
             tmpVector3.y = positions[ i + 1];
             tmpVector3.z = positions[ i + 2];
 
-            tmpVector3.multiply(scale);
+            tmpVector3.applyMatrix4(tmpMatrix);
+            tmpVector3.multiply(o.scale);
 
             json.vertices[idx * 9 + 0] = tmpVector3.x;
             json.vertices[idx * 9 + 1] = tmpVector3.y;
@@ -298,7 +306,8 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
         } else if (geometry instanceof THREE.Geometry) {
           for (i = 0; i < geometry.vertices.length; i++ ) {
             tmpVector3.copy(geometry.vertices[i]);
-            tmpVector3.multiply(scale);
+            tmpVector3.applyMatrix4(tmpMatrix);
+            tmpVector3.multiply(o.scale);
 
             json.vertices[idx * 3 + 0] = tmpVector3.x;
             json.vertices[idx * 3 + 1] = tmpVector3.y;
