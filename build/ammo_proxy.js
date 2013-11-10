@@ -3921,7 +3921,7 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
     inverseParent.getInverse(o.matrixWorld);
 
     o.traverse(function(child) {
-      if (child instanceof THREE.Mesh) {
+      if (child instanceof THREE.Mesh && !child.isBB) {
         geometry = child.geometry;
         mesh = child;
 
@@ -4051,7 +4051,7 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
     inverseParent.getInverse(o.matrixWorld);
 
     o.traverse(function(o) {
-      if (o instanceof THREE.Mesh) {
+      if (o instanceof THREE.Mesh && !o.isBB) {
         var min, max, halfExtents, tmpVec3 = new THREE.Vector3(),
         position = new THREE.Vector3(),
         rotation = new THREE.Quaternion(),
@@ -4130,7 +4130,7 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
       tmpMatrix.copy(inverseParent);
       tmpMatrix.multiply(child.matrixWorld);
 
-      if (child instanceof THREE.Mesh) {
+      if (child instanceof THREE.Mesh && !child.isBB) {
         scale.getScaleFromMatrix(child.matrixWorld);
 
         if (geometry instanceof THREE.BufferGeometry) {
