@@ -87,6 +87,9 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
         rotation.setFromRotationMatrix(tmpMatrix);
 
         if (geometry instanceof THREE.BufferGeometry) {
+          if (!geometry.attributes.position.array) {
+            return console.warn('BufferGeometry has no position attribute. Was it unloaded?');
+          }
           var positions = geometry.attributes.position.array;
           var vA, vB, vC;
           var indices = geometry.attributes.index.array;
@@ -286,6 +289,10 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
         scale.getScaleFromMatrix(child.matrixWorld);
 
         if (geometry instanceof THREE.BufferGeometry) {
+          if (!geometry.attributes.position.array) {
+            return console.warn('BufferGeometry has no position attribute. Was it unloaded?');
+          }
+          
           var positions = geometry.attributes.position.array;
 
           for (i = 0; i < positions.length; i += 3) {
