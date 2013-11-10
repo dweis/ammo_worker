@@ -661,6 +661,48 @@ define([], function() {
       }
     },
 
+    DynamicsWorld_rayTestClosest: function(descriptor, fn) {
+      this.tmpVec[0].setX(descriptor.rayFromWorld.x);
+      this.tmpVec[0].setY(descriptor.rayFromWorld.y);
+      this.tmpVec[0].setZ(descriptor.rayFromWorld.z);
+      this.tmpVec[1].setX(descriptor.rayToWorld.x);
+      this.tmpVec[1].setY(descriptor.rayToWorld.y);
+      this.tmpVec[1].setZ(descriptor.rayToWorld.z);
+
+      var callback = new Ammo.ClosestRayResultCallback(this.tmpVec[0], this.tmpVec[1]);
+
+      this.dynamicsWorld.rayTest(this.tmpVec[0], this.tmpVec[1], callback);
+
+      if (callback.hasHit()) {
+        var body = Ammo.castObject(callback.get_m_collisionObject(), Ammo.btRigidBody);
+
+        if (body.id) {
+          if (typeof fn === 'function') {
+            fn({
+              type: 'btRigidBody', 
+              bodyId: body.id,
+              hitPointWorld: {
+                x: callback.get_m_hitPointWorld().x(),
+                y: callback.get_m_hitPointWorld().y(),
+                z: callback.get_m_hitPointWorld().z()
+              },
+              hitNormalWorld: {
+                x: callback.get_m_hitNormalWorld().x(),
+                y: callback.get_m_hitNormalWorld().y(),
+                z: callback.get_m_hitNormalWorld().z()
+              }
+            });
+          }
+        }
+      } else {
+        if (typeof fn === 'function') {
+          fn();
+        }
+      }
+
+      Ammo.destroy(callback);
+    },
+
     DynamicsWorld_addRigidBody: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
 
