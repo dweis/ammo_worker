@@ -14,7 +14,6 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
       shape = this._getShapeJSON(object, { strategy: shape.strategy });
     }
 
-
     var position = {
         x: object.position.x,
         y: object.position.y,
@@ -41,40 +40,43 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
     opts.strategy = opts.strategy || 'compound_bounding_box';
 
     switch(opts.strategy) {
-      case 'compound_bounding_box':
-        return this._createBoundingBoxCompoundShape(o);
+    case 'compound_bounding_box':
+      return this._createBoundingBoxCompoundShape(o);
 
-      case 'bvh_triangle_mesh':
-        return this._createBvhTriangleMeshShape(o);
+    case 'bvh_triangle_mesh':
+      return this._createBvhTriangleMeshShape(o);
 
-      case 'convex_triangle_mesh':
-        return this._createConvexTriangleMeshShape(o);
+    case 'convex_triangle_mesh':
+      return this._createConvexTriangleMeshShape(o);
 
-      case 'convex_hull_mesh':
-        return this._createConvexHullMeshShape(o);
+    case 'convex_hull_mesh':
+      return this._createConvexHullMeshShape(o);
 
-      default:
-        throw new Error('Unknown strategy: ' + opts.strategy);
+    default:
+      throw new Error('Unknown strategy: ' + opts.strategy);
     }
   };
 
   THREEAdapter.prototype._createTriangleMeshShape = function(o, json) {
     var inverseParent = new THREE.Matrix4(),
         tmpMatrix = new THREE.Matrix4(),
-      tmpVector3 = new THREE.Vector3();
+        tmpVector3 = new THREE.Vector3(),
+        mesh,
+        geometry,
+        i,
+        idx = 0,
+        face;
 
     o.traverse(function(child) {
       if (child instanceof THREE.Mesh) {
-        //child.material = terrainMaterial;
+        console.log(child);
         geometry = child.geometry;
         mesh = child;
-        //child.material.map = texture;
 
-        var min, max, halfExtents, tmpVec3 = new THREE.Vector3(),
-        position = new THREE.Vector3(),
-        rotation = new THREE.Quaternion(),
-        worldTransform = mesh.matrixWorld.clone(),
-        scale = new THREE.Vector3();
+        var position = new THREE.Vector3(),
+            rotation = new THREE.Quaternion(),
+            worldTransform = mesh.matrixWorld.clone(),
+            scale = new THREE.Vector3();
 
         tmpMatrix.copy(inverseParent);
         tmpMatrix.multiply(worldTransform);
@@ -85,31 +87,80 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
         rotation.setFromRotationMatrix(tmpMatrix);
 
         if (geometry instanceof THREE.BufferGeometry) {
+          var positions = o.geometry.attributes.position.array;
+          var vA, vB, vC;
+          var indices = o.geometry.attributes.index.array;
+          var offsets = o.geometry.offsets;
 
+          for (var j = 0, jl = offsets.length; j < jl; ++ j ) {
+            var start = offsets[ j ].start;
+            var count = offsets[ j ].count;
+            var index = offsets[ j ].index;
+
+            for (i = start, il = start + count; i < il; i += 3 ) {
+              vA = index + indices[ i + 0 ];
+              vB = index + indices[ i + 1 ];
+              vC = index + indices[ i + 2 ];
+              tmpVector3.x = positions[ vA * 3 ];
+              tmpVector3.y = positions[ vA * 3 + 1];
+              tmpVector3.z = positions[ vA * 3 + 2];
+
+              tmpVector3.multiply(scale);
+
+              json.triangles[idx * 9 + 0] = tmpVector3.x;
+              json.triangles[idx * 9 + 1] = tmpVector3.y;
+              json.triangles[idx * 9 + 2] = tmpVector3.z;
+
+              tmpVector3.x = positions[ vB * 3 ];
+              tmpVector3.y = positions[ vB * 3 + 1];
+              tmpVector3.z = positions[ vB * 3 + 2];
+              
+              tmpVector3.multiply(scale);
+              
+              json.triangles[idx * 9 + 3] = tmpVector3.x;
+              json.triangles[idx * 9 + 4] = tmpVector3.y;
+              json.triangles[idx * 9 + 5] = tmpVector3.z;
+              
+              tmpVector3.x = positions[ vC * 3 ];
+              tmpVector3.y = positions[ vC * 3 + 1];
+              tmpVector3.z = positions[ vC * 3 + 2];
+              
+              tmpVector3.multiply(scale);
+              
+              json.triangles[idx * 9 + 6] = tmpVector3.x;
+              json.triangles[idx * 9 + 7] = tmpVector3.y;
+              json.triangles[idx * 9 + 8] = tmpVector3.z;
+              
+              idx ++;
+            }
+          }
         } else if (geometry instanceof THREE.Geometry) {
-          for (var faceIdx in geometry.faces) {
-            face = geometry.faces[faceIdx];
+          for (i = 0; i < geometry.faces.length; i++) {
+            console.log(i);
+            face = geometry.faces[i];
 
             tmpVector3.copy(geometry.vertices[face.a]);
             tmpVector3.multiply(scale);
 
-            json.triangles[faceIdx * 9 + 0] = tmpVector3.x;
-            json.triangles[faceIdx * 9 + 1] = tmpVector3.y;
-            json.triangles[faceIdx * 9 + 2] = tmpVector3.z;
+            json.triangles[idx * 9 + 0] = tmpVector3.x;
+            json.triangles[idx * 9 + 1] = tmpVector3.y;
+            json.triangles[idx * 9 + 2] = tmpVector3.z;
 
             tmpVector3.copy(geometry.vertices[face.b]);
             tmpVector3.multiply(scale);
 
-            json.triangles[faceIdx * 9 + 3] = tmpVector3.x;
-            json.triangles[faceIdx * 9 + 4] = tmpVector3.y;
-            json.triangles[faceIdx * 9 + 5] = tmpVector3.z;
+            json.triangles[idx * 9 + 3] = tmpVector3.x;
+            json.triangles[idx * 9 + 4] = tmpVector3.y;
+            json.triangles[idx * 9 + 5] = tmpVector3.z;
 
             tmpVector3.copy(geometry.vertices[face.c]);
             tmpVector3.multiply(scale);
 
-            json.triangles[faceIdx * 9 + 6] = tmpVector3.x;
-            json.triangles[faceIdx * 9 + 7] = tmpVector3.y;
-            json.triangles[faceIdx * 9 + 8] = tmpVector3.z;
+            json.triangles[idx * 9 + 6] = tmpVector3.x;
+            json.triangles[idx * 9 + 7] = tmpVector3.y;
+            json.triangles[idx * 9 + 8] = tmpVector3.z;
+
+            idx ++;
           }
         }
       }
@@ -127,7 +178,7 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
     });
 
     return json;
-  }
+  };
 
   THREEAdapter.prototype._createConvexTriangleMeshShape = function(o) {
     var json = {
@@ -214,43 +265,55 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
         });
       }
     });
-return json;
+    return json;
   };
 
   THREEAdapter.prototype._createConvexHullMeshShape = function(o) {
-
     var json = {
-      shape: 'convex_hull_mesh',
-      vertices: []
-    };
+          shape: 'convex_hull_mesh',
+          vertices: []
+        },
+        idx = 0;
 
     o.traverse(function(child) {
-      if (child instanceof THREE.Mesh) {
-          var geometry = child.geometry,
-          mesh,
-          face,
-          vertices,
+      var geometry = child.geometry,
           scale = new THREE.Vector3(),
           tmpVector3 = new THREE.Vector3();
 
-       // vertices = new Float64Array(geometry.vertices.length * 3);
-
+      if (child instanceof THREE.Mesh) {
         scale.getScaleFromMatrix(child.matrixWorld);
 
-        for (var vertexIdx in geometry.vertices) {
-          tmpVector3.copy(geometry.vertices[vertexIdx]);
-          tmpVector3.multiply(scale);
+        if (geometry instanceof THREE.BufferGeometry) {
+          var positions = o.geometry.attributes.position.array;
 
-          json.vertices[vertexIdx * 3 + 0] = tmpVector3.x;
-          json.vertices[vertexIdx * 3 + 1] = tmpVector3.y;
-          json.vertices[vertexIdx * 3 + 2] = tmpVector3.z;
+          for (i = 0; i < positions.length; i += 3) {
+            tmpVector3.x = positions[ i + 0 ];
+            tmpVector3.y = positions[ i + 1];
+            tmpVector3.z = positions[ i + 2];
+
+            tmpVector3.multiply(scale);
+            
+            json.vertices[idx * 9 + 0] = tmpVector3.x;
+            json.vertices[idx * 9 + 1] = tmpVector3.y;
+            json.vertices[idx * 9 + 2] = tmpVector3.z;
+            
+            idx ++;
+          }
+        } else if (geometry instanceof THREE.Geometry) {
+          for (i = 0; i < geometry.vertices.length; i++ ) {
+            tmpVector3.copy(geometry.vertices[i]);
+            tmpVector3.multiply(scale);
+
+            json.vertices[idx * 3 + 0] = tmpVector3.x;
+            json.vertices[idx * 3 + 1] = tmpVector3.y;
+            json.vertices[idx * 3 + 2] = tmpVector3.z;
+
+            idx++;
+          }
         }
-
-        o.position.x = (Math.random() * 30) - 15;
-        o.position.y = 10 + (Math.random() * 40) - 5;
-        o.position.z = (Math.random() * 30) - 15;
       }
     });
+
     return json;
   };
 

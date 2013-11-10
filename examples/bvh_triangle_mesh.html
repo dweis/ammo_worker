@@ -38,7 +38,7 @@
 
       object.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, 0.1);
       //object.add(new THREE.Mesh(new THREE.PlaneGeometry(100, 100, 25, 25), material));
-      object.add(new THREE.Mesh(new THREE.TorusGeometry(25, 30, 25, 25, Math.PI * 2), material));
+      object.add(new THREE.Mesh(new THREE.TorusGeometry(25, 8, 25, 25, Math.PI * 2), material));
       object.add(new THREE.Mesh(new THREE.CubeGeometry(100, 10, 100, 1, 1, 1), material));
       object.children[0].scale.x = 0.5;
 

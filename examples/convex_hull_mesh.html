@@ -48,6 +48,11 @@
       }
 
       o.scale.x = o.scale.y = o.scale.z = Math.random() * 2;
+
+      o.position.x = (Math.random() * 30) - 15;
+      o.position.y = 10 + (Math.random() * 40) - 5;
+      o.position.z = (Math.random() * 30) - 15;
+      
       mesh = new THREE.Mesh(geometry, material)
 
       o.add(mesh);
