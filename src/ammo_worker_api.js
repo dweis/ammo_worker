@@ -18,8 +18,8 @@ define([], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      importScripts('./js/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -797,11 +797,40 @@ define([], function() {
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
 
+console.log(descriptor);
+      if (descriptor.kinematic) {
+        body.setCollisionFlags(body.getCollisionFlags() | 2);
+        body.setActivationState(4);
+      }
+
       var idx = this.bodies.push(body) - 1;
       body.id = idx;
 
       if (typeof fn === 'function') {
         fn(idx);
+      }
+    },
+
+    RigidBody_setWorldTransform: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId],
+          position,
+          rotation;
+      
+      if (body) {
+        this.tmpTrans[0].setIdentity();
+        body.getMotionState().getWorldTransform(this.tmpTrans[0]);
+        position = this.tmpTrans[0].getOrigin();
+        rotation = this.tmpTrans[0].getRotation();
+
+        position.setX(descriptor.position.x);
+        position.setY(descriptor.position.y);
+        position.setZ(descriptor.position.z);
+
+        rotation.setX(descriptor.rotation.x);
+        rotation.setY(descriptor.rotation.y);
+        rotation.setZ(descriptor.rotation.z);
+        rotation.setW(descriptor.rotation.w);
+        body.getMotionState().setWorldTransform(this.tmpTrans[0]);
       }
     },
 

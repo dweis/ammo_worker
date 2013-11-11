@@ -83,7 +83,9 @@ DemoScene.prototype._initScene = function() {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  this.proxy.adapter.createRigidBodyFromObject(ground, 0).then(_.bind(function(rigidBody) {
+  this.proxy.adapter.createRigidBodyFromObject(ground, 1000000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'}).then(_.bind(function(rigidBody) {
+    rigidBody.setLinearFactor({ x: 0, y: 0, z: 0 });
+    rigidBody.setAngularFactor({ x: 0, y: 0, z: 0 });
     rigidBody.setFriction(0.9);
     rigidBody.addToWorld(1,255);
     this.groundBody = rigidBody;

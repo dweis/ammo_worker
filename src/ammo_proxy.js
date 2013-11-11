@@ -105,12 +105,13 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
     return deferred.promise;
   };
 
-  AmmoProxy.prototype.createRigidBody = function(shape, mass, position, quaternion) {
+  AmmoProxy.prototype.createRigidBody = function(shape, mass, position, quaternion, kinematic) {
     var descriptor = {
         shape: shape,
         mass: mass,
         position: position,
-        quaternion: quaternion
+        quaternion: quaternion,
+        kinematic: kinematic ? true : false
       },
       deferred = when.defer();
 
@@ -216,8 +217,8 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
     this.next = new Float64Array(data);
   };
 
-  AmmoProxy.prototype.createRigidBodyFromObject = function(object, mass, shape) {
-    return this.adapter.createRigidBodyFromObject(object, mass, shape); 
+  AmmoProxy.prototype.createRigidBodyFromObject = function(object, mass, shape, kinematic) {
+    return this.adapter.createRigidBodyFromObject(object, mass, shape, kinematic); 
   };
 
   AmmoProxy.prototype.getRigidBodyOffset = function(bodyId) {

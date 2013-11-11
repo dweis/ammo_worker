@@ -2596,8 +2596,8 @@ define('ammo_worker_api',[], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      importScripts('./js/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -3375,11 +3375,40 @@ define('ammo_worker_api',[], function() {
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
 
+console.log(descriptor);
+      if (descriptor.kinematic) {
+        body.setCollisionFlags(body.getCollisionFlags() | 2);
+        body.setActivationState(4);
+      }
+
       var idx = this.bodies.push(body) - 1;
       body.id = idx;
 
       if (typeof fn === 'function') {
         fn(idx);
+      }
+    },
+
+    RigidBody_setWorldTransform: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId],
+          position,
+          rotation;
+      
+      if (body) {
+        this.tmpTrans[0].setIdentity();
+        body.getMotionState().getWorldTransform(this.tmpTrans[0]);
+        position = this.tmpTrans[0].getOrigin();
+        rotation = this.tmpTrans[0].getRotation();
+
+        position.setX(descriptor.position.x);
+        position.setY(descriptor.position.y);
+        position.setZ(descriptor.position.z);
+
+        rotation.setX(descriptor.rotation.x);
+        rotation.setY(descriptor.rotation.y);
+        rotation.setZ(descriptor.rotation.z);
+        rotation.setW(descriptor.rotation.w);
+        body.getMotionState().setWorldTransform(this.tmpTrans[0]);
       }
     },
 
@@ -3624,6 +3653,14 @@ define('ammo_rigid_body',[], function() {
     });
   };
 
+  AmmoRigidBody.prototype.setWorldTransform = function(position, rotation) {
+    return this.proxy.execute('RigidBody_setWorldTransform', {
+      bodyId: this.bodyId,
+      position: position,
+      rotation: rotation
+    });
+  };
+
   return AmmoRigidBody;
 });
 
@@ -3838,7 +3875,6 @@ define('three/three_binding',[], function() {
       this.object.matrixWorld.scale(this.originalScale);
       this.object.matrixWorld.setPosition(tmpVector3);
     }
-
   };
 
   THREEBinding.prototype.destroy = function() {
@@ -3858,7 +3894,7 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
     return new THREEBinding(this.proxy, object, offset);
   };
 
-  THREEAdapter.prototype.createRigidBodyFromObject = function(object, mass, shape) {
+  THREEAdapter.prototype.createRigidBodyFromObject = function(object, mass, shape, kinematic) {
     if (!shape) {
       shape = this._getShapeJSON(object);
     } else if (shape.shape === 'auto') {
@@ -3877,7 +3913,7 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
         w: object.quaternion.w
       };
 
-    var deferred = this.proxy.createRigidBody(shape, mass, position, quaternion);
+    var deferred = this.proxy.createRigidBody(shape, mass, position, quaternion, kinematic);
 
     deferred.then(_.bind(function(rigidBody) {
       rigidBody.binding = this.createBinding(object, this.proxy.getRigidBodyOffset(rigidBody.bodyId));
@@ -3888,7 +3924,7 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
 
   THREEAdapter.prototype._getShapeJSON = function(o, opts) {
     opts = opts || {};
-    opts.strategy = opts.strategy || 'compound_bounding_box';
+    opts.strategy = opts.strategy || 'convex_hull_mesh';
 
     switch(opts.strategy) {
     case 'compound_bounding_box':
@@ -3906,6 +3942,157 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
     default:
       throw new Error('Unknown strategy: ' + opts.strategy);
     }
+  };
+
+  THREEAdapter.prototype._createConvexTriangleMeshShape = function(o) {
+    var json = {
+      'shape': 'convex_triangle_mesh',
+      'triangles': []
+    };
+
+    return this._createTriangleMeshShape(o, json);
+  };
+
+  THREEAdapter.prototype._createBvhTriangleMeshShape = function(o) {
+    var json = {
+      'shape': 'bvh_triangle_mesh',
+      'triangles': []
+    };
+
+    return this._createTriangleMeshShape(o, json);
+  };
+
+  THREEAdapter.prototype._createBoundingBoxCompoundShape = function(o) {
+    var inverseParent = new THREE.Matrix4(),
+        tmpMatrix = new THREE.Matrix4();
+
+    var json = {
+      'shape': 'compound',
+      'children': [
+      ]
+    };
+
+    inverseParent.getInverse(o.matrixWorld);
+
+    o.traverse(function(o) {
+      if (o instanceof THREE.Mesh && !o.isBB) {
+        var min, max, halfExtents = new THREE.Vector3(),
+        position = new THREE.Vector3(),
+        rotation = new THREE.Quaternion(),
+        scale = new THREE.Vector3();
+
+        scale.getScaleFromMatrix(o.matrixWorld);
+
+        tmpMatrix.copy(inverseParent);
+        tmpMatrix.multiply(o.matrixWorld);
+
+        position.getPositionFromMatrix(tmpMatrix);
+        tmpMatrix.extractRotation(tmpMatrix);
+        rotation.setFromRotationMatrix(tmpMatrix);
+
+        o.geometry.computeBoundingBox();
+        min = o.geometry.boundingBox.min.clone();
+        max = o.geometry.boundingBox.max.clone();
+
+        halfExtents.subVectors(max, min);
+        halfExtents.multiplyScalar(0.5);
+
+        halfExtents.multiplyVectors(halfExtents, scale);
+
+        var center = new THREE.Vector3();
+        center.x = ( min.x + max.x ) / 2;
+        center.y = ( min.y + max.y ) / 2;
+        center.z = ( min.z + max.z ) / 2;
+        center.multiplyVectors(center, scale);
+
+        json.children.push({
+          shape: 'box',
+          halfExtents: {
+            x: halfExtents.x,
+            y: halfExtents.y,
+            z: halfExtents.z
+          },
+          localTransform: {
+            position: {
+              x: position.x,
+              y: position.y,
+              z: position.z
+            },
+            rotation: {
+              x: rotation.x,
+              y: rotation.y,
+              z: rotation.z,
+              w: rotation.w
+            }
+          }
+        });
+      }
+    });
+    return json;
+  };
+
+  THREEAdapter.prototype._createConvexHullMeshShape = function(o) {
+    var json = {
+      shape: 'convex_hull_mesh',
+      vertices: []
+    },
+    idx = 0;
+
+    var inverseParent = new THREE.Matrix4(),
+        tmpMatrix = new THREE.Matrix4();
+        
+    inverseParent.getInverse(o.matrixWorld);
+
+    o.traverse(function(child) {
+      var geometry = child.geometry,
+          scale = new THREE.Vector3(),
+          tmpVector3 = new THREE.Vector3(),
+          i;
+
+      tmpMatrix.copy(inverseParent);
+      tmpMatrix.multiply(child.matrixWorld);
+
+      if (child instanceof THREE.Mesh && !child.isBB) {
+        scale.getScaleFromMatrix(child.matrixWorld);
+
+        if (geometry instanceof THREE.BufferGeometry) {
+          if (!geometry.attributes.position.array) {
+            return console.warn('BufferGeometry has no position attribute. Was it unloaded?');
+          }
+
+          var positions = geometry.attributes.position.array;
+
+          for (i = 0; i < positions.length; i += 3) {
+            tmpVector3.x = positions[ i + 0 ];
+            tmpVector3.y = positions[ i + 1];
+            tmpVector3.z = positions[ i + 2];
+
+            tmpVector3.applyMatrix4(tmpMatrix);
+            tmpVector3.multiply(o.scale);
+
+            json.vertices[idx * 9 + 0] = tmpVector3.x;
+            json.vertices[idx * 9 + 1] = tmpVector3.y;
+            json.vertices[idx * 9 + 2] = tmpVector3.z;
+
+            idx ++;
+          }
+        } else if (geometry instanceof THREE.Geometry) {
+          for (i = 0; i < geometry.vertices.length; i++ ) {
+            tmpVector3.copy(geometry.vertices[i]);
+            tmpVector3.applyMatrix4(tmpMatrix);
+            tmpVector3.multiply(o.scale);
+
+            json.vertices[idx * 3 + 0] = tmpVector3.x;
+            json.vertices[idx * 3 + 1] = tmpVector3.y;
+            json.vertices[idx * 3 + 2] = tmpVector3.z;
+
+            idx++;
+          }
+        }
+      }
+    });
+
+    return json;
   };
 
   THREEAdapter.prototype._createTriangleMeshShape = function(o, json) {
@@ -4012,159 +4199,6 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
             json.triangles[idx * 9 + 8] = tmpVector3.z;
 
             idx ++;
-          }
-        }
-      }
-    });
-
-    return json;
-  };
-
-  THREEAdapter.prototype._createConvexTriangleMeshShape = function(o) {
-    var json = {
-      'shape': 'convex_triangle_mesh',
-      'triangles': []
-    };
-
-    return this._createTriangleMeshShape(o, json);
-  };
-
-  THREEAdapter.prototype._createBvhTriangleMeshShape = function(o) {
-    var json = {
-      'shape': 'bvh_triangle_mesh',
-      'triangles': []
-    };
-
-    return this._createTriangleMeshShape(o, json);
-  };
-
-  THREEAdapter.prototype._createBoundingBoxCompoundShape = function(o) {
-    var inverseParent = new THREE.Matrix4(),
-        tmpMatrix = new THREE.Matrix4();
-
-    var json = {
-      'shape': 'compound',
-      'children': [
-      ]
-    };
-
-    inverseParent.getInverse(o.matrixWorld);
-
-    o.traverse(function(o) {
-      if (o instanceof THREE.Mesh && !o.isBB) {
-        var min, max, halfExtents, tmpVec3 = new THREE.Vector3(),
-        position = new THREE.Vector3(),
-        rotation = new THREE.Quaternion(),
-        worldTransform = o.matrixWorld.clone(),
-        scale = new THREE.Vector3();
-
-        tmpMatrix.copy(inverseParent);
-        tmpMatrix.multiply(worldTransform);
-
-        position.getPositionFromMatrix(tmpMatrix);
-        scale.getScaleFromMatrix(worldTransform);
-        tmpMatrix.extractRotation(tmpMatrix);
-        rotation.setFromRotationMatrix(tmpMatrix);
-
-        o.geometry.computeBoundingBox();
-        min = o.geometry.boundingBox.min.clone();
-        max = o.geometry.boundingBox.max.clone();
-
-        tmpVec3.subVectors(max, min);
-        tmpVec3.multiplyScalar(0.5);
-
-        tmpVec3.multiplyVectors(tmpVec3, scale);
-        halfExtents = tmpVec3;
-
-        var center = new THREE.Vector3();
-        center.x = ( min.x + max.x ) / 2;
-        center.y = ( min.y + max.y ) / 2;
-        center.z = ( min.z + max.z ) / 2;
-        center.multiplyVectors(center, scale);
-
-        json.children.push({
-          shape: 'box',
-          halfExtents: {
-            x: halfExtents.x,
-            y: halfExtents.y,
-            z: halfExtents.z
-          },
-          localTransform: {
-            position: {
-              x: position.x,
-              y: position.y,
-              z: position.z
-            },
-            rotation: {
-              x: rotation.x,
-              y: rotation.y,
-              z: rotation.z,
-              w: rotation.w
-            }
-          }
-        });
-      }
-    });
-    return json;
-  };
-
-  THREEAdapter.prototype._createConvexHullMeshShape = function(o) {
-    var json = {
-      shape: 'convex_hull_mesh',
-      vertices: []
-    },
-    idx = 0;
-
-    var inverseParent = new THREE.Matrix4(),
-        tmpMatrix = new THREE.Matrix4();
-        
-    inverseParent.getInverse(o.matrixWorld);
-
-    o.traverse(function(child) {
-      var geometry = child.geometry,
-          scale = new THREE.Vector3(),
-          tmpVector3 = new THREE.Vector3(),
-          i;
-
-
-      tmpMatrix.copy(inverseParent);
-      tmpMatrix.multiply(child.matrixWorld);
-
-      if (child instanceof THREE.Mesh && !child.isBB) {
-        scale.getScaleFromMatrix(child.matrixWorld);
-
-        if (geometry instanceof THREE.BufferGeometry) {
-          if (!geometry.attributes.position.array) {
-            return console.warn('BufferGeometry has no position attribute. Was it unloaded?');
-          }
-
-          var positions = geometry.attributes.position.array;
-
-          for (i = 0; i < positions.length; i += 3) {
-            tmpVector3.x = positions[ i + 0 ];
-            tmpVector3.y = positions[ i + 1];
-            tmpVector3.z = positions[ i + 2];
-
-            tmpVector3.applyMatrix4(tmpMatrix);
-            tmpVector3.multiply(o.scale);
-
-            json.vertices[idx * 9 + 0] = tmpVector3.x;
-            json.vertices[idx * 9 + 1] = tmpVector3.y;
-            json.vertices[idx * 9 + 2] = tmpVector3.z;
-
-            idx ++;
-          }
-        } else if (geometry instanceof THREE.Geometry) {
-          for (i = 0; i < geometry.vertices.length; i++ ) {
-            tmpVector3.copy(geometry.vertices[i]);
-            tmpVector3.applyMatrix4(tmpMatrix);
-            tmpVector3.multiply(o.scale);
-
-            json.vertices[idx * 3 + 0] = tmpVector3.x;
-            json.vertices[idx * 3 + 1] = tmpVector3.y;
-            json.vertices[idx * 3 + 2] = tmpVector3.z;
-
-            idx++;
           }
         }
       }
@@ -4283,12 +4317,13 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     return deferred.promise;
   };
 
-  AmmoProxy.prototype.createRigidBody = function(shape, mass, position, quaternion) {
+  AmmoProxy.prototype.createRigidBody = function(shape, mass, position, quaternion, kinematic) {
     var descriptor = {
         shape: shape,
         mass: mass,
         position: position,
-        quaternion: quaternion
+        quaternion: quaternion,
+        kinematic: kinematic ? true : false
       },
       deferred = when.defer();
 
@@ -4394,8 +4429,8 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     this.next = new Float64Array(data);
   };
 
-  AmmoProxy.prototype.createRigidBodyFromObject = function(object, mass, shape) {
-    return this.adapter.createRigidBodyFromObject(object, mass, shape); 
+  AmmoProxy.prototype.createRigidBodyFromObject = function(object, mass, shape, kinematic) {
+    return this.adapter.createRigidBodyFromObject(object, mass, shape, kinematic); 
   };
 
   AmmoProxy.prototype.getRigidBodyOffset = function(bodyId) {

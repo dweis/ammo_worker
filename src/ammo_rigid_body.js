@@ -131,5 +131,13 @@ define([], function() {
     });
   };
 
+  AmmoRigidBody.prototype.setWorldTransform = function(position, rotation) {
+    return this.proxy.execute('RigidBody_setWorldTransform', {
+      bodyId: this.bodyId,
+      position: position,
+      rotation: rotation
+    });
+  };
+
   return AmmoRigidBody;
 });
