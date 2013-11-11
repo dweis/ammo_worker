@@ -18,8 +18,8 @@ define([], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      importScripts('./js/ammo.js');
-      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      //import Scripts('./js/ammo.js');
+      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -797,7 +797,6 @@ define([], function() {
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
 
-console.log(descriptor);
       if (descriptor.kinematic) {
         body.setCollisionFlags(body.getCollisionFlags() | 2);
         body.setActivationState(4);
