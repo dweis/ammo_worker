@@ -119,6 +119,29 @@ define([], function() {
     });
   };
 
+  AmmoRigidBody.prototype.setLinearVelocity = function(linearVelocity) {
+    return this.proxy.execute('RigidBody_setLinearVelocity', {
+      bodyId: this.bodyId,
+      linearFactor: {
+        x: linearVelocity.x,
+        y: linearVelocity.y,
+        z: linearVelocity.z
+      }
+    });
+  };
+
+  AmmoRigidBody.prototype.setAngularVelocity = function(angularVelocity) {
+    return this.proxy.execute('RigidBody_setAngularVelocity', {
+      bodyId: this.bodyId,
+      angularFactor: {
+        x: angularVelocity.x,
+        y: angularVelocity.y,
+        z: angularVelocity.z
+      }
+    });
+  };
+
+
   AmmoRigidBody.prototype.destroy = function() {
     var deferred = this.proxy.execute('RigidBody_destroy', { bodyId: this.bodyId });
 

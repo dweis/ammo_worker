@@ -3553,6 +3553,28 @@ define('ammo_worker_api',[], function() {
       }
     },
 
+    RigidBody_setLinearVelocity: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        this.tmpVec[0].setX(descriptor.linearVelocity.x); 
+        this.tmpVec[0].setY(descriptor.linearVelocity.y); 
+        this.tmpVec[0].setZ(descriptor.linearVelocity.z); 
+        body.setLinearVelocity(this.tmpVec[0]);
+      }
+    },
+
+    RigidBody_setAngularVelocity: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        this.tmpVec[0].setX(descriptor.angularVelocity.x); 
+        this.tmpVec[0].setY(descriptor.angularVelocity.y); 
+        this.tmpVec[0].setZ(descriptor.angularVelocity.z); 
+        body.setAngularVelocity(this.tmpVec[0]);
+      }
+    },
+
     RigidBody_destroy: function(id) {
       this.dynamicsWorld.removeRigidBody(this.bodies[id]);
       Ammo.destroy(this.bodies[id]);
@@ -3690,6 +3712,29 @@ define('ammo_rigid_body',[], function() {
       }
     });
   };
+
+  AmmoRigidBody.prototype.setLinearVelocity = function(linearVelocity) {
+    return this.proxy.execute('RigidBody_setLinearVelocity', {
+      bodyId: this.bodyId,
+      linearFactor: {
+        x: linearVelocity.x,
+        y: linearVelocity.y,
+        z: linearVelocity.z
+      }
+    });
+  };
+
+  AmmoRigidBody.prototype.setAngularVelocity = function(angularVelocity) {
+    return this.proxy.execute('RigidBody_setAngularVelocity', {
+      bodyId: this.bodyId,
+      angularFactor: {
+        x: angularVelocity.x,
+        y: angularVelocity.y,
+        z: angularVelocity.z
+      }
+    });
+  };
+
 
   AmmoRigidBody.prototype.destroy = function() {
     var deferred = this.proxy.execute('RigidBody_destroy', { bodyId: this.bodyId });

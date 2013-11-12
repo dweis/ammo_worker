@@ -975,6 +975,28 @@ define([], function() {
       }
     },
 
+    RigidBody_setLinearVelocity: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        this.tmpVec[0].setX(descriptor.linearVelocity.x); 
+        this.tmpVec[0].setY(descriptor.linearVelocity.y); 
+        this.tmpVec[0].setZ(descriptor.linearVelocity.z); 
+        body.setLinearVelocity(this.tmpVec[0]);
+      }
+    },
+
+    RigidBody_setAngularVelocity: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        this.tmpVec[0].setX(descriptor.angularVelocity.x); 
+        this.tmpVec[0].setY(descriptor.angularVelocity.y); 
+        this.tmpVec[0].setZ(descriptor.angularVelocity.z); 
+        body.setAngularVelocity(this.tmpVec[0]);
+      }
+    },
+
     RigidBody_destroy: function(id) {
       this.dynamicsWorld.removeRigidBody(this.bodies[id]);
       Ammo.destroy(this.bodies[id]);
