@@ -67,8 +67,9 @@
 
       console.log(cube);
 
-      this.proxy.createRigidBodyFromObject(cube, 1, { shape: 'auto', strategy: 'compound_bounding_box' }, true)
+      this.proxy.createRigidBodyFromObject(cube, 1, { shape: 'auto', strategy: 'compound_bounding_box' })
         .then(function(rigidBody) {
+        rigidBody.setType('kinematic');
         rigidBody.setLinearFactor({ x: 1, y: 1, z: 1 });
         rigidBody.setAngularFactor({ x: 0, y: 1, z: 0 });
         rigidBody.setDamping(0.95, 0.95);

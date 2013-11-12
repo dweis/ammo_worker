@@ -11,6 +11,13 @@ define([], function() {
     }
   };
 
+  AmmoRigidBody.prototype.setType = function(type) {
+    return this.proxy.execute('RigidBody_setType', {
+      bodyId: this.bodyId,
+      type: type
+    });
+  };
+
   AmmoRigidBody.prototype.setDamping = function(linearDamping, angularDamping) {
     return this.proxy.execute('RigidBody_setDamping', {
       bodyId: this.bodyId,

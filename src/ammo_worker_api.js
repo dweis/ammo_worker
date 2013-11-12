@@ -15,6 +15,24 @@ define([], function() {
   }
 
   AmmoWorkerAPI.prototype = {
+    collisionFlags: {
+      CF_STATIC_OBJECT: 1, 
+      CF_KINEMATIC_OBJECT: 2, 
+      CF_NO_CONTACT_RESPONSE: 4, 
+      CF_CUSTOM_MATERIAL_CALLBACK: 8, 
+      CF_CHARACTER_OBJECT: 16, 
+      CF_DISABLE_VISUALIZE_OBJECT: 32, 
+      CF_DISABLE_SPU_COLLISION_PROCESSING: 64 
+    },
+
+    activationStates: {
+      ACTIVE_TAG: 1,
+      ISLAND_SLEEPING: 2,
+      WANTS_DEACTIVATION: 3,
+      DISABLE_DEACTIVATION: 4,
+      DISABLE_SIMULATION: 5
+    }, 
+
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
@@ -372,7 +390,7 @@ define([], function() {
       vehicle = new Ammo.btRaycastVehicle(vehicleTuning, body, new Ammo.btDefaultVehicleRaycaster(this.dynamicsWorld));
       vehicle.tuning = vehicleTuning;
 
-      body.setActivationState(4);
+      body.setActivationState(this.activationStates.DISABLE_DEACTIVATION);
       vehicle.setCoordinateSystem(0, 1, 2);
 
       this.dynamicsWorld.addVehicle(vehicle);
@@ -747,7 +765,7 @@ define([], function() {
       ghostObject.setWorldTransform(this.tmpTrans[0]);
 
       ghostObject.setCollisionShape(colShape);
-      ghostObject.setCollisionFlags(4); // no collision response 
+      ghostObject.setCollisionFlags(this.collisionFlags.CF_NO_CONTACT_RESPONSE); // no collision response 
 
       var idx = this.ghosts.push(ghostObject) - 1;
       ghostObject.id = idx;
@@ -797,16 +815,35 @@ define([], function() {
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
 
-      if (descriptor.kinematic) {
-        body.setCollisionFlags(body.getCollisionFlags() | 2);
-        body.setActivationState(4);
-      }
-
       var idx = this.bodies.push(body) - 1;
       body.id = idx;
 
       if (typeof fn === 'function') {
         fn(idx);
+      }
+    },
+
+    RigidBody_setType: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        switch (descriptor.type) {
+        case 'static':
+          body.setCollisionFlags(this.collisionFlags.CF_STATIC_OBJECT);
+          body.setActivationState(this.activationStates.DISABLE_SIMULATION);
+          break;
+        case 'kinematic':
+          body.setCollisionFlags(this.collisionFlags.CF_KINEMATIC_OBJECT);
+          body.setActivationState(this.activationStates.DISABLE_DEACTIVATION);
+          break;
+        default:
+          console.warn('unknown body type: ' + descriptor.type + ', defaulting to dynamic');
+          body.setCollisionFlags(0);
+          break;
+        case 'dynamic':
+          body.setCollisionFlags(0);
+          break;
+        }
       }
     },
 

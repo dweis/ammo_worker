@@ -106,7 +106,7 @@
 
       this.scene.add(o);
 
-      o.position.y = 10;
+      o.position.y = 3;
 
       this.scene.updateMatrixWorld(true);
 
@@ -121,7 +121,7 @@
         frictionSlip: config.frictionSlip
       };
 
-      this.proxy.createRigidBodyFromObject(o, 2000).then(function(rigidBody) {
+      this.proxy.createRigidBodyFromObject(o, 1000).then(function(rigidBody) {
         rigidBody.addToWorld();
         that.proxy.createVehicle(rigidBody, tuning).then(function(vehicle) {
           var wheel, cylinder, euler = new THREE.Euler(),

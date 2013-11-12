@@ -78,15 +78,15 @@ DemoScene.prototype._initScene = function() {
     color: 0x666666
   });
 
-  var ground = new THREE.Mesh(new THREE.CubeGeometry(1000,0.01, 1000),groundMaterial); 
+  var ground = new THREE.Mesh(new THREE.CubeGeometry(1000,0.01,1000, 1, 1, 1),groundMaterial); 
   //ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
   ground.receiveShadow = true;
   scene.add(ground);
+  scene.updateMatrixWorld();
 
-  this.proxy.adapter.createRigidBodyFromObject(ground, 1000000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'}).then(_.bind(function(rigidBody) {
-    rigidBody.setLinearFactor({ x: 0, y: 0, z: 0 });
-    rigidBody.setAngularFactor({ x: 0, y: 0, z: 0 });
-    rigidBody.setFriction(0.9);
+  this.proxy.adapter.createRigidBodyFromObject(ground, 50000000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'}).then(_.bind(function(rigidBody) {
+    rigidBody.setType('static');
+    rigidBody.setFriction(0.5);
     rigidBody.addToWorld(1,255);
     this.groundBody = rigidBody;
   }, this));

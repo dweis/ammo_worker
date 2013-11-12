@@ -2593,6 +2593,24 @@ define('ammo_worker_api',[], function() {
   }
 
   AmmoWorkerAPI.prototype = {
+    collisionFlags: {
+      CF_STATIC_OBJECT: 1, 
+      CF_KINEMATIC_OBJECT: 2, 
+      CF_NO_CONTACT_RESPONSE: 4, 
+      CF_CUSTOM_MATERIAL_CALLBACK: 8, 
+      CF_CHARACTER_OBJECT: 16, 
+      CF_DISABLE_VISUALIZE_OBJECT: 32, 
+      CF_DISABLE_SPU_COLLISION_PROCESSING: 64 
+    },
+
+    activationStates: {
+      ACTIVE_TAG: 1,
+      ISLAND_SLEEPING: 2,
+      WANTS_DEACTIVATION: 3,
+      DISABLE_DEACTIVATION: 4,
+      DISABLE_SIMULATION: 5
+    }, 
+
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
@@ -2950,7 +2968,7 @@ define('ammo_worker_api',[], function() {
       vehicle = new Ammo.btRaycastVehicle(vehicleTuning, body, new Ammo.btDefaultVehicleRaycaster(this.dynamicsWorld));
       vehicle.tuning = vehicleTuning;
 
-      body.setActivationState(4);
+      body.setActivationState(this.activationStates.DISABLE_DEACTIVATION);
       vehicle.setCoordinateSystem(0, 1, 2);
 
       this.dynamicsWorld.addVehicle(vehicle);
@@ -3325,7 +3343,7 @@ define('ammo_worker_api',[], function() {
       ghostObject.setWorldTransform(this.tmpTrans[0]);
 
       ghostObject.setCollisionShape(colShape);
-      ghostObject.setCollisionFlags(4); // no collision response 
+      ghostObject.setCollisionFlags(this.collisionFlags.CF_NO_CONTACT_RESPONSE); // no collision response 
 
       var idx = this.ghosts.push(ghostObject) - 1;
       ghostObject.id = idx;
@@ -3375,16 +3393,35 @@ define('ammo_worker_api',[], function() {
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
 
-      if (descriptor.kinematic) {
-        body.setCollisionFlags(body.getCollisionFlags() | 2);
-        body.setActivationState(4);
-      }
-
       var idx = this.bodies.push(body) - 1;
       body.id = idx;
 
       if (typeof fn === 'function') {
         fn(idx);
+      }
+    },
+
+    RigidBody_setType: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        switch (descriptor.type) {
+        case 'static':
+          body.setCollisionFlags(this.collisionFlags.CF_STATIC_OBJECT);
+          body.setActivationState(this.activationStates.DISABLE_SIMULATION);
+          break;
+        case 'kinematic':
+          body.setCollisionFlags(this.collisionFlags.CF_KINEMATIC_OBJECT);
+          body.setActivationState(this.activationStates.DISABLE_DEACTIVATION);
+          break;
+        default:
+          console.warn('unknown body type: ' + descriptor.type + ', defaulting to dynamic');
+          body.setCollisionFlags(0);
+          break;
+        case 'dynamic':
+          body.setCollisionFlags(0);
+          break;
+        }
       }
     },
 
@@ -3530,6 +3567,13 @@ define('ammo_rigid_body',[], function() {
     if (this.binding && this.binding.update) {
       this.binding.update();
     }
+  };
+
+  AmmoRigidBody.prototype.setType = function(type) {
+    return this.proxy.execute('RigidBody_setType', {
+      bodyId: this.bodyId,
+      type: type
+    });
   };
 
   AmmoRigidBody.prototype.setDamping = function(linearDamping, angularDamping) {
@@ -3893,7 +3937,7 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
     return new THREEBinding(this.proxy, object, offset);
   };
 
-  THREEAdapter.prototype.createRigidBodyFromObject = function(object, mass, shape, kinematic) {
+  THREEAdapter.prototype.createRigidBodyFromObject = function(object, mass, shape) {
     if (!shape) {
       shape = this._getShapeJSON(object);
     } else if (shape.shape === 'auto') {
@@ -3912,7 +3956,7 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
         w: object.quaternion.w
       };
 
-    var deferred = this.proxy.createRigidBody(shape, mass, position, quaternion, kinematic);
+    var deferred = this.proxy.createRigidBody(shape, mass, position, quaternion);
 
     deferred.then(_.bind(function(rigidBody) {
       rigidBody.binding = this.createBinding(object, this.proxy.getRigidBodyOffset(rigidBody.bodyId));
@@ -4316,13 +4360,12 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     return deferred.promise;
   };
 
-  AmmoProxy.prototype.createRigidBody = function(shape, mass, position, quaternion, kinematic) {
+  AmmoProxy.prototype.createRigidBody = function(shape, mass, position, quaternion) {
     var descriptor = {
         shape: shape,
         mass: mass,
         position: position,
-        quaternion: quaternion,
-        kinematic: kinematic ? true : false
+        quaternion: quaternion
       },
       deferred = when.defer();
 
@@ -4428,8 +4471,8 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     this.next = new Float64Array(data);
   };
 
-  AmmoProxy.prototype.createRigidBodyFromObject = function(object, mass, shape, kinematic) {
-    return this.adapter.createRigidBodyFromObject(object, mass, shape, kinematic); 
+  AmmoProxy.prototype.createRigidBodyFromObject = function(object, mass, shape) {
+    return this.adapter.createRigidBodyFromObject(object, mass, shape); 
   };
 
   AmmoProxy.prototype.getRigidBodyOffset = function(bodyId) {

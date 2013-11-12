@@ -7,7 +7,7 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
     return new THREEBinding(this.proxy, object, offset);
   };
 
-  THREEAdapter.prototype.createRigidBodyFromObject = function(object, mass, shape, kinematic) {
+  THREEAdapter.prototype.createRigidBodyFromObject = function(object, mass, shape) {
     if (!shape) {
       shape = this._getShapeJSON(object);
     } else if (shape.shape === 'auto') {
@@ -26,7 +26,7 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
         w: object.quaternion.w
       };
 
-    var deferred = this.proxy.createRigidBody(shape, mass, position, quaternion, kinematic);
+    var deferred = this.proxy.createRigidBody(shape, mass, position, quaternion);
 
     deferred.then(_.bind(function(rigidBody) {
       rigidBody.binding = this.createBinding(object, this.proxy.getRigidBodyOffset(rigidBody.bodyId));
