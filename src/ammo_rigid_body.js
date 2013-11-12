@@ -1,180 +1,179 @@
-var _ = require('underscore');
+define([], function() {
+  function AmmoRigidBody(proxy, bodyId) {
+    this.proxy = proxy;
+    this.bodyId = bodyId;
+    this.binding = undefined;
+  } 
 
-function AmmoRigidBody() {
-  this.ammoWorldComponent = null;
-  this.body = null;
-}
+  AmmoRigidBody.prototype.update = function() {
+    if (this.binding && this.binding.update) {
+      this.binding.update();
+    }
+  };
 
-AmmoRigidBody.prototype = new VAPI.VeroldComponent();
-
-AmmoRigidBody.prototype.init = function() {
-  this.getEvents().on('ammoworld_ready', this.ammoWorldReady, this);
-  this.getEvents().once('load_hierarchy', this.createCollider, this);
-};
-
-AmmoRigidBody.prototype.shutdown = function() {
-  this.getEvents().off('ammoworld_ready', this.ammoWorldReady, this);
-};
-
-AmmoRigidBody.prototype.objectLoaded = function() {
-  this.getScene().threeData.updateMatrixWorld();
-  this.createCollider();
-};
-
-AmmoRigidBody.prototype.update = function() {
-  if (this.rigidBody) {
-    this.rigidBody.update();
-  }
-};
-
-AmmoRigidBody.prototype.ammoWorldReady = function(ammoWorldComponent) {
-  if (!this.ammoWorldComponent) {
-    this.ammoWorldComponent = ammoWorldComponent;
-    this.createCollider();
-  }
-};
-
-AmmoRigidBody.prototype.createCollider = function() {
-  if (this.rigidBody || this.getObject().state_hierarchy !== 'loaded' || !this.ammoWorldComponent) {
-    return;
-  }
-
-  this.ammoWorldComponent.proxy.adapter.createRigidBodyFromObject(this.getThreeData(), this.mass, 
-      this.shape)
-    .then(_.bind(function(rigidBody) {
-      this.rigidBody = rigidBody;
-      this.setType(this.type);
-      this.setRestitution(this.restitution);
-      this.setFriction(this.friction);
-      this.setDamping(this.linearDamping, this.angularDamping);
-      this.setLinearFactor(this.linearFactor);
-      this.setAngularFactor(this.angularFactor);
-      rigidBody.addToWorld();
-      this.getObject().trigger('ammo_rigidbody_ready', this);
-    }, this))
-    .otherwise(function(err) {
-      console.error('An error occured while adding the rigid body', err.message);                            
+  AmmoRigidBody.prototype.setType = function(type) {
+    return this.proxy.execute('RigidBody_setType', {
+      bodyId: this.bodyId,
+      type: type
     });
-};
+  };
 
-AmmoRigidBody.prototype.setDamping = function(linearDamping, angularDamping) {
-  if (!this.rigidBody) {
-    return console.error('setDamping called before rigidBody created!');
-  }
+  AmmoRigidBody.prototype.setDamping = function(linearDamping, angularDamping) {
+    return this.proxy.execute('RigidBody_setDamping', {
+      bodyId: this.bodyId,
+      linearDamping: linearDamping,
+      angularDamping: angularDamping
+    });
+  };
 
-  return this.rigidBody.setDamping(linearDamping, angularDamping);
-};
+  AmmoRigidBody.prototype.applyTorque = function(torque) {
+    return this.proxy.execute('RigidBody_applyTorque', {
+      bodyId: this.bodyId,
+      torque: {
+        x: torque.x,
+        y: torque.y,
+        z: torque.z
+      }
+    });
+  };
 
-AmmoRigidBody.prototype.setType = function(type) {
-  if (!this.rigidBody) {
-    return console.error('setType called before rigidBody created!');
-  }
+  AmmoRigidBody.prototype.applyForce = function(force, relativePosition) {
+    return this.proxy.execute('RigidBody_applyForce', {
+      bodyId: this.bodyId,
+      force: force,
+      relativePosition: relativePosition || { x: 0, y: 0, z: 0 }
+    });
+  };
 
-  return this.rigidBody.setType(type);
-};
+  AmmoRigidBody.prototype.applyCentralForce = function(force) {
+    return this.proxy.execute('RigidBody_applyCentralForce', {
+      bodyId: this.bodyId,
+      force: {
+        x: force.x,
+        y: force.y,
+        z: force.z
+      }
+    });
+  };
 
-AmmoRigidBody.prototype.applyTorque = function(torque) {
-  if (!this.rigidBody) {
-    return console.error('applyTorque called before rigidBody created!');
-  }
+  AmmoRigidBody.prototype.applyImpulse = function(impulse, relativePosition) {
+    return this.proxy.execute('RigidBody_applyImpulse', {
+      bodyId: this.bodyId,
+      impulse: {
+        x: impulse.x,
+        y: impulse.y,
+        z: impulse.z
+      },
+      relativePosition: relativePosition && {
+        x: relativePosition.x,
+        y: relativePosition.y,
+        z: relativePosition.z
+      } || { x: 0, y: 0, z: 0 }
+    });
+  };
 
-  return this.rigidBody.applyTorque(torque);
-};
+  AmmoRigidBody.prototype.applyCentralImpulse = function(impulse) {
+    return this.proxy.execute('RigidBody_applyCentralImpulse', {
+      bodyId: this.bodyId,
+      impulse: {
+        x: impulse.x,
+        y: impulse.y,
+        z: impulse.z
+      }
+    });
+  };
 
-AmmoRigidBody.prototype.applyForce = function(force, relativePosition) {
-  if (!this.rigidBody) {
-    return console.error('applyForce called before rigidBody created!');
-  }
+  AmmoRigidBody.prototype.setFriction = function(friction) {
+    return this.proxy.execute('RigidBody_setFriction', {
+      bodyId: this.bodyId,
+      friction: friction
+    });
+  };
 
-  return this.rigidBody.applyForce(force, relativePosition);
-};
+  AmmoRigidBody.prototype.setRestitution = function(restitution) {
+    return this.proxy.execute('RigidBody_setRestitution', {
+      bodyId: this.bodyId,
+      restitution: restitution
+    });
+  };
 
-AmmoRigidBody.prototype.applyCentralForce = function(force) {
-  if (!this.rigidBody) {
-    return console.error('applyCentralForce called before rigidBody created!');
-  }
+  AmmoRigidBody.prototype.setLinearFactor = function(linearFactor) {
+    return this.proxy.execute('RigidBody_setLinearFactor', {
+      bodyId: this.bodyId,
+      linearFactor: {
+        x: linearFactor.x,
+        y: linearFactor.y,
+        z: linearFactor.z
+      }
+    });
+  };
 
-  return this.rigidBody.applyCentralForce(force);
-};
+  AmmoRigidBody.prototype.setAngularFactor = function(angularFactor) {
+    return this.proxy.execute('RigidBody_setAngularFactor', {
+      bodyId: this.bodyId,
+      angularFactor: {
+        x: angularFactor.x,
+        y: angularFactor.y,
+        z: angularFactor.z
+      }
+    });
+  };
 
-AmmoRigidBody.prototype.applyImpulse = function(impulse, relativePosition) {
-  if (!this.rigidBody) {
-    return console.error('applyImpulse called before rigidBody created!');
-  }
+  AmmoRigidBody.prototype.setLinearVelocity = function(linearVelocity) {
+    return this.proxy.execute('RigidBody_setLinearVelocity', {
+      bodyId: this.bodyId,
+      linearVelocity: {
+        x: linearVelocity.x,
+        y: linearVelocity.y,
+        z: linearVelocity.z
+      }
+    });
+  };
 
-  return this.rigidBody.applyImpulse(impulse, relativePosition);
-};
+  AmmoRigidBody.prototype.setAngularVelocity = function(angularVelocity) {
+    return this.proxy.execute('RigidBody_setAngularVelocity', {
+      bodyId: this.bodyId,
+      angularVelocity: {
+        x: angularVelocity.x,
+        y: angularVelocity.y,
+        z: angularVelocity.z
+      }
+    });
+  };
 
-AmmoRigidBody.prototype.applyCentralImpulse = function(impulse) {
-  if (!this.rigidBody) {
-    return console.error('applyCentralImpulse called before rigidBody created!');
-  }
 
-  return this.rigidBody.applyCentralImpulse(impulse);
-};
+  AmmoRigidBody.prototype.destroy = function() {
+    var deferred = this.proxy.execute('RigidBody_destroy', { bodyId: this.bodyId });
 
-AmmoRigidBody.prototype.setFriction = function(friction) {
-  if (!this.rigidBody) {
-    return console.error('setFriction called before rigidBody created!');
-  }
+    this.bodyId = undefined;
 
-  return this.rigidBody.setFriction(friction);
-};
+    this.binding.destroy();
 
-AmmoRigidBody.prototype.setRestitution = function(restitution) {
-  if (!this.rigidBody) {
-    return console.error('setRestitution called before rigidBody created!');
-  }
+    return deferred;
+  };
 
-  return this.rigidBody.setRestitution(restitution);
-};
 
-AmmoRigidBody.prototype.setLinearFactor = function(linearFactor) {
-  if (!this.rigidBody) {
-    return console.error('setLinearFactor called before rigidBody created!');
-  }
+  AmmoRigidBody.prototype.addToWorld = function(group, mask) {
+    return this.proxy.execute('DynamicsWorld_addRigidBody', {
+      bodyId: this.bodyId,
+      group: group,
+      mask: mask
+    });
+  };
 
-  return this.rigidBody.setLinearFactor(linearFactor);
-};
+  AmmoRigidBody.prototype.setWorldTransform = function(position, rotation) {
+    return this.proxy.execute('RigidBody_setWorldTransform', {
+      bodyId: this.bodyId,
+      position: position,
+      rotation: rotation
+    });
+  };
 
-AmmoRigidBody.prototype.setAngularFactor = function(angularFactor) {
-  if (!this.rigidBody) {
-    return console.error('setAngularFactor called before rigidBody created!');
-  }
+  AmmoRigidBody.prototype.clearForces = function() {
+    return this.proxy.execute('RigidBody_clearForces', {
+      bodyId: this.bodyId
+    });
+  };
 
-  return this.rigidBody.setAngularFactor(angularFactor);
-};
-
-AmmoRigidBody.prototype.setWorldTransform = function(position, rotation) {
-  if (!this.rigidBody) {
-    return console.error('setWorldTransform called before rigidBody created!');
-  }
-
-  return this.rigidBody.setWorldTransform(position, rotation);  
-};
-
-AmmoRigidBody.prototype.clearForces = function() {
-  if (!this.rigidBody) {
-    return console.error('clearForces called before rigidBody created!');
-  }
-
-  return this.rigidBody.clearForces();  
-};
-
-AmmoRigidBody.prototype.setLinearVelocity = function(linearVelocity) {
-  if (!this.rigidBody) {
-    return console.error('setLinearVelocity called before rigidBody created!');    
-  }
-  
-  return this.rigidBody.setLinearVelocity(linearVelocity);
-};
-
-AmmoRigidBody.prototype.setAngularVelocity = function(angularVelocity) {
-  if (!this.rigidBody) {
-    return console.error('setAngularVelocity called before rigidBody created!');    
-  }
-  
-  return this.rigidBody.setAngularVelocity(angularVelocity);
-};
-
-return AmmoRigidBody;
+  return AmmoRigidBody;
+});
