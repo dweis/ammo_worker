@@ -3716,7 +3716,7 @@ define('ammo_rigid_body',[], function() {
   AmmoRigidBody.prototype.setLinearVelocity = function(linearVelocity) {
     return this.proxy.execute('RigidBody_setLinearVelocity', {
       bodyId: this.bodyId,
-      linearFactor: {
+      linearVelocity: {
         x: linearVelocity.x,
         y: linearVelocity.y,
         z: linearVelocity.z
@@ -3727,7 +3727,7 @@ define('ammo_rigid_body',[], function() {
   AmmoRigidBody.prototype.setAngularVelocity = function(angularVelocity) {
     return this.proxy.execute('RigidBody_setAngularVelocity', {
       bodyId: this.bodyId,
-      angularFactor: {
+      angularVelocity: {
         x: angularVelocity.x,
         y: angularVelocity.y,
         z: angularVelocity.z
