@@ -875,6 +875,15 @@ define([], function() {
       }
     },
 
+    RigidBody_clearForces: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+      
+      if (body) {
+        body.clearForces();
+        body.activate();
+      }
+    },
+
     RigidBody_applyForce: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
       

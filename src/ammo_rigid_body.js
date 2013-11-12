@@ -146,5 +146,11 @@ define([], function() {
     });
   };
 
+  AmmoRigidBody.prototype.clearForces = function() {
+    return this.proxy.execute('RigidBody_clearForces', {
+      bodyId: this.bodyId
+    });
+  };
+
   return AmmoRigidBody;
 });

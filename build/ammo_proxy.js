@@ -3453,6 +3453,15 @@ define('ammo_worker_api',[], function() {
       }
     },
 
+    RigidBody_clearForces: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+      
+      if (body) {
+        body.clearForces();
+        body.activate();
+      }
+    },
+
     RigidBody_applyForce: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
       
@@ -3706,6 +3715,12 @@ define('ammo_rigid_body',[], function() {
       bodyId: this.bodyId,
       position: position,
       rotation: rotation
+    });
+  };
+
+  AmmoRigidBody.prototype.clearForces = function() {
+    return this.proxy.execute('RigidBody_clearForces', {
+      bodyId: this.bodyId
     });
   };
 
