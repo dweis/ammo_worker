@@ -3444,7 +3444,12 @@ define('ammo_worker_api',[], function() {
         rotation.setY(descriptor.rotation.y);
         rotation.setZ(descriptor.rotation.z);
         rotation.setW(descriptor.rotation.w);
-        body.getMotionState().setWorldTransform(this.tmpTrans[0]);
+
+        if (body.isKinematicObject()) {
+          body.getMotionState().setWorldTransform(this.tmpTrans[0]);
+        } else {
+          body.setWorldTransform(this.tmpTrans[0]);
+        }
       }
     },
 
