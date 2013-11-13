@@ -29,6 +29,8 @@
         right: false
       };
 
+      this.cubes = [];
+
       document.addEventListener('keyup', function(e) {
         switch (e.keyCode) {
           case 37: this.keys.left = false; break;
@@ -50,22 +52,42 @@
 
     SimpleDemo.prototype = new DemoScene();
 
+    SimpleDemo.prototype._createCube = function(material) {
+      var cube = new THREE.Object3D();
+      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material));
+      cube.position.x = (Math.random() * 50) - 25;
+      cube.position.y = 10 + (Math.random() * 10);
+      cube.position.z = (Math.random() * 50) - 25;
+
+      this.scene.add(cube);
+      this.proxy.createRigidBodyFromObject(cube, 1, { shape: 'auto', strategy: 'compound_bounding_box' })
+        .then(function(rigidBody) {
+          rigidBody.addToWorld();
+          this.cubes.push(rigidBody);
+        }.bind(this))
+        .otherwise(function(err) {
+          console.error(err.message);
+        });
+    };
+
     SimpleDemo.prototype.initDemo = function() {
       console.log('initializing...');
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
+      var material2 = new THREE.MeshLambertMaterial({ color: 0xcc3300 });
 
       this.camera.position.x = this.camera.position.z = 40;
       this.camera.position.y = 20;
 
-      console.log('creating cube');
       var cube = new THREE.Object3D();
 
-      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material));
+      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material2));
       cube.position.y = 10;
       cube.children[0].castShadow = true;
       this.scene.add(cube);
 
-      console.log(cube);
+      for (var i = 0; i < 100; i++) {
+        this._createCube(material);
+      }
 
       this.proxy.createRigidBodyFromObject(cube, 1, { shape: 'auto', strategy: 'compound_bounding_box' })
         .then(function(rigidBody) {
@@ -80,9 +102,9 @@
         console.log(this.cubeBody);
         setInterval(function() {
           rigidBody.setWorldTransform({
-            x: (Math.random() * 10) - 5,
-            y: 4,
-            z: (Math.random() * 10) - 5
+            x: (Math.random() * 100) - 50,
+            y: 2,
+            z: (Math.random() * 100) - 50
           },
           {
             x:0,
@@ -131,6 +153,10 @@
 
           this.cubeBody.applyForce(tmpVec);
         }
+      }
+
+      for (var i = 0; i < this.cubes.length; i++) {
+        this.cubes[i].update();  
       }
     };
 

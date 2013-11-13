@@ -69,6 +69,15 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
     });
   };
 
+  /*
+  AmmoProxy.prototype.rayTestAllHits = function(rayFromWorld, rayToWorld) {
+    return this.execute('DynamicsWorld_rayTestAllHits', {
+      rayFromWorld: rayFromWorld,
+      rayToWorld: rayToWorld
+    });
+  };
+  */
+
   AmmoProxy.prototype.createVehicle = function(rigidBody, tuning) {
     var descriptor = {
       bodyId: rigidBody instanceof AmmoRigidBody ? rigidBody.bodyId : rigidBody,

@@ -43,9 +43,16 @@
       var rayTest = function () {
         console.time('rayTest');
         this.proxy.rayTestClosest({ x: -5, y: 0.5, z: -5 }, { x: 5, y: 0.5, z: 5 }).then(function(desc) {
-          console.log(desc);
+          console.log('closest', desc);
           console.timeEnd('rayTest');
         }.bind(this));
+
+        /*
+        this.proxy.rayTestAllHits({ x: -5, y: 0.5, z: -5 }, { x: 5, y: 0.5, z: 5 }).then(function(desc) {
+          console.log('all', desc);
+          console.timeEnd('rayTest');
+        }.bind(this));
+        */
 
         setTimeout(rayTest, 2500);
       }.bind(this);

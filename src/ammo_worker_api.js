@@ -36,8 +36,8 @@ define([], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      importScripts('./js/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -678,6 +678,31 @@ define([], function() {
               descriptor.biasFactor, descriptor.relaxationFactor);
       }
     },
+
+    /*
+    DynamicsWorld_rayTestAllHits: function(descriptor, fn) {
+      this.tmpVec[0].setX(descriptor.rayFromWorld.x);
+      this.tmpVec[0].setY(descriptor.rayFromWorld.y);
+      this.tmpVec[0].setZ(descriptor.rayFromWorld.z);
+      this.tmpVec[1].setX(descriptor.rayToWorld.x);
+      this.tmpVec[1].setY(descriptor.rayToWorld.y);
+      this.tmpVec[1].setZ(descriptor.rayToWorld.z);
+
+      var callback = new Ammo.AllHitsRayResultCallback(this.tmpVec[0], this.tmpVec[1]);
+
+      this.dynamicsWorld.rayTest(this.tmpVec[0], this.tmpVec[1], callback);
+
+      if (callback.hasHit()) {
+        console.log('hits', callback.m_hitFractions.size());
+      } else {
+        if (typeof fn === 'function') {
+          fn();
+        }
+      }
+
+      Ammo.destroy(callback);
+    },
+    */
 
     DynamicsWorld_rayTestClosest: function(descriptor, fn) {
       this.tmpVec[0].setX(descriptor.rayFromWorld.x);
