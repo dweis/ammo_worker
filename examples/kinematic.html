@@ -22,32 +22,7 @@
         tmpQuaternion = new THREE.Quaternion();
 
     function SimpleDemo() {
-      this.keys = {
-        up: false,
-        down: false,
-        left: false,
-        right: false
-      };
-
       this.cubes = [];
-
-      document.addEventListener('keyup', function(e) {
-        switch (e.keyCode) {
-          case 37: this.keys.left = false; break;
-          case 38: this.keys.up = false; break;
-          case 39: this.keys.right = false; break;
-          case 40: this.keys.down = false; break;
-        }
-      }.bind(this));
-
-      document.addEventListener('keydown', function(e) {
-        switch (e.keyCode) {
-          case 37: this.keys.left = true; break;
-          case 38: this.keys.up = true; break;
-          case 39: this.keys.right = true; break;
-          case 40: this.keys.down = true; break;
-        }
-      }.bind(this));
     }
 
     SimpleDemo.prototype = new DemoScene();
@@ -117,42 +92,8 @@
     };
 
     SimpleDemo.prototype.updateBodies = function(delta) {
-      var torque = 0, force = 0;
-
       if (this.cubeBody) {
-        if (this.keys.left) { 
-          torque += 5;
-        }
-
-        if (this.keys.right) {
-          torque -= 5;
-        }
-
-        if (this.keys.up) {
-          force -= 500;
-        }
-
-        if (this.keys.down) {
-          force += 300;
-        }
-
         this.cubeBody.update();
-
-        if (torque !== 0) {
-          console.log('applying torque');
-          this.cubeBody.applyTorque({ x: 0, y: torque * delta, z: 0 });
-        }
-
-        if (force !== 0) {
-          console.log('applying force');
-          tmpVec.x = 0;
-          tmpVec.y = 0;
-          tmpVec.z = force;
-          tmpQuaternion.setFromRotationMatrix(this.cubeBody.binding.object.matrixWorld);
-          tmpVec.applyQuaternion(tmpQuaternion);
-
-          this.cubeBody.applyForce(tmpVec);
-        }
       }
 
       for (var i = 0; i < this.cubes.length; i++) {

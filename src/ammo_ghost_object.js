@@ -12,5 +12,11 @@ define([], function() {
     });
   };
 
+  AmmoGhostObject.prototype.destroy = function() {
+    return this.proxy.execute('GhostObject_destroy', {
+      ghostId: this.ghostId
+    });
+  };
+
   return AmmoGhostObject;
 });

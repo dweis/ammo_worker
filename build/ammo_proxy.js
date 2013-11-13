@@ -2980,12 +2980,6 @@ define('ammo_worker_api',[], function() {
       }
     },
 
-    Vehicle_destroy: function(id) {
-      this.dynamicsWorld.removeVehicle(this.vehicles[id]);
-      this.vehicles[id] = undefined;
-    },
-
-
     Vehicle_addWheel: function(descriptor, fn) {
       var vehicle = this.vehicles[descriptor.vehicleId];
 
@@ -3600,10 +3594,48 @@ define('ammo_worker_api',[], function() {
       }
     },
 
+    Constraint_destroy: function(id) {
+      var constraint = this.constraints[id];
+
+      if (constraint) {
+        this.dynamicsWorld.removeConstraint(constraint);
+        Ammo.destroy(constraint);
+        this.constraints[id] = undefined;
+        this.trigger('Constraint_destroy', id);
+      }
+    },
+
     RigidBody_destroy: function(id) {
-      this.dynamicsWorld.removeRigidBody(this.bodies[id]);
-      Ammo.destroy(this.bodies[id]);
-      this.bodies[id] = undefined;
+      var body = this.bodies[id];
+
+      if (body) {
+        this.dynamicsWorld.removeRigidBody(body);
+        Ammo.destroy(body);
+        this.bodies[id] = undefined;
+        this.trigger('RigidBody_destroy', id);
+      }
+    },
+
+    Vehicle_destroy: function(id) {
+      var vehicle = this.vehicles[id];
+
+      if (vehicle) {
+        this.dynamicsWorld.removeVehicle(vehicle);
+        Ammo.destroy(vehicle);
+        this.vehicles[id] = undefined;
+        this.trigger('Vehicle_destroy', id);
+      }
+    },
+
+    GhostObject_destroy: function(id) {
+      var ghost = this.ghosts[id];
+
+      if (ghost) {
+        this.dynamicsWorld.removeCollisionObject(ghost);
+        Ammo.destroy(ghost);
+        this.ghosts[id] = undefined;
+        this.trigger('GhostObject_destroy', id);
+      }
     },
 
     shutdown: function() {
@@ -3622,6 +3654,10 @@ define('ammo_rigid_body',[], function() {
     this.proxy = proxy;
     this.bodyId = bodyId;
     this.binding = undefined;
+    this.position = { x: 0, y: 0, z: 0 };
+    this.rotation = { x: 0, y: 0, z: 0, w: 1 };
+    this.linearVelocity = { x: 0, y: 0, z: 0 };
+    this.angularVelocity = { x: 0, y: 0, z: 0 };
   } 
 
   AmmoRigidBody.prototype.update = function() {
@@ -3973,6 +4009,12 @@ define('ammo_ghost_object',[], function() {
       ghostId: this.ghostId,
       group: group,
       mask: mask
+    });
+  };
+
+  AmmoGhostObject.prototype.destroy = function() {
+    return this.proxy.execute('GhostObject_destroy', {
+      ghostId: this.ghostId
     });
   };
 
@@ -4362,6 +4404,11 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     opts.maxVehicles = opts.maxVehicles || 32;
     opts.maxWheelsPerVehicle = opts.maxWheelsPerVehicle || 8;
 
+    var bodies = this.bodies = [];
+    var constraints = this.constraints = [];
+    var vehicles = this.vehicles = [];
+    var ghosts = this.ghosts = [];
+
     this.adapter = new THREEAdapter(this);
 
     this.worker = cw(new AmmoWorkerAPI(opts));
@@ -4369,7 +4416,23 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     this.worker.on('update', _.bind(this.update, this));
 
     this.worker.on('error', function(err) {
-      console.warn(err.message);
+      console.err(err.message);
+    });
+
+    this.worker.on('GhostObject_destroy', function(id) {
+      ghosts[id] = undefined;
+    });
+
+    this.worker.on('RigidBody_destroy', function(id) {
+      bodies[id] = undefined;
+    });
+
+    this.worker.on('Vehicle_destroy', function(id) {
+      vehicles[id] = undefined;
+    });
+
+    this.worker.on('Constraints_destroy', function(id) {
+      constraints[id] = undefined;
     });
 
     function proxyMethod(method) {
@@ -4434,7 +4497,9 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     this.worker.Vehicle_create(descriptor).then(_.bind(function(vehicleId) {
       var proxy = this;
       setTimeout(function() {
-        deferred.resolve(new AmmoVehicle(proxy, vehicleId, rigidBody));
+        var vehicle = new AmmoVehicle(proxy, vehicleId, rigidBody);
+        proxy.vehicles[vehicleId] = vehicle;
+        deferred.resolve(vehicle);
       }, 0);
     }, this));
 
@@ -4452,7 +4517,9 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     this.worker.GhostObject_create(descriptor).then(_.bind(function(ghostId) {
       var proxy = this;
       setTimeout(function() {
-        deferred.resolve(new AmmoGhostObject(proxy, ghostId));
+        var ghost = new AmmoGhostObject(proxy, ghostId); 
+        proxy.ghosts[ghostId] = ghost;
+        deferred.resolve(ghost);
       }, 0);
     }, this));
 
@@ -4471,7 +4538,9 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     this.worker.RigidBody_create(descriptor).then(_.bind(function(bodyId) {
       var proxy = this;
       setTimeout(function() {
-        deferred.resolve(new AmmoRigidBody(proxy, bodyId));
+        var body = new AmmoRigidBody(proxy, bodyId); 
+        proxy.bodies[bodyId] = body;
+        deferred.resolve(body);
       }, 0);
     }, this));
 
@@ -4491,7 +4560,9 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     this.execute('Point2PointConstraint_create', descriptor).then(_.bind(function(constraintId) {
       var proxy = this;
       setTimeout(function() {
-        deferred.resolve(new AmmoPoint2PointConstraint(proxy, constraintId));
+        var constraint = new AmmoPoint2PointConstraint(proxy, constraintId); 
+        proxy.constraints[constraintId] = constraint;
+        deferred.resolve(constraint);
       }, 0);
     },this));
 
@@ -4534,7 +4605,9 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     this.execute('SliderConstraint_create', descriptor).then(_.bind(function(constraintId) {
       var proxy = this;
       setTimeout(function() {
-        deferred.resolve(new AmmoSliderConstraint(proxy, constraintId));
+        var constraint = new AmmoSliderConstraint(proxy, constraintId); 
+        proxy.constraints[constraintId] = constraint;
+        deferred.resolve(constraint);
       }, 0);
     },this));
 
@@ -4555,7 +4628,9 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     this.execute('HingeConstraint_create', descriptor).then(_.bind(function(constraintId) {
       var proxy = this;
       setTimeout(function() {
-        deferred.resolve(new AmmoHingeConstraint(proxy, constraintId));
+        var constraint = new AmmoHingeConstraint(proxy, constraintId);
+        proxy.constraints[constraintId] = constraint;
+        deferred.resolve(constraint);
       }, 0);
     },this));
 
@@ -4580,6 +4655,38 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
 
   AmmoProxy.prototype.getWheelOffset = function(vehicleId, wheelIndex) {
     return (this.opts.maxBodies * 7) + (vehicleId * 8 * 7) + (wheelIndex * 7);
+  };
+
+  AmmoProxy.prototype.getVehicle = function(vehicleId) {
+    if (this.vehicles[vehicleId]) {
+      return this.vehicles[vehicleId];
+    }
+
+    console.warn('Asked for non-existent vehicle with ID: ' + vehicleId);
+  };
+
+  AmmoProxy.prototype.getConstraint = function(constraintId) {
+    if (this.constraints[constraintId]) {
+      return this.constraints[constraintId];
+    }
+
+    console.warn('Asked for non-existent constraint with ID: ' + constraintId);
+  };
+
+  AmmoProxy.prototype.getRigidBody = function(rigidBodyId) {
+    if (this.bodies[rigidBodyId]) {
+      return this.bodies[rigidBodyId];
+    }
+
+    console.warn('Asked for non-existent rigid body with ID: ' + rigidBodyId);
+  };
+
+  AmmoProxy.prototype.getGhostObject = function(ghostObjectId) {
+    if (this.ghosts[ghostObjectId]) {
+      return this.ghosts[ghostObjectId];
+    }
+
+    console.warn('Asked for non-existent ghost object with ID: ' + ghostObjectId);
   };
 
   return AmmoProxy;

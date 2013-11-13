@@ -402,12 +402,6 @@ define([], function() {
       }
     },
 
-    Vehicle_destroy: function(id) {
-      this.dynamicsWorld.removeVehicle(this.vehicles[id]);
-      this.vehicles[id] = undefined;
-    },
-
-
     Vehicle_addWheel: function(descriptor, fn) {
       var vehicle = this.vehicles[descriptor.vehicleId];
 
@@ -1022,10 +1016,48 @@ define([], function() {
       }
     },
 
+    Constraint_destroy: function(id) {
+      var constraint = this.constraints[id];
+
+      if (constraint) {
+        this.dynamicsWorld.removeConstraint(constraint);
+        Ammo.destroy(constraint);
+        this.constraints[id] = undefined;
+        this.trigger('Constraint_destroy', id);
+      }
+    },
+
     RigidBody_destroy: function(id) {
-      this.dynamicsWorld.removeRigidBody(this.bodies[id]);
-      Ammo.destroy(this.bodies[id]);
-      this.bodies[id] = undefined;
+      var body = this.bodies[id];
+
+      if (body) {
+        this.dynamicsWorld.removeRigidBody(body);
+        Ammo.destroy(body);
+        this.bodies[id] = undefined;
+        this.trigger('RigidBody_destroy', id);
+      }
+    },
+
+    Vehicle_destroy: function(id) {
+      var vehicle = this.vehicles[id];
+
+      if (vehicle) {
+        this.dynamicsWorld.removeVehicle(vehicle);
+        Ammo.destroy(vehicle);
+        this.vehicles[id] = undefined;
+        this.trigger('Vehicle_destroy', id);
+      }
+    },
+
+    GhostObject_destroy: function(id) {
+      var ghost = this.ghosts[id];
+
+      if (ghost) {
+        this.dynamicsWorld.removeCollisionObject(ghost);
+        Ammo.destroy(ghost);
+        this.ghosts[id] = undefined;
+        this.trigger('GhostObject_destroy', id);
+      }
     },
 
     shutdown: function() {
