@@ -6,7 +6,7 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
-      'stopSimulation'
+      'stopSimulation', 'getStats'
     ];
 
     opts = this.opts = opts || {};
@@ -29,7 +29,7 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
     this.worker.on('update', _.bind(this.update, this));
 
     this.worker.on('error', function(err) {
-      console.err(err.message);
+      console.error(err.message);
     });
 
     this.worker.on('GhostObject_destroy', function(id) {

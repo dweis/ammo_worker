@@ -1,4 +1,16 @@
 var DemoScene = function() {
+  var div = document.createElement('div');
+  div.id = 'physics-stats';
+  div.style['z-index']  = 50;
+  div.style['color'] = '#fff';
+  div.style['position'] = 'absolute';
+  div.style['bottom'] = '0px';
+  div.style['right'] = '0px';
+  div.style['padding'] = '5px';
+  div.style['font-family'] = 'tahoma, verdana, sans-serif';
+  div.style['font-size'] = '12pt';
+  document.body.appendChild(div);
+  this.statsEl = document.getElementById('physics-stats');
 };
 
 DemoScene.prototype.init = function() {
@@ -7,6 +19,13 @@ DemoScene.prototype.init = function() {
   this.proxy.setStep(1/120);
   this.proxy.setIterations(10);
   */
+
+  setInterval(function() {
+    this.proxy.getStats().
+      then(function(stats) {
+        this.statsEl.innerHTML = stats.fps;
+      }.bind(this));
+  }.bind(this), 500);
 
   window.addEventListener('blur', function() { 
     this.proxy.stopSimulation();

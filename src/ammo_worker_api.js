@@ -36,8 +36,8 @@ define([], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      importScripts('./js/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -81,14 +81,24 @@ define([], function() {
       this.fire('ready');
     },
 
+    getStats: function(undefined, fn) {
+      return fn({
+        totalTime: this.totalTime,
+        frames: this.frames,
+        fps: this.fps
+      });
+    },
+
     startSimulation: function() {
       var that = this, last = Date.now();
+
+      that.totalTime = 0;
+      that.frames = 0;
 
       this.simulationTimerId = setInterval(function() {
         var vehicle, update, i, j, pos, now = Date.now(),
             delta = (now - last) / 1000;
 
-        last = now;
 
         that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);
 
@@ -142,6 +152,11 @@ define([], function() {
           }.bind(this));
 
           that.fire('update', update.buffer, [update.buffer]);
+          that.frames ++;
+
+          last = now;
+          that.totalTime += delta;
+          that.fps = Math.round( that.frames / that.totalTime );
         }
       }, this.step * 1000);
     },
