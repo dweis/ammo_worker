@@ -2614,8 +2614,8 @@ define('ammo_worker_api',[], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      importScripts('./js/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -3387,6 +3387,61 @@ define('ammo_worker_api',[], function() {
       }
     },
 
+    KinematicCharacterController_create: function(descriptor, fn) {
+      var colShape,
+          startTransform = this.tmpTrans[0],
+          origin = this.tmpVec[1],
+          rotation = this.tmpQuaternion[0],
+          ghost,
+          controller;
+
+      startTransform.setIdentity();
+
+      colShape = this._createShape(descriptor.shape);
+
+      if (!colShape) {
+        throw('Invalid collision shape!');
+      }
+
+      origin.setX(descriptor.position.x);
+      origin.setY(descriptor.position.y);
+      origin.setZ(descriptor.position.z);
+
+      rotation.setX(descriptor.quaternion.x);
+      rotation.setY(descriptor.quaternion.y);
+      rotation.setZ(descriptor.quaternion.z);
+      rotation.setW(descriptor.quaternion.w);
+
+      startTransform.setOrigin(origin);
+      startTransform.setRotation(rotation);
+      console.log(1);
+
+      ghost = new Ammo.btPairCachingGhostObject();
+      ghost.setWorldTransform(startTransform);
+
+console.log(2);
+      ghost.setCollisionShape(colShape);
+      console.log(3);
+      ghost.setCollisionFlags(this.collisionFlags.CF_CHARACTER_OBJECT);
+      console.log(4);
+
+      character = new Ammo.btKinematicCharacterController (ghost, colShape, descriptor.stepHeight);
+console.log(5);
+
+      /*
+      myMotionState = new Ammo.btDefaultMotionState(startTransform);
+      rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
+      body = new Ammo.btRigidBody(rbInfo);
+      */
+
+      var idx = this.bodies.push(body) - 1;
+      body.id = idx;
+
+      if (typeof fn === 'function') {
+        fn(idx);
+      }
+    },
+
     RigidBody_create: function(descriptor, fn) {
       var colShape,
           startTransform = this.tmpTrans[0],
@@ -4036,6 +4091,27 @@ define('ammo_ghost_object',[], function() {
   return AmmoGhostObject;
 });
 
+define('ammo_kinematic_character_controller',[], function() {
+  function AmmoKinematicCharacterController(proxy, bodyId) {
+    this.proxy = proxy;
+    this.bodyId = bodyId;
+    this.binding = undefined;
+    this.position = { x: 0, y: 0, z: 0 };
+    this.rotation = { x: 0, y: 0, z: 0, w: 1 };
+    this.linearVelocity = { x: 0, y: 0, z: 0 };
+    this.angularVelocity = { x: 0, y: 0, z: 0 };
+  } 
+
+  AmmoKinematicCharacterController.prototype.update = function() {
+    if (this.binding && this.binding.update) {
+      this.binding.update();
+    }
+  };
+
+
+  return AmmoKinematicCharacterController;
+});
+
 define('three/three_binding',[], function() {
   var tmpQuaternion = new THREE.Quaternion(),
       tmpVector3 = new THREE.Vector3();
@@ -4107,6 +4183,34 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
 
     deferred.then(_.bind(function(rigidBody) {
       rigidBody.binding = this.createBinding(object, this.proxy.getRigidBodyOffset(rigidBody.bodyId));
+    }, this));
+
+    return deferred;
+  };
+
+  THREEAdapter.prototype.createKinematicCharacterControllerFromObject = function(object, shape, stepHeight) {
+    if (!shape) {
+      shape = this._getShapeJSON(object);
+    } else if (shape.shape === 'auto') {
+      shape = this._getShapeJSON(object, { strategy: shape.strategy });
+    }
+
+    var position = {
+        x: object.position.x,
+        y: object.position.y,
+        z: object.position.z
+      },
+      quaternion = {
+        x: object.quaternion.x,
+        y: object.quaternion.y,
+        z: object.quaternion.z,
+        w: object.quaternion.w
+      };
+
+    var deferred = this.proxy.createKinematicCharacterController(shape, position, quaternion, stepHeight);
+
+    deferred.then(_.bind(function(kinematicCharacterController) {
+      kinematicCharacterController.binding = this.createBinding(object, this.proxy.getKinematicCharacterControllerOffset(kinematicCharacterController.controllerId));
     }, this));
 
     return deferred;
@@ -4402,9 +4506,10 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
 
 define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 
          'ammo_point2point_constraint', 'ammo_hinge_constraint', 'ammo_slider_constraint',
-         'ammo_ghost_object', 'three/three_adapter' ], 
+         'ammo_ghost_object', 'ammo_kinematic_character_controller', 'three/three_adapter' ], 
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
-        AmmoHingeConstraint, AmmoSliderConstraint, AmmoGhostObject, THREEAdapter) {
+        AmmoHingeConstraint, AmmoSliderConstraint, AmmoGhostObject, 
+        AmmoKinematicCharacterController, THREEAdapter) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
@@ -4541,6 +4646,27 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     return deferred.promise;
   };
 
+  AmmoProxy.prototype.createKinematicCharacterController = function(shape, position, quaternion, stepHeight) {
+    var descriptor = {
+        shape: shape,
+        position: position,
+        quaternion: quaternion,
+        stepHeight: stepHeight
+      },
+      deferred = when.defer();
+
+    this.worker.KinematicCharacterController_create(descriptor).then(_.bind(function(kinematicCharacterControllerId) {
+      var proxy = this;
+      setTimeout(function() {
+        var controller = new AmmoKinematicCharacterController(proxy, kinematicCharacterControllerId); 
+        proxy.kinematicCharacterControllers[kinematicCharacterControllerId] = controller;
+        deferred.resolve(controller);
+      }, 0);
+    }, this));
+
+    return deferred.promise;
+  };
+
   AmmoProxy.prototype.createRigidBody = function(shape, mass, position, quaternion) {
     var descriptor = {
         shape: shape,
@@ -4662,6 +4788,11 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
 
   AmmoProxy.prototype.createRigidBodyFromObject = function(object, mass, shape) {
     return this.adapter.createRigidBodyFromObject(object, mass, shape); 
+  };
+
+
+  AmmoProxy.prototype.createKinematicCharacterControllerFromObject = function(object, shape, stepHeight) {
+    return this.adapter.createKinematicCharacterControllerFromObject(object, shape, stepHeight);
   };
 
   AmmoProxy.prototype.getRigidBodyOffset = function(bodyId) {

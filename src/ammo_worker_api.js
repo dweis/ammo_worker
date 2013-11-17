@@ -36,8 +36,8 @@ define([], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      importScripts('./js/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -803,6 +803,61 @@ define([], function() {
 
       var idx = this.ghosts.push(ghostObject) - 1;
       ghostObject.id = idx;
+
+      if (typeof fn === 'function') {
+        fn(idx);
+      }
+    },
+
+    KinematicCharacterController_create: function(descriptor, fn) {
+      var colShape,
+          startTransform = this.tmpTrans[0],
+          origin = this.tmpVec[1],
+          rotation = this.tmpQuaternion[0],
+          ghost,
+          controller;
+
+      startTransform.setIdentity();
+
+      colShape = this._createShape(descriptor.shape);
+
+      if (!colShape) {
+        throw('Invalid collision shape!');
+      }
+
+      origin.setX(descriptor.position.x);
+      origin.setY(descriptor.position.y);
+      origin.setZ(descriptor.position.z);
+
+      rotation.setX(descriptor.quaternion.x);
+      rotation.setY(descriptor.quaternion.y);
+      rotation.setZ(descriptor.quaternion.z);
+      rotation.setW(descriptor.quaternion.w);
+
+      startTransform.setOrigin(origin);
+      startTransform.setRotation(rotation);
+      console.log(1);
+
+      ghost = new Ammo.btPairCachingGhostObject();
+      ghost.setWorldTransform(startTransform);
+
+console.log(2);
+      ghost.setCollisionShape(colShape);
+      console.log(3);
+      ghost.setCollisionFlags(this.collisionFlags.CF_CHARACTER_OBJECT);
+      console.log(4);
+
+      character = new Ammo.btKinematicCharacterController (ghost, colShape, descriptor.stepHeight);
+console.log(5);
+
+      /*
+      myMotionState = new Ammo.btDefaultMotionState(startTransform);
+      rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
+      body = new Ammo.btRigidBody(rbInfo);
+      */
+
+      var idx = this.bodies.push(body) - 1;
+      body.id = idx;
 
       if (typeof fn === 'function') {
         fn(idx);

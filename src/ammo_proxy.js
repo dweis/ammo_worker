@@ -1,8 +1,9 @@
 define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 
          'ammo_point2point_constraint', 'ammo_hinge_constraint', 'ammo_slider_constraint',
-         'ammo_ghost_object', 'three/three_adapter' ], 
+         'ammo_ghost_object', 'ammo_kinematic_character_controller', 'three/three_adapter' ], 
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
-        AmmoHingeConstraint, AmmoSliderConstraint, AmmoGhostObject, THREEAdapter) {
+        AmmoHingeConstraint, AmmoSliderConstraint, AmmoGhostObject, 
+        AmmoKinematicCharacterController, THREEAdapter) {
   function AmmoProxy(opts) {
     var context = this, i, apiMethods = [
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
@@ -139,6 +140,27 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
     return deferred.promise;
   };
 
+  AmmoProxy.prototype.createKinematicCharacterController = function(shape, position, quaternion, stepHeight) {
+    var descriptor = {
+        shape: shape,
+        position: position,
+        quaternion: quaternion,
+        stepHeight: stepHeight
+      },
+      deferred = when.defer();
+
+    this.worker.KinematicCharacterController_create(descriptor).then(_.bind(function(kinematicCharacterControllerId) {
+      var proxy = this;
+      setTimeout(function() {
+        var controller = new AmmoKinematicCharacterController(proxy, kinematicCharacterControllerId); 
+        proxy.kinematicCharacterControllers[kinematicCharacterControllerId] = controller;
+        deferred.resolve(controller);
+      }, 0);
+    }, this));
+
+    return deferred.promise;
+  };
+
   AmmoProxy.prototype.createRigidBody = function(shape, mass, position, quaternion) {
     var descriptor = {
         shape: shape,
@@ -260,6 +282,11 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
 
   AmmoProxy.prototype.createRigidBodyFromObject = function(object, mass, shape) {
     return this.adapter.createRigidBodyFromObject(object, mass, shape); 
+  };
+
+
+  AmmoProxy.prototype.createKinematicCharacterControllerFromObject = function(object, shape, stepHeight) {
+    return this.adapter.createKinematicCharacterControllerFromObject(object, shape, stepHeight);
   };
 
   AmmoProxy.prototype.getRigidBodyOffset = function(bodyId) {
