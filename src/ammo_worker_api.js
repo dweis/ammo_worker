@@ -36,8 +36,8 @@ define([], function() {
     init: function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
 
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      importScripts('./js/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -75,6 +75,7 @@ define([], function() {
       this.buffers = [
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
+        new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize)
       ];
 
@@ -85,7 +86,8 @@ define([], function() {
       return fn({
         totalTime: this.totalTime,
         frames: this.frames,
-        fps: this.fps
+        fps: this.fps,
+        buffersReady: this.buffers.length
       });
     },
 
@@ -934,6 +936,19 @@ define([], function() {
       } 
     },
 
+    RigidBody_applyCentralForce: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+      
+      if (body) {
+        this.tmpVec[0].setX(descriptor.force.x);
+        this.tmpVec[0].setY(descriptor.force.y);
+        this.tmpVec[0].setZ(descriptor.force.z);
+
+        body.applyCentralForce(this.tmpVec[0]);
+        body.activate();
+      } 
+    },
+
     RigidBody_applyImpulse: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
       
@@ -946,6 +961,19 @@ define([], function() {
         this.tmpVec[1].setZ(descriptor.relativePosition.z);
 
         body.applyImpulse(this.tmpVec[0], this.tmpVec[1]);
+        body.activate();
+      } 
+    },
+
+    RigidBody_applyCentralImpulse: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+      
+      if (body) {
+        this.tmpVec[0].setX(descriptor.force.x);
+        this.tmpVec[0].setY(descriptor.force.y);
+        this.tmpVec[0].setZ(descriptor.force.z);
+
+        body.applyCentralImpulse(this.tmpVec[0]);
         body.activate();
       } 
     },

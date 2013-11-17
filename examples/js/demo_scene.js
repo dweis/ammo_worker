@@ -23,7 +23,7 @@ DemoScene.prototype.init = function() {
   setInterval(function() {
     this.proxy.getStats().
       then(function(stats) {
-        this.statsEl.innerHTML = stats.fps;
+        this.statsEl.innerHTML = stats.fps + '(' + stats.buffersReady + ')';
       }.bind(this));
   }.bind(this), 500);
 
