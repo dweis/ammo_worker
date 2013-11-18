@@ -2675,7 +2675,6 @@ define('ammo_worker_api',[], function() {
       this.dynamicsWorld.getPairCache().setInternalGhostPairCallback(this.ghostPairCallback);
 
       this.dynamicsWorld.getDispatchInfo().set_m_allowedCcdPenetration(0.0001);
-      console.log('1');
 
       this.buffers = [
         new ArrayBuffer(bufferSize),
@@ -3446,7 +3445,6 @@ define('ammo_worker_api',[], function() {
       if (!colShape) {
         throw('Invalid collision shape!');
       }
-      console.log(descriptor);
 
       origin.setX(descriptor.position.x);
       origin.setY(descriptor.position.y);
@@ -3491,6 +3489,74 @@ define('ammo_worker_api',[], function() {
         this.tmpVec[0].setZ(descriptor.direction.z);
 
         controller.setWalkDirection(this.tmpVec[0]);
+      }
+    },
+
+    KinematicCharacterController_jump: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        controller.jump();
+      }
+    },
+
+    KinematicCharacterController_setJumpSeed: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        controller.setJumpSpeed(descriptor.jumpSpeed);
+      }
+    },
+
+    KinematicCharacterController_setMaxJumpHeight: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        controller.setMaxJumpHeight(descriptor.maxJumpHeight);
+      }
+    },
+
+    KinematicCharacterController_setGravity: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        controller.setGravity(descriptor.gravity);
+      }
+    },
+
+    KinematicCharacterController_setUpAxis: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        controller.setUpAxis(descriptor.upAxis);
+      }
+    },
+
+    KinematicCharacterController_setVelocityForTimeInterval: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        this.tmpVec[0].setX(descriptor.velocity.x);
+        this.tmpVec[0].setY(descriptor.velocity.y);
+        this.tmpVec[0].setZ(descriptor.velocity.z);
+
+        controller.setVelocityForTimeInterval(this.tmpVec[0], descriptor.interval);
+      }
+    },
+
+    KinematicCharacterController_setUseGhostSweepTest: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        controller.setUseGhostSweepTest(descriptor.useGhostSweepTest);
+      }
+    },
+
+    KinematicCharacterController_setMaxSlope: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        controller.setMaxSlope(descriptor.slopeRadians);
       }
     },
 
@@ -4194,6 +4260,62 @@ define('ammo_kinematic_character_controller',[], function() {
     return this.proxy.execute('KinematicCharacterController_setWalkDirection', {
       controllerId: this.controllerId,
       direction: direction
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setJumpSpeed = function(jumpSpeed) {
+    return this.proxy.execute('KinematicCharacterController_setJumpSeed', {
+      controllerId: this.controllerId,
+      jumpSpeed: jumpSpeed
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setMaxJumpHeight = function(maxJumpHeight) {
+    return this.proxy.execute('KinematicCharacterController_setMaxJumpHeight', {
+      controllerId: this.controllerId,
+      maxJumpHeight: maxJumpHeight
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setGravity = function(gravity) {
+    return this.proxy.execute('KinematicCharacterController_setGravity', {
+      controllerId: this.controllerId,
+      gravity: gravity
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setUpAxis = function(upAxis) {
+    return this.proxy.execute('KinematicCharacterController_setUpAxis', {
+      controllerId: this.controllerId,
+      upAxis: upAxis
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.jump = function() {
+    return this.proxy.execute('KinematicCharacterController_jump', {
+      controllerId: this.controllerId
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setVelocityForTimeInterval = function(velocity, interval) {
+    return this.proxy.execute('KinematicCharacterController_setVelocityForTimeInterval', {
+      controllerId: this.controllerId,
+      velocity: velocity,
+      interval: interval
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setUseGhostSweepTest = function(useGhostSweepTest) {
+    return this.proxy.execute('KinematicCharacterController_setUseGhostSweepTest', {
+      controllerId: this.controllerId,
+      useGhostSweepTest: useGhostSweepTest
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setMaxSlope = function(slopeRadians) {
+    return this.proxy.execute('KinematicCharacterController_setMaxSlope', {
+      controllerId: this.controllerId,
+      slopRadians: slopeRadians
     });
   };
 

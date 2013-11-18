@@ -22,5 +22,61 @@ define([], function() {
     });
   };
 
+  AmmoKinematicCharacterController.prototype.setJumpSpeed = function(jumpSpeed) {
+    return this.proxy.execute('KinematicCharacterController_setJumpSeed', {
+      controllerId: this.controllerId,
+      jumpSpeed: jumpSpeed
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setMaxJumpHeight = function(maxJumpHeight) {
+    return this.proxy.execute('KinematicCharacterController_setMaxJumpHeight', {
+      controllerId: this.controllerId,
+      maxJumpHeight: maxJumpHeight
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setGravity = function(gravity) {
+    return this.proxy.execute('KinematicCharacterController_setGravity', {
+      controllerId: this.controllerId,
+      gravity: gravity
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setUpAxis = function(upAxis) {
+    return this.proxy.execute('KinematicCharacterController_setUpAxis', {
+      controllerId: this.controllerId,
+      upAxis: upAxis
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.jump = function() {
+    return this.proxy.execute('KinematicCharacterController_jump', {
+      controllerId: this.controllerId
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setVelocityForTimeInterval = function(velocity, interval) {
+    return this.proxy.execute('KinematicCharacterController_setVelocityForTimeInterval', {
+      controllerId: this.controllerId,
+      velocity: velocity,
+      interval: interval
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setUseGhostSweepTest = function(useGhostSweepTest) {
+    return this.proxy.execute('KinematicCharacterController_setUseGhostSweepTest', {
+      controllerId: this.controllerId,
+      useGhostSweepTest: useGhostSweepTest
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setMaxSlope = function(slopeRadians) {
+    return this.proxy.execute('KinematicCharacterController_setMaxSlope', {
+      controllerId: this.controllerId,
+      slopRadians: slopeRadians
+    });
+  };
+
   return AmmoKinematicCharacterController;
 });
