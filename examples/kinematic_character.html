@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Movement Test</title>
+  <title>Kinematic Character</title>
   <style>
   html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; }
   </style>
@@ -24,9 +24,48 @@
 
     function SimpleDemo() {
       this.cubes = [];
+
+      this.keys = {
+        up: false,
+        down: false,
+        left: false,
+        right: false
+      };
+
+      document.addEventListener('keyup', function(e) {
+        switch (e.keyCode) {
+          case 37: this.keys.left = false; break;
+          case 38: this.keys.up = false; break;
+          case 39: this.keys.right = false; break;
+          case 40: this.keys.down = false; break;
+        }
+      }.bind(this));
+
+      document.addEventListener('keydown', function(e) {
+        switch (e.keyCode) {
+          case 37: this.keys.left = true; break;
+          case 38: this.keys.up = true; break;
+          case 39: this.keys.right = true; break;
+          case 40: this.keys.down = true; break;
+        }
+      }.bind(this));
     }
 
     SimpleDemo.prototype = new DemoScene();
+
+    SimpleDemo.prototype._createStep = function(i, material) {
+      var cube = new THREE.Object3D();
+      cube.add(new THREE.Mesh(new THREE.CubeGeometry(2, 1, 8), material));
+      cube.position.x = i * 2;
+      cube.position.y = i * 1;
+      cube.position.z = 0;
+
+      this.scene.add(cube);
+        this.proxy.createRigidBodyFromObject(cube, 0, { shape: 'auto', strategy: 'compound_bounding_box' })
+        .then(function(rigidBody) {
+          rigidBody.addToWorld();
+        }.bind(this));
+    };
 
     SimpleDemo.prototype._createCube = function(material) {
       var cube = new THREE.Object3D();
@@ -51,50 +90,35 @@
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
       var material2 = new THREE.MeshLambertMaterial({ color: 0xcc3300 });
 
-      this.camera.position.x = this.camera.position.z = 40;
-      this.camera.position.y = 20;
-
       var cube = new THREE.Object3D();
 
-      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material2));
+      cube.add(new THREE.Mesh(new THREE.SphereGeometry(2, 12, 12), material2));
       cube.position.y = 10;
+      cube.position.x = 20;
       cube.children[0].castShadow = true;
       this.scene.add(cube);
 
-      for (var i = 0; i < 100; i++) {
+      for (var i = 0; i < 5; i++) {
         this._createCube(material);
       }
 
-      this.proxy.createKinematicCharacterControllerFromObject(cube, { shape: 'auto', strategy: 'convex_hull_mesh' }, 0.5)
+      // steps
+      for (var i = 0; i < 20; i++) {
+        this._createStep(i, material);
+      }
+
+      this.proxy.createKinematicCharacterControllerFromObject(cube, { shape: 'sphere', radius: 2  }, 2)
         .then(function(kinematicCharacter) {
-        // rigidBody.setType('kinematic');
-        // rigidBody.setLinearFactor({ x: 1, y: 1, z: 1 });
-        // rigidBody.setAngularFactor({ x: 0, y: 1, z: 0 });
-        // rigidBody.setDamping(0.95, 0.95);
-        // rigidBody.setFriction(0.01);
-        // rigidBody.setRestitution(0.01);
-        rigidBody.addToWorld();
-        this.cubeBody = kinematicCharacter; 
-        // console.log(this.cubeBody);
-        // setInterval(function() {
-        //   rigidBody.setWorldTransform({
-        //     x: (Math.random() * 100) - 50,
-        //     y: 2,
-        //     z: (Math.random() * 100) - 50
-        //   },
-        //   {
-        //     x:0,
-        //     y:0,
-        //     z:0,
-        //     w:1
-        //   });
-        // }.bind(this), 500);
-      }.bind(this));
+          this.character = kinematicCharacter; 
+        }.bind(this))
+        .otherwise(function(err) {
+          console.error(err);
+        }.bind(this));
     };
 
     SimpleDemo.prototype.updateBodies = function(delta) {
-      if (this.cubeBody) {
-        this.cubeBody.update();
+      if (this.character) {
+        this.character.update();
       }
 
       for (var i = 0; i < this.cubes.length; i++) {
@@ -104,6 +128,26 @@
 
     SimpleDemo.prototype.preUpdate = function(delta) {
       this.updateBodies(delta);
+
+      if (!this.character) return;
+      tmpVec.x = 0;
+      tmpVec.y = 0;
+      tmpVec.z = 0;
+
+      tmpQuaternion.setFromRotationMatrix(this.character.binding.object.matrixWorld);
+      if (this.keys.up) {
+        tmpVec.z += 1;
+      } else if (this.keys.down) {
+        tmpVec.z -= 1;
+      } else if (this.keys.left) {
+        tmpVec.x -= 1;
+      } else if (this.keys.right) {
+        tmpVec.x += 1;
+      }
+
+      tmpVec.applyQuaternion(tmpQuaternion);
+      this.controls.target = this.character.binding.object.position;
+      this.character.setWalkDirection(tmpVec);
     };
 
     var demo = new SimpleDemo();

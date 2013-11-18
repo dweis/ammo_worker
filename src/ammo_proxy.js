@@ -22,6 +22,7 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
     var constraints = this.constraints = [];
     var vehicles = this.vehicles = [];
     var ghosts = this.ghosts = [];
+    var kinematicCharacterControllers = this.kinematicCharacterControllers = [];
 
     this.adapter = new THREEAdapter(this);
 
@@ -45,8 +46,12 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
       vehicles[id] = undefined;
     });
 
-    this.worker.on('Constraints_destroy', function(id) {
+    this.worker.on('Constraint_destroy', function(id) {
       constraints[id] = undefined;
+    });
+
+    this.worker.on('KinematicCharacterController_destroy', function(id) {
+      kinematicCharacterControllers[id] = undefined;
     });
 
     function proxyMethod(method) {
@@ -303,6 +308,10 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
     }
 
     console.warn('Asked for non-existent vehicle with ID: ' + vehicleId);
+  };
+
+  AmmoProxy.prototype.getKinematicCharacterControllerOffset = function(kinematicCharacterControllerId) {
+    return (this.opts.maxBodies * 7) + (this.opts.maxVehicles * 8 * 7) + (kinematicCharacterControllerId * 7);
   };
 
   AmmoProxy.prototype.getConstraint = function(constraintId) {

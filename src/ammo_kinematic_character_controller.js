@@ -1,7 +1,7 @@
 define([], function() {
-  function AmmoKinematicCharacterController(proxy, bodyId) {
+  function AmmoKinematicCharacterController(proxy, controllerId) {
     this.proxy = proxy;
-    this.bodyId = bodyId;
+    this.controllerId = controllerId;
     this.binding = undefined;
     this.position = { x: 0, y: 0, z: 0 };
     this.rotation = { x: 0, y: 0, z: 0, w: 1 };
@@ -15,6 +15,12 @@ define([], function() {
     }
   };
 
+  AmmoKinematicCharacterController.prototype.setWalkDirection = function(direction) {
+    return this.proxy.execute('KinematicCharacterController_setWalkDirection', {
+      controllerId: this.controllerId,
+      direction: direction
+    });
+  };
 
   return AmmoKinematicCharacterController;
 });

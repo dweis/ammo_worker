@@ -2584,6 +2584,7 @@ define('ammo_worker_api',[], function() {
     this.maxBodies = 1000;
     this.maxVehicles = 32;
     this.maxWheelsPerVehicle = 8;
+    this.maxKinematicCharacterControllers = 16;
 
     for (var i in opts) {
       if (opts.hasOwnProperty(i)) {
@@ -2611,11 +2612,22 @@ define('ammo_worker_api',[], function() {
       DISABLE_SIMULATION: 5
     }, 
 
-    init: function() {
-      var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
+    collisionFilterGroups:  {
+      DefaultFilter: 1,
+      StaticFilter: 2,
+      KinematicFilter: 4,
+      DebrisFilter: 8,
+      SensorTrigger: 16,
+      CharacterFilter: 32,
+      AllFilter: -1 //all bits sets: DefaultFilter | StaticFilter | KinematicFilter | DebrisFilter | SensorTrigger
+    },
 
-      importScripts('./js/ammo.js');
-      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
+    init: function() {
+      var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8) +
+          (this.maxKinematicCharacterControllers * 7);
+
+      //import Scripts('./js/ammo.js');
+      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -2638,10 +2650,22 @@ define('ammo_worker_api',[], function() {
       this.vehicles = [];
       this.constraints = [];
       this.ghosts = [];
+      this.characterControllers = [];
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
+
       this.overlappingPairCache = new Ammo.btDbvtBroadphase();
+
+      /*
+      this.tmpVec[0].setX(-1000);
+      this.tmpVec[0].setY(-1000);
+      this.tmpVec[0].setZ(-1000);
+      this.tmpVec[1].setX(1000);
+      this.tmpVec[1].setY(1000);
+      this.tmpVec[1].setZ(1000);
+      this.overlappingPairCache = new Ammo.btAxisSweep3(this.tmpVec[0], this.tmpVec[1]);
+      */
       
       this.solver = new Ammo.btSequentialImpulseConstraintSolver();
       this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(this.dispatcher,
@@ -2649,6 +2673,9 @@ define('ammo_worker_api',[], function() {
 
       this.ghostPairCallback = new Ammo.btGhostPairCallback();
       this.dynamicsWorld.getPairCache().setInternalGhostPairCallback(this.ghostPairCallback);
+
+      this.dynamicsWorld.getDispatchInfo().set_m_allowedCcdPenetration(0.0001);
+      console.log('1');
 
       this.buffers = [
         new ArrayBuffer(bufferSize),
@@ -2717,6 +2744,21 @@ define('ammo_worker_api',[], function() {
                 update[pos + 6] = that.tmpTrans[0].getRotation().w();
               }
             }
+          }
+
+          for (i in that.characterControllers) {
+            if (that.characterControllers[i]) {
+              var trans = that.characterControllers[i].getGhostObject().getWorldTransform();//that.tmpTrans[0]);
+              pos = (that.maxBodies * 7) + (that.maxVehicles * that.maxWheelsPerVehicle * 7) + (i * 7);
+
+              update[pos + 0] = trans.getOrigin().x();
+              update[pos + 1] = trans.getOrigin().y();
+              update[pos + 2] = trans.getOrigin().z();
+              update[pos + 3] = trans.getRotation().x();
+              update[pos + 4] = trans.getRotation().y();
+              update[pos + 5] = trans.getRotation().z();
+              update[pos + 6] = trans.getRotation().w();
+            }  
           }
 
           that.ghosts.forEach(function(ghost/*, idx*/) {
@@ -3402,6 +3444,7 @@ define('ammo_worker_api',[], function() {
       if (!colShape) {
         throw('Invalid collision shape!');
       }
+      console.log(descriptor);
 
       origin.setX(descriptor.position.x);
       origin.setY(descriptor.position.y);
@@ -3414,31 +3457,38 @@ define('ammo_worker_api',[], function() {
 
       startTransform.setOrigin(origin);
       startTransform.setRotation(rotation);
-      console.log(1);
 
       ghost = new Ammo.btPairCachingGhostObject();
       ghost.setWorldTransform(startTransform);
 
-console.log(2);
       ghost.setCollisionShape(colShape);
-      console.log(3);
       ghost.setCollisionFlags(this.collisionFlags.CF_CHARACTER_OBJECT);
-      console.log(4);
 
-      character = new Ammo.btKinematicCharacterController (ghost, colShape, descriptor.stepHeight);
-console.log(5);
+      controller = new Ammo.btKinematicCharacterController (ghost, colShape, descriptor.stepHeight);
 
-      /*
-      myMotionState = new Ammo.btDefaultMotionState(startTransform);
-      rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
-      body = new Ammo.btRigidBody(rbInfo);
-      */
+      this.dynamicsWorld.addCollisionObject(ghost, this.collisionFilterGroups.CharacterFilter,
+        this.collisionFilterGroups.StaticFilter | this.collisionFilterGroups.DefaultFilter);
 
-      var idx = this.bodies.push(body) - 1;
-      body.id = idx;
+      this.dynamicsWorld.addAction(controller);
+
+      var idx = this.characterControllers.push(controller) - 1;
+      this.ghost = ghost;
+      controller.id = idx;
 
       if (typeof fn === 'function') {
         fn(idx);
+      }
+    },
+
+    KinematicCharacterController_setWalkDirection: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        this.tmpVec[0].setX(descriptor.direction.x);
+        this.tmpVec[0].setY(descriptor.direction.y);
+        this.tmpVec[0].setZ(descriptor.direction.z);
+
+        controller.setWalkDirection(this.tmpVec[0]);
       }
     },
 
@@ -3525,14 +3575,18 @@ console.log(5);
         position = this.tmpTrans[0].getOrigin();
         rotation = this.tmpTrans[0].getRotation();
 
-        position.setX(descriptor.position.x);
-        position.setY(descriptor.position.y);
-        position.setZ(descriptor.position.z);
+        if (descriptor.position) {
+          position.setX(descriptor.position.x);
+          position.setY(descriptor.position.y);
+          position.setZ(descriptor.position.z);
+        }
 
-        rotation.setX(descriptor.rotation.x);
-        rotation.setY(descriptor.rotation.y);
-        rotation.setZ(descriptor.rotation.z);
-        rotation.setW(descriptor.rotation.w);
+        if (descriptor.rotation) {
+          rotation.setX(descriptor.rotation.x);
+          rotation.setY(descriptor.rotation.y);
+          rotation.setZ(descriptor.rotation.z);
+          rotation.setW(descriptor.rotation.w);
+        }
 
         if (body.isKinematicObject()) {
           body.getMotionState().setWorldTransform(this.tmpTrans[0]);
@@ -4092,9 +4146,9 @@ define('ammo_ghost_object',[], function() {
 });
 
 define('ammo_kinematic_character_controller',[], function() {
-  function AmmoKinematicCharacterController(proxy, bodyId) {
+  function AmmoKinematicCharacterController(proxy, controllerId) {
     this.proxy = proxy;
-    this.bodyId = bodyId;
+    this.controllerId = controllerId;
     this.binding = undefined;
     this.position = { x: 0, y: 0, z: 0 };
     this.rotation = { x: 0, y: 0, z: 0, w: 1 };
@@ -4108,6 +4162,12 @@ define('ammo_kinematic_character_controller',[], function() {
     }
   };
 
+  AmmoKinematicCharacterController.prototype.setWalkDirection = function(direction) {
+    return this.proxy.execute('KinematicCharacterController_setWalkDirection', {
+      controllerId: this.controllerId,
+      direction: direction
+    });
+  };
 
   return AmmoKinematicCharacterController;
 });
@@ -4528,6 +4588,7 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     var constraints = this.constraints = [];
     var vehicles = this.vehicles = [];
     var ghosts = this.ghosts = [];
+    var kinematicCharacterControllers = this.kinematicCharacterControllers = [];
 
     this.adapter = new THREEAdapter(this);
 
@@ -4551,8 +4612,12 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
       vehicles[id] = undefined;
     });
 
-    this.worker.on('Constraints_destroy', function(id) {
+    this.worker.on('Constraint_destroy', function(id) {
       constraints[id] = undefined;
+    });
+
+    this.worker.on('KinematicCharacterController_destroy', function(id) {
+      kinematicCharacterControllers[id] = undefined;
     });
 
     function proxyMethod(method) {
@@ -4809,6 +4874,10 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     }
 
     console.warn('Asked for non-existent vehicle with ID: ' + vehicleId);
+  };
+
+  AmmoProxy.prototype.getKinematicCharacterControllerOffset = function(kinematicCharacterControllerId) {
+    return (this.opts.maxBodies * 7) + (this.opts.maxVehicles * 8 * 7) + (kinematicCharacterControllerId * 7);
   };
 
   AmmoProxy.prototype.getConstraint = function(constraintId) {
