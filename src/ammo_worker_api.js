@@ -6,6 +6,7 @@ define([], function() {
     this.maxBodies = 1000;
     this.maxVehicles = 32;
     this.maxWheelsPerVehicle = 8;
+    this.maxKinematicCharacterControllers = 16;
 
     for (var i in opts) {
       if (opts.hasOwnProperty(i)) {
@@ -33,8 +34,19 @@ define([], function() {
       DISABLE_SIMULATION: 5
     }, 
 
+    collisionFilterGroups:  {
+      DefaultFilter: 1,
+      StaticFilter: 2,
+      KinematicFilter: 4,
+      DebrisFilter: 8,
+      SensorTrigger: 16,
+      CharacterFilter: 32,
+      AllFilter: -1 //all bits sets: DefaultFilter | StaticFilter | KinematicFilter | DebrisFilter | SensorTrigger
+    },
+
     init: function() {
-      var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8);
+      var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8) +
+          (this.maxKinematicCharacterControllers * 7);
 
       importScripts('./js/ammo.js');
       //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
@@ -60,10 +72,22 @@ define([], function() {
       this.vehicles = [];
       this.constraints = [];
       this.ghosts = [];
+      this.characterControllers = [];
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
+
       this.overlappingPairCache = new Ammo.btDbvtBroadphase();
+
+      /*
+      this.tmpVec[0].setX(-1000);
+      this.tmpVec[0].setY(-1000);
+      this.tmpVec[0].setZ(-1000);
+      this.tmpVec[1].setX(1000);
+      this.tmpVec[1].setY(1000);
+      this.tmpVec[1].setZ(1000);
+      this.overlappingPairCache = new Ammo.btAxisSweep3(this.tmpVec[0], this.tmpVec[1]);
+      */
       
       this.solver = new Ammo.btSequentialImpulseConstraintSolver();
       this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(this.dispatcher,
@@ -71,6 +95,9 @@ define([], function() {
 
       this.ghostPairCallback = new Ammo.btGhostPairCallback();
       this.dynamicsWorld.getPairCache().setInternalGhostPairCallback(this.ghostPairCallback);
+
+      this.dynamicsWorld.getDispatchInfo().set_m_allowedCcdPenetration(0.0001);
+      console.log('1');
 
       this.buffers = [
         new ArrayBuffer(bufferSize),
@@ -141,6 +168,21 @@ define([], function() {
                 update[pos + 6] = that.tmpTrans[0].getRotation().w();
               }
             }
+          }
+
+          for (i in that.characterControllers) {
+            if (that.characterControllers[i]) {
+              var trans = that.characterControllers[i].getGhostObject().getWorldTransform();//that.tmpTrans[0]);
+              pos = (that.maxBodies * 7) + (that.maxVehicles * that.maxWheelsPerVehicle * 7) + (i * 7);
+
+              update[pos + 0] = trans.getOrigin().x();
+              update[pos + 1] = trans.getOrigin().y();
+              update[pos + 2] = trans.getOrigin().z();
+              update[pos + 3] = trans.getRotation().x();
+              update[pos + 4] = trans.getRotation().y();
+              update[pos + 5] = trans.getRotation().z();
+              update[pos + 6] = trans.getRotation().w();
+            }  
           }
 
           that.ghosts.forEach(function(ghost/*, idx*/) {
@@ -811,6 +853,69 @@ define([], function() {
       }
     },
 
+    KinematicCharacterController_create: function(descriptor, fn) {
+      var colShape,
+          startTransform = this.tmpTrans[0],
+          origin = this.tmpVec[1],
+          rotation = this.tmpQuaternion[0],
+          ghost,
+          controller;
+
+      startTransform.setIdentity();
+
+      colShape = this._createShape(descriptor.shape);
+
+      if (!colShape) {
+        throw('Invalid collision shape!');
+      }
+      console.log(descriptor);
+
+      origin.setX(descriptor.position.x);
+      origin.setY(descriptor.position.y);
+      origin.setZ(descriptor.position.z);
+
+      rotation.setX(descriptor.quaternion.x);
+      rotation.setY(descriptor.quaternion.y);
+      rotation.setZ(descriptor.quaternion.z);
+      rotation.setW(descriptor.quaternion.w);
+
+      startTransform.setOrigin(origin);
+      startTransform.setRotation(rotation);
+
+      ghost = new Ammo.btPairCachingGhostObject();
+      ghost.setWorldTransform(startTransform);
+
+      ghost.setCollisionShape(colShape);
+      ghost.setCollisionFlags(this.collisionFlags.CF_CHARACTER_OBJECT);
+
+      controller = new Ammo.btKinematicCharacterController (ghost, colShape, descriptor.stepHeight);
+
+      this.dynamicsWorld.addCollisionObject(ghost, this.collisionFilterGroups.CharacterFilter,
+        this.collisionFilterGroups.StaticFilter | this.collisionFilterGroups.DefaultFilter);
+
+      this.dynamicsWorld.addAction(controller);
+
+      var idx = this.characterControllers.push(controller) - 1;
+      this.ghost = ghost;
+      controller.id = idx;
+
+      if (typeof fn === 'function') {
+        fn(idx);
+      }
+    },
+
+    KinematicCharacterController_setWalkDirection: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        this.tmpVec[0].setX(descriptor.direction.x);
+        this.tmpVec[0].setY(descriptor.direction.y);
+        this.tmpVec[0].setZ(descriptor.direction.z);
+
+        controller.setWalkDirection(this.tmpVec[0]);
+      }
+    },
+
     RigidBody_create: function(descriptor, fn) {
       var colShape,
           startTransform = this.tmpTrans[0],
@@ -894,14 +999,18 @@ define([], function() {
         position = this.tmpTrans[0].getOrigin();
         rotation = this.tmpTrans[0].getRotation();
 
-        position.setX(descriptor.position.x);
-        position.setY(descriptor.position.y);
-        position.setZ(descriptor.position.z);
+        if (descriptor.position) {
+          position.setX(descriptor.position.x);
+          position.setY(descriptor.position.y);
+          position.setZ(descriptor.position.z);
+        }
 
-        rotation.setX(descriptor.rotation.x);
-        rotation.setY(descriptor.rotation.y);
-        rotation.setZ(descriptor.rotation.z);
-        rotation.setW(descriptor.rotation.w);
+        if (descriptor.rotation) {
+          rotation.setX(descriptor.rotation.x);
+          rotation.setY(descriptor.rotation.y);
+          rotation.setZ(descriptor.rotation.z);
+          rotation.setW(descriptor.rotation.w);
+        }
 
         if (body.isKinematicObject()) {
           body.getMotionState().setWorldTransform(this.tmpTrans[0]);
