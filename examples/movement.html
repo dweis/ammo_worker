@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Movement Test</title>
+  <style>
+  html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; }
+  </style>
+</head>
+<body>
+  <div id="container">
+  </div>
+  <div style="position: absolute; top: 0; left: 0; color: white; font-family: tahoma, sans-serif; font-size: 24pt;">
+  </div>
+  <script src="js/catiline.js"></script>
+  <script src="js/three.js"></script>
+  <script src="js/stats.min.js"></script>
+  <script src="js/OrbitControls.js"></script>
+  <script src="../build/ammo_proxy.js"></script>
+  <script src="js/demo_scene.js"></script>
+  <script type="text/javascript">
+    var tmpVec = new THREE.Vector3(),
+        tmpQuaternion = new THREE.Quaternion();
+
+    function SimpleDemo() {
+      this.cubes = [];
+
+      this.keys = {
+        up: false,
+        down: false,
+        left: false,
+        right: false
+      };
+
+      document.addEventListener('keyup', function(e) {
+        switch (e.keyCode) {
+          case 37: this.keys.left = false; break;
+          case 38: this.keys.up = false; break;
+          case 39: this.keys.right = false; break;
+          case 40: this.keys.down = false; break;
+        }
+      }.bind(this));
+
+      document.addEventListener('keydown', function(e) {
+        switch (e.keyCode) {
+          case 37: this.keys.left = true; break;
+          case 38: this.keys.up = true; break;
+          case 39: this.keys.right = true; break;
+          case 40: this.keys.down = true; break;
+        }
+      }.bind(this));
+    }
+
+    SimpleDemo.prototype = new DemoScene();
+
+    SimpleDemo.prototype._createCube = function(x, y, z, material) {
+      var cube = new THREE.Object3D();
+      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material));
+
+      cube.position.x = 2 + (x * 4);
+      cube.position.y = 2 + (y * 4);
+      cube.position.z = 2 + (z * 4);
+
+      this.scene.add(cube);
+      this.proxy.createRigidBodyFromObject(cube, 1, { shape: 'box', halfExtents: { x: 2, y: 2, z: 2 } })
+        .then(function(rigidBody) {
+          rigidBody.addToWorld();
+          this.cubes.push(rigidBody);
+        }.bind(this))
+        .otherwise(function(err) {
+          console.error(err.message);
+        });
+    };
+
+    SimpleDemo.prototype.initDemo = function() {
+      console.log('initializing...');
+      var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 }),
+          material2 = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+
+      this.camera.position.x = this.camera.position.z = 40;
+      this.camera.position.y = 20;
+
+      console.log('creating cube');
+      var cube = new THREE.Object3D();
+
+      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material2));
+      cube.position.x = -10;
+      cube.position.y = 10;
+      cube.position.z = 10;
+      cube.children[0].castShadow = true;
+      this.scene.add(cube);
+
+      console.log(cube);
+
+      this.proxy.createRigidBodyFromObject(cube, 1, { shape: "box", "halfExtents": { "x": 2, "y": 2, "z": 2 }}).then(function(rigidBody) {
+        rigidBody.setLinearFactor({ x: 1, y: 1, z: 1 });
+        rigidBody.setAngularFactor({ x: 0, y: 1, z: 0 });
+        rigidBody.setDamping(0.99, 0.99);
+        rigidBody.setFriction(0.01);
+        rigidBody.setRestitution(0.01);
+        rigidBody.addToWorld();
+        this.cubeBody = rigidBody; 
+        console.log(this.cubeBody);
+      }.bind(this));
+
+
+      for (var z = 0; z < 5; z ++) {
+        for (var y = 0; y < 5; y ++) {
+          for (var x = 0; x < 5; x++) {
+            this._createCube(x, y, z, material);
+          }
+        }
+      }
+    };
+
+    SimpleDemo.prototype.updateBodies = function(delta) {
+      var torque = 0, force = 0;
+
+      if (this.cubeBody) {
+        if (this.keys.left) { 
+          torque += 5;
+        }
+
+        if (this.keys.right) {
+          torque -= 5;
+        }
+
+        if (this.keys.up) {
+          force -= 500;
+        }
+
+        if (this.keys.down) {
+          force += 300;
+        }
+
+        this.cubeBody.update();
+
+        if (torque !== 0) {
+          this.cubeBody.applyTorque({ x: 0, y: torque * delta, z: 0 });
+        }
+
+        if (force !== 0) {
+          tmpVec.x = 0;
+          tmpVec.y = 0;
+          tmpVec.z = force;
+          tmpQuaternion.setFromRotationMatrix(this.cubeBody.binding.object.matrixWorld);
+          tmpVec.applyQuaternion(tmpQuaternion);
+
+          this.cubeBody.applyForce(tmpVec);
+        }
+      }
+    };
+
+    SimpleDemo.prototype.preUpdate = function(delta) {
+      this.updateBodies(delta);
+
+      for (var i = 0; i < this.cubes.length; i++) {
+        this.cubes[i].update();
+      }
+    };
+
+    var demo = new SimpleDemo();
+
+    demo.init();
+  </script>
+</body>
+</html>

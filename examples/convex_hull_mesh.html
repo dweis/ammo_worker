@@ -31,14 +31,7 @@
     };
 
     SimpleDemo.prototype._createTriangleMesh = function(material) {
-      var o = new THREE.Object3D(),
-          geometry,
-          mesh,
-          face,
-          vertices,
-          scale = new THREE.Vector3(),
-          tmpVector3 = new THREE.Vector3();
-
+      var o = new THREE.Object3D();
       switch (Math.floor(Math.random() * 4)) {
         case 0:
           geometry = new THREE.TorusGeometry(2, 1, 8, 6);
@@ -55,33 +48,23 @@
       }
 
       o.scale.x = o.scale.y = o.scale.z = Math.random() * 2;
+
+      o.position.x = (Math.random() * 30) - 15;
+      o.position.y = 10 + (Math.random() * 40) - 5;
+      o.position.z = (Math.random() * 30) - 15;
+      
       mesh = new THREE.Mesh(geometry, material)
 
       o.add(mesh);
       this.scene.add(o);
 
-      vertices = new Float64Array(geometry.vertices.length * 3);
-
       this.scene.updateMatrixWorld();
-      scale.getScaleFromMatrix(mesh.matrixWorld);
-
-      for (var vertexIdx in geometry.vertices) {
-        tmpVector3.copy(geometry.vertices[vertexIdx]);
-        tmpVector3.multiply(scale);
-
-        vertices[vertexIdx * 3 + 0] = tmpVector3.x;
-        vertices[vertexIdx * 3 + 1] = tmpVector3.y;
-        vertices[vertexIdx * 3 + 2] = tmpVector3.z;
-      }
-
-      o.position.x = (Math.random() * 30) - 15;
-      o.position.y = 10 + (Math.random() * 40) - 5;
-      o.position.z = (Math.random() * 30) - 15;
 
       this.proxy.createRigidBodyFromObject(o, 0.1, {
-        shape: 'convex_hull_mesh',
-        vertices: vertices
+        shape: 'auto',
+        strategy: 'convex_hull_mesh',
       }).then(function(rigidBody) {
+        rigidBody.addToWorld();
         this.bodies.push(rigidBody);
       }.bind(this));
 

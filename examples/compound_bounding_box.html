@@ -82,8 +82,9 @@
 
   CompoundDemo.prototype._createBody = function(object) {
     this.proxy
-      .createRigidBodyFromObject(object, 1)
+      .createRigidBodyFromObject(object, 1000, { shape: 'auto', strategy: 'compound_bounding_box' })
       .then(function(rigidBody) {
+        rigidBody.addToWorld();
         this.bodies.push(rigidBody);
       }.bind(this));
   };

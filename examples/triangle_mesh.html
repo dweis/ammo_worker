@@ -25,7 +25,7 @@
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
       this.bodies = [];
-      for (var i = 0; i < 100; i++) {
+      for (var i = 0; i < 20; i++) {
         var o = this._createTriangleMesh(material);
       }
     };
@@ -33,11 +33,7 @@
     SimpleDemo.prototype._createTriangleMesh = function(material) {
       var o = new THREE.Object3D(),
           geometry,
-          mesh,
-          face,
-          triangles,
-          scale = new THREE.Vector3(),
-          tmpVector3 = new THREE.Vector3();
+          mesh;
 
       switch (Math.floor(Math.random() * 3)) {
         case 0:
@@ -55,46 +51,18 @@
       mesh = new THREE.Mesh(geometry, material)
 
       o.add(mesh);
+      o.position.x = (Math.random() * 100) - 50;
+      o.position.y = 35;// + (Math.random() * 20) - 5;
+      o.position.z = (Math.random() * 100) - 50;
+
       this.scene.add(o);
-
-      triangles = new Float64Array(geometry.faces.length * 9);
-
       this.scene.updateMatrixWorld();
-      scale.getScaleFromMatrix(mesh.matrixWorld);
-
-      for (var faceIdx in geometry.faces) {
-        face = geometry.faces[faceIdx];
-
-        tmpVector3.copy(geometry.vertices[face.a]);
-        tmpVector3.multiply(scale);
-
-        triangles[faceIdx * 9 + 0] = tmpVector3.x;
-        triangles[faceIdx * 9 + 1] = tmpVector3.y;
-        triangles[faceIdx * 9 + 2] = tmpVector3.z;
-
-        tmpVector3.copy(geometry.vertices[face.b]);
-        tmpVector3.multiply(scale);
-
-        triangles[faceIdx * 9 + 3] = tmpVector3.x;
-        triangles[faceIdx * 9 + 4] = tmpVector3.y;
-        triangles[faceIdx * 9 + 5] = tmpVector3.z;
-
-        tmpVector3.copy(geometry.vertices[face.c]);
-        tmpVector3.multiply(scale);
-
-        triangles[faceIdx * 9 + 6] = tmpVector3.x;
-        triangles[faceIdx * 9 + 7] = tmpVector3.y;
-        triangles[faceIdx * 9 + 8] = tmpVector3.z;
-      }
-
-      o.position.x = (Math.random() * 30) - 15;
-      o.position.y = 10 + (Math.random() * 20) - 5;
-      o.position.z = (Math.random() * 30) - 15;
 
       this.proxy.createRigidBodyFromObject(o, 0.1, {
-        shape: 'convex_triangle_mesh',
-        triangles: triangles
+        shape: 'auto',
+        strategy: 'convex_triangle_mesh'
       }).then(function(rigidBody) {
+        rigidBody.addToWorld();
         this.bodies.push(rigidBody);
       }.bind(this));
 

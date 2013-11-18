@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Performance Test</title>
+  <title>Ghost Object Test</title>
   <style>
   html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
   </style>
@@ -24,8 +24,14 @@
     SimpleDemo.prototype.initDemo = function() {
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
+      this.proxy.createGhostObject({ shape: 'sphere', radius: 10 },
+          { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0, w: 1 }).then(function(ghost) {
+            ghost.addToWorld();
+        console.log('ghost', arguments);
+      });
+
       this.bodies = [];
-      for (var i = 0; i < 500; i++) {
+      for (var i = 0; i < 100; i++) {
         var o = this._createBox(material);
         this.scene.add(o);
       }

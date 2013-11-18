@@ -1,4 +1,16 @@
 var DemoScene = function() {
+  var div = document.createElement('div');
+  div.id = 'physics-stats';
+  div.style['z-index']  = 50;
+  div.style['color'] = '#fff';
+  div.style['position'] = 'absolute';
+  div.style['bottom'] = '0px';
+  div.style['right'] = '0px';
+  div.style['padding'] = '5px';
+  div.style['font-family'] = 'tahoma, verdana, sans-serif';
+  div.style['font-size'] = '12pt';
+  document.body.appendChild(div);
+  this.statsEl = document.getElementById('physics-stats');
 };
 
 DemoScene.prototype.init = function() {
@@ -7,6 +19,13 @@ DemoScene.prototype.init = function() {
   this.proxy.setStep(1/120);
   this.proxy.setIterations(10);
   */
+
+  setInterval(function() {
+    this.proxy.getStats().
+      then(function(stats) {
+        this.statsEl.innerHTML = stats.fps + '(' + stats.buffersReady + ')';
+      }.bind(this));
+  }.bind(this), 500);
 
   window.addEventListener('blur', function() { 
     this.proxy.stopSimulation();
@@ -78,12 +97,17 @@ DemoScene.prototype._initScene = function() {
     color: 0x666666
   });
 
-  var ground = new THREE.Mesh(new THREE.CubeGeometry(1000,0.01, 1000),groundMaterial); 
+  var ground = new THREE.Mesh(new THREE.CubeGeometry(1000,0.01,1000, 1, 1, 1),groundMaterial); 
   //ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
   ground.receiveShadow = true;
+  ground.position.y = 0;
   scene.add(ground);
+  scene.updateMatrixWorld();
 
-  this.proxy.adapter.createRigidBodyFromObject(ground, 0).then(_.bind(function(rigidBody) {
+  this.proxy.adapter.createRigidBodyFromObject(ground, 50000000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'}).then(_.bind(function(rigidBody) {
+    rigidBody.setType('static');
+    rigidBody.setFriction(0.5);
+    rigidBody.addToWorld(1,255);
     this.groundBody = rigidBody;
   }, this));
 
@@ -106,16 +130,18 @@ DemoScene.prototype._initScene = function() {
 };
 
 DemoScene.prototype.update = function(delta) {
+  var dt = delta - this.last;
+  this.last = delta;
   this.stats.begin();
   if (typeof this.preUpdate === 'function') {
-    this.preUpdate(delta);
+    this.preUpdate(dt);
   }
 
   this.controls.update();
   this.renderer.render(this.scene, this.camera);
 
   if (typeof this.postUpdate === 'function') {
-    this.postUpdate(delta);
+    this.postUpdate(dt);
   }
 
   if (this.proxy && this.proxy.swap) {

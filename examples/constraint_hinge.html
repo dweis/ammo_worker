@@ -25,10 +25,10 @@
 
         switch (e.keyCode) {
           case 38:
-            torque = -10000;
+            torque = -1000;
             break;
           case 40:
-            torque = 10000;
+            torque = 1000;
             break;
         }
 
@@ -53,22 +53,25 @@
       hinge = new THREE.Object3D();
 
       hinge.add(new THREE.Mesh(new THREE.CubeGeometry(0.3, 4, 0.3), material));
-      hinge.position.y = 2.2;
-      hinge.position.x = -7.4;
+      hinge.position.y = 2.4;
+      hinge.position.x = -8.4;
       hinge.children[0].castShadow = true;
       this.scene.add(hinge);
 
-      this.proxy.createRigidBodyFromObject(hinge, 0).then(function(rigidBody) {
+      this.proxy.createRigidBodyFromObject(hinge, 10).then(function(rigidBody) {
+        rigidBody.setType('static');
+        rigidBody.addToWorld();
         this.bodies.push(rigidBody); 
 
         door = new THREE.Object3D();
         door.add(new THREE.Mesh(new THREE.CubeGeometry(2, 4, 0.3), material));
-        door.position.y = 2.2;
+        door.position.y = 2.4;
         door.position.x = -6;
         door.children[0].castShadow = true;
         this.scene.add(door);
 
         this.proxy.createRigidBodyFromObject(door, 4).then(function(rigidBody) {
+          rigidBody.addToWorld();
           this.bodies.push(rigidBody); 
 
           this.proxy.createHingeConstraint(this.bodies[0], this.bodies[1], 

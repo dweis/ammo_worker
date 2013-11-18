@@ -49,6 +49,7 @@
         }
       }).then(function(rigidBody) {
         rigidBody.addToWorld();
+        rigidBody.setDamping(0.99, 0.99);
         this.bodies.push(rigidBody);
       }.bind(this));
 

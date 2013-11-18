@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kinematic Character</title>
+  <style>
+  html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; }
+  </style>
+</head>
+<body>
+  <div id="container">
+  </div>
+  <div style="position: absolute; top: 0; left: 0; color: white; font-family: tahoma, sans-serif; font-size: 24pt;">
+  </div>
+  <script src="js/catiline.js"></script>
+  <script src="js/three.js"></script>
+  <script src="js/stats.min.js"></script>
+  <script src="js/OrbitControls.js"></script>
+  <script src="../build/ammo_proxy.js"></script>
+  <script src="js/demo_scene.js"></script>
+  <script src="js/ammo.js"></script>
+  <script type="text/javascript">
+    var tmpVec = new THREE.Vector3(),
+        tmpQuaternion = new THREE.Quaternion();
+
+    function SimpleDemo() {
+      this.cubes = [];
+
+      this.keys = {
+        up: false,
+        down: false,
+        left: false,
+        right: false
+      };
+
+      document.addEventListener('keyup', function(e) {
+        switch (e.keyCode) {
+          case 37: this.keys.left = false; break;
+          case 38: this.keys.up = false; break;
+          case 39: this.keys.right = false; break;
+          case 40: this.keys.down = false; break;
+        }
+      }.bind(this));
+
+      document.addEventListener('keydown', function(e) {
+        switch (e.keyCode) {
+          case 37: this.keys.left = true; break;
+          case 38: this.keys.up = true; break;
+          case 39: this.keys.right = true; break;
+          case 40: this.keys.down = true; break;
+        }
+      }.bind(this));
+    }
+
+    SimpleDemo.prototype = new DemoScene();
+
+    SimpleDemo.prototype._createStep = function(i, material) {
+      var cube = new THREE.Object3D();
+      cube.add(new THREE.Mesh(new THREE.CubeGeometry(2, 1, 8), material));
+      cube.position.x = i * 2;
+      cube.position.y = i * 1;
+      cube.position.z = 0;
+
+      this.scene.add(cube);
+        this.proxy.createRigidBodyFromObject(cube, 0, { shape: 'auto', strategy: 'compound_bounding_box' })
+        .then(function(rigidBody) {
+          rigidBody.addToWorld();
+        }.bind(this));
+    };
+
+    SimpleDemo.prototype._createCube = function(material) {
+      var cube = new THREE.Object3D();
+      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material));
+      cube.position.x = (Math.random() * 50) - 25;
+      cube.position.y = 10 + (Math.random() * 10);
+      cube.position.z = (Math.random() * 50) - 25;
+
+      this.scene.add(cube);
+      this.proxy.createRigidBodyFromObject(cube, 1, { shape: 'auto', strategy: 'compound_bounding_box' })
+        .then(function(rigidBody) {
+          rigidBody.addToWorld();
+          this.cubes.push(rigidBody);
+        }.bind(this))
+        .otherwise(function(err) {
+          console.error(err.message);
+        });
+    };
+
+    SimpleDemo.prototype.initDemo = function() {
+      console.log('initializing...');
+      var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
+      var material2 = new THREE.MeshLambertMaterial({ color: 0xcc3300 });
+
+      var cube = new THREE.Object3D();
+
+      cube.add(new THREE.Mesh(new THREE.SphereGeometry(2, 12, 12), material2));
+      cube.position.y = 10;
+      cube.position.x = 20;
+      cube.children[0].castShadow = true;
+      this.scene.add(cube);
+
+      for (var i = 0; i < 5; i++) {
+        this._createCube(material);
+      }
+
+      // steps
+      for (var i = 0; i < 20; i++) {
+        this._createStep(i, material);
+      }
+
+      this.proxy.createKinematicCharacterControllerFromObject(cube, { shape: 'sphere', radius: 2  }, 2)
+        .then(function(kinematicCharacter) {
+          this.character = kinematicCharacter; 
+        }.bind(this))
+        .otherwise(function(err) {
+          console.error(err);
+        }.bind(this));
+    };
+
+    SimpleDemo.prototype.updateBodies = function(delta) {
+      if (this.character) {
+        this.character.update();
+      }
+
+      for (var i = 0; i < this.cubes.length; i++) {
+        this.cubes[i].update();  
+      }
+    };
+
+    SimpleDemo.prototype.preUpdate = function(delta) {
+      this.updateBodies(delta);
+
+      if (!this.character) return;
+      tmpVec.x = 0;
+      tmpVec.y = 0;
+      tmpVec.z = 0;
+
+      tmpQuaternion.setFromRotationMatrix(this.character.binding.object.matrixWorld);
+      if (this.keys.up) {
+        tmpVec.z += 1;
+      } else if (this.keys.down) {
+        tmpVec.z -= 1;
+      } else if (this.keys.left) {
+        tmpVec.x -= 1;
+      } else if (this.keys.right) {
+        tmpVec.x += 1;
+      }
+
+      tmpVec.applyQuaternion(tmpQuaternion);
+      this.controls.target = this.character.binding.object.position;
+      this.character.setWalkDirection(tmpVec);
+    };
+
+    var demo = new SimpleDemo();
+
+    demo.init();
+  </script>
+</body>
+</html>

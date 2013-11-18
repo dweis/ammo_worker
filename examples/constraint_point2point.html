@@ -22,14 +22,14 @@
     SimpleDemo.prototype = new DemoScene();
 
     SimpleDemo.prototype.initDemo = function() {
-      var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
+      var material = new THREE.MeshPhongMaterial({ opacity: 0.5, color: 0x33CC00, shading: THREE.SmoothShading });
 
       this.camera.position.x = this.camera.position.z = 200;
       this.camera.position.y = 100;
 
       this.bodies = [];
-      for (var i = 0; i < 100; i++) {
-        var o = this._createLink(material);
+      for (var i = 0; i < 250; i++) {
+        var o = this._createLink(i, material);
         this.scene.add(o);
       }
 
@@ -43,26 +43,32 @@
 
           last = body;
         }.bind(this));
+
+        this.proxy.createPoint2PointConstraint(this.bodies[0], 
+            this.bodies[this.bodies.length - 1],
+            { x: 0, y: -2, z: 0 },
+            { x: 0, y: 2, z: 0 });
       }.bind(this), 500);
     };
 
     var y = 0;
-    SimpleDemo.prototype._createLink = function(material, last) {
+    SimpleDemo.prototype._createLink = function(i, material, last) {
       y += 2;
       var o = new THREE.Object3D();
 
-      o.add(new THREE.Mesh(new THREE.SphereGeometry(2.2), material));
+      o.add(new THREE.Mesh(new THREE.SphereGeometry(2.1, 24, 24), material));
 
-      o.position.x = (Math.random() * 30) - 15;
-      o.position.y = y;
-      o.position.z = (Math.random() * 30) - 15;
+      o.position.x = Math.sin(i*0.025) * 100;
+      o.position.y = 20;// + y;
+      o.position.z = Math.cos(i*0.025) * 100;
 
 
       this.proxy.createRigidBodyFromObject(o, 0.5, {
         shape: 'sphere',
         radius: 2
       }).then(function(rigidBody) {
-        rigidBody.setAngularFactor({ x: 0, y: 1, z: 1 });
+        rigidBody.addToWorld();
+        //rigidBody.setAngularFactor({ x: 1, y: 1, z: 1 });
         this.bodies.push(rigidBody);
       }.bind(this));
 

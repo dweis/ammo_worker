@@ -3,12 +3,31 @@ define([], function() {
     this.proxy = proxy;
     this.bodyId = bodyId;
     this.binding = undefined;
+    this.position = { x: 0, y: 0, z: 0 };
+    this.rotation = { x: 0, y: 0, z: 0, w: 1 };
+    this.linearVelocity = { x: 0, y: 0, z: 0 };
+    this.angularVelocity = { x: 0, y: 0, z: 0 };
   } 
 
   AmmoRigidBody.prototype.update = function() {
     if (this.binding && this.binding.update) {
       this.binding.update();
     }
+  };
+
+  AmmoRigidBody.prototype.setType = function(type) {
+    return this.proxy.execute('RigidBody_setType', {
+      bodyId: this.bodyId,
+      type: type
+    });
+  };
+
+  AmmoRigidBody.prototype.setDamping = function(linearDamping, angularDamping) {
+    return this.proxy.execute('RigidBody_setDamping', {
+      bodyId: this.bodyId,
+      linearDamping: linearDamping,
+      angularDamping: angularDamping
+    });
   };
 
   AmmoRigidBody.prototype.applyTorque = function(torque) {
@@ -104,6 +123,29 @@ define([], function() {
     });
   };
 
+  AmmoRigidBody.prototype.setLinearVelocity = function(linearVelocity) {
+    return this.proxy.execute('RigidBody_setLinearVelocity', {
+      bodyId: this.bodyId,
+      linearVelocity: {
+        x: linearVelocity.x,
+        y: linearVelocity.y,
+        z: linearVelocity.z
+      }
+    });
+  };
+
+  AmmoRigidBody.prototype.setAngularVelocity = function(angularVelocity) {
+    return this.proxy.execute('RigidBody_setAngularVelocity', {
+      bodyId: this.bodyId,
+      angularVelocity: {
+        x: angularVelocity.x,
+        y: angularVelocity.y,
+        z: angularVelocity.z
+      }
+    });
+  };
+
+
   AmmoRigidBody.prototype.destroy = function() {
     var deferred = this.proxy.execute('RigidBody_destroy', { bodyId: this.bodyId });
 
@@ -112,6 +154,29 @@ define([], function() {
     this.binding.destroy();
 
     return deferred;
+  };
+
+
+  AmmoRigidBody.prototype.addToWorld = function(group, mask) {
+    return this.proxy.execute('DynamicsWorld_addRigidBody', {
+      bodyId: this.bodyId,
+      group: group,
+      mask: mask
+    });
+  };
+
+  AmmoRigidBody.prototype.setWorldTransform = function(position, rotation) {
+    return this.proxy.execute('RigidBody_setWorldTransform', {
+      bodyId: this.bodyId,
+      position: position,
+      rotation: rotation
+    });
+  };
+
+  AmmoRigidBody.prototype.clearForces = function() {
+    return this.proxy.execute('RigidBody_clearForces', {
+      bodyId: this.bodyId
+    });
   };
 
   return AmmoRigidBody;
