@@ -2626,8 +2626,8 @@ define('ammo_worker_api',[], function() {
       var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8) +
           (this.maxKinematicCharacterControllers * 7);
 
-      importScripts('./js/ammo.js');
-      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      //import Scripts('./js/ammo.js');
+      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
