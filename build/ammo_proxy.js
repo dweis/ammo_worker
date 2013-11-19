@@ -3500,11 +3500,19 @@ define('ammo_worker_api',[], function() {
       }
     },
 
-    KinematicCharacterController_setJumpSeed: function(descriptor) {
+    KinematicCharacterController_setJumpSpeed: function(descriptor) {
       var controller = this.characterControllers[descriptor.controllerId];
 
       if (controller) {
         controller.setJumpSpeed(descriptor.jumpSpeed);
+      }
+    },
+
+    KinematicCharacterController_setFallSpeed: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        controller.setFallSpeed(descriptor.fallSpeed);
       }
     },
 
@@ -3557,6 +3565,18 @@ define('ammo_worker_api',[], function() {
 
       if (controller) {
         controller.setMaxSlope(descriptor.slopeRadians);
+      }
+    },
+
+    KinematicCharacterController_warp: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        this.tmpVec[0].setX(descriptor.origin.x);
+        this.tmpVec[0].setY(descriptor.origin.y);
+        this.tmpVec[0].setZ(descriptor.origin.z);
+
+        controller.warp(this.tmpVec[0]);
       }
     },
 
@@ -4264,9 +4284,16 @@ define('ammo_kinematic_character_controller',[], function() {
   };
 
   AmmoKinematicCharacterController.prototype.setJumpSpeed = function(jumpSpeed) {
-    return this.proxy.execute('KinematicCharacterController_setJumpSeed', {
+    return this.proxy.execute('KinematicCharacterController_setJumpSpeed', {
       controllerId: this.controllerId,
       jumpSpeed: jumpSpeed
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setFallSpeed = function(fallSpeed) {
+    return this.proxy.execute('KinematicCharacterController_setFallSpeed', {
+      controllerId: this.controllerId,
+      fallSpeed: fallSpeed
     });
   };
 
@@ -4316,6 +4343,13 @@ define('ammo_kinematic_character_controller',[], function() {
     return this.proxy.execute('KinematicCharacterController_setMaxSlope', {
       controllerId: this.controllerId,
       slopRadians: slopeRadians
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.warp = function(origin) {
+    return this.proxy.execute('KinematicCharacterController_warp', {
+      controllerId: this.controllerId,
+      origin: origin
     });
   };
 

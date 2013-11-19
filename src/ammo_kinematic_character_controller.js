@@ -23,9 +23,16 @@ define([], function() {
   };
 
   AmmoKinematicCharacterController.prototype.setJumpSpeed = function(jumpSpeed) {
-    return this.proxy.execute('KinematicCharacterController_setJumpSeed', {
+    return this.proxy.execute('KinematicCharacterController_setJumpSpeed', {
       controllerId: this.controllerId,
       jumpSpeed: jumpSpeed
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.setFallSpeed = function(fallSpeed) {
+    return this.proxy.execute('KinematicCharacterController_setFallSpeed', {
+      controllerId: this.controllerId,
+      fallSpeed: fallSpeed
     });
   };
 
@@ -75,6 +82,13 @@ define([], function() {
     return this.proxy.execute('KinematicCharacterController_setMaxSlope', {
       controllerId: this.controllerId,
       slopRadians: slopeRadians
+    });
+  };
+
+  AmmoKinematicCharacterController.prototype.warp = function(origin) {
+    return this.proxy.execute('KinematicCharacterController_warp', {
+      controllerId: this.controllerId,
+      origin: origin
     });
   };
 

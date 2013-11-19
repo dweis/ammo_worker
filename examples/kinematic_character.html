@@ -27,6 +27,8 @@
 
       this.cubes = [];
 
+      this.angle = 0.0;
+
       this.keys = {
         up: false,
         down: false,
@@ -46,6 +48,9 @@
           case 49: 
             this.useGhostSweepTest = !this.useGhostSweepTest;
             this.character.setUseGhostSweepTest(this.useGhostSweepTest);
+            break;
+          case 50:
+            this.character.warp({ x: 0, y: 10, z: 0 });
             break;
           default: console.log(e.keyCode); break;
         }
@@ -82,9 +87,9 @@
     SimpleDemo.prototype._createCube = function(material) {
       var cube = new THREE.Object3D();
       cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material));
-      cube.position.x = (Math.random() * 50) - 25;
-      cube.position.y = 10 + (Math.random() * 10);
-      cube.position.z = (Math.random() * 50) - 25;
+      cube.position.x = (Math.random() * 500) - 250;
+      cube.position.y = 10 + (Math.random() * 50);
+      cube.position.z = (Math.random() * 500) - 250;
 
       this.scene.add(cube);
       this.proxy.createRigidBodyFromObject(cube, 1, { shape: 'auto', strategy: 'compound_bounding_box' })
@@ -99,18 +104,40 @@
 
     SimpleDemo.prototype.initDemo = function() {
       console.log('initializing...');
+      // set the scene size
+      var WIDTH = document.body.clientWidth,
+          HEIGHT = document.body.clientHeight;
+
+      // set some camera attributes
+      var VIEW_ANGLE = 45,
+          ASPECT = WIDTH / HEIGHT,
+          NEAR = 0.01,
+          FAR = 1000;
+
+      var cameraRig = this.cameraRig = new THREE.Object3D();
+
+      this.camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+      this.camera.position.z = 15;
+      this.camera.position.y = 5;
+      this.camera.lookAt({x: 0, y: 0, z: 0 });
+      cameraRig.add(this.camera);
+
+      cameraRig.position.y = 0;
+      cameraRig.lookAt({x: 0, y: 0, z: 0});
+
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
       var material2 = new THREE.MeshLambertMaterial({ color: 0xcc3300 });
 
       var cube = new THREE.Object3D();
 
-      cube.add(new THREE.Mesh(new THREE.SphereGeometry(2, 12, 12), material2));
+      cube.add(new THREE.Mesh(new THREE.SphereGeometry(1, 12, 12), material2));
       cube.position.y = 10;
       cube.position.x = 20;
       cube.children[0].castShadow = true;
       this.scene.add(cube);
+      cube.add(cameraRig);
 
-      for (var i = 0; i < 5; i++) {
+      for (var i = 0; i < 100; i++) {
         this._createCube(material);
       }
 
@@ -119,10 +146,11 @@
         this._createStep(i, material);
       }
 
-      this.proxy.createKinematicCharacterControllerFromObject(cube, { shape: 'sphere', radius: 2  }, 2)
+      this.proxy.createKinematicCharacterControllerFromObject(cube, { shape: 'sphere', radius: 1  }, 0.2)
         .then(function(kinematicCharacter) {
           this.character = kinematicCharacter; 
-          kinematicCharacter.setJumpSpeed(35);
+          kinematicCharacter.setJumpSpeed(40);
+          kinematicCharacter.setFallSpeed(50);
           kinematicCharacter.setMaxJumpHeight(20);
           kinematicCharacter.setGravity(50);
           kinematicCharacter.setUpAxis(1);
@@ -151,28 +179,52 @@
       tmpVec.y = 0;
       tmpVec.z = 0;
 
-      tmpQuaternion.setFromRotationMatrix(this.character.binding.object.matrixWorld);
+      //tmpQuaternion.setFromRotationMatrix(this.character.binding.object.matrixWorld);
+      tmpQuaternion.setFromAxisAngle({ x: 0, y: 1, z: 0}, this.angle);
+
       if (this.keys.up) {
-        tmpVec.z += 1;
-      } else if (this.keys.down) {
         tmpVec.z -= 1;
+      } else if (this.keys.down) {
+        tmpVec.z += 1;
       } else if (this.keys.left) {
-        tmpVec.x -= 1;
+        //tmpVec.x -= 1;
+        this.angle += Math.PI * (delta/1000);
       } else if (this.keys.right) {
-        tmpVec.x += 1;
+        //tmpVec.x += 1;
+        this.angle -= Math.PI * (delta/1000);
       }
+
+      tmpVec.applyQuaternion(tmpQuaternion);
+
+      this.character.setWalkDirection(tmpVec);
 
       if (this.keys.space) {
         this.character.jump();
       }
 
+      //tmpQuaternion.inverse();
+      this.cameraRig.quaternion.copy(tmpQuaternion);
+
       if (this.keys.enter) {
         this.character.setVelocityForTimeInterval({ x: 1, y: 0, z: 1 }, 1);  
       }
 
+      //this.camera.position.x = 0;
+      //this.camera.position.y = 0;
+      //this.camera.position.z = 0;
+
       tmpVec.applyQuaternion(tmpQuaternion);
-      this.controls.target = this.character.binding.object.position;
-      this.character.setWalkDirection(tmpVec);
+
+
+      //tmpVec.multiplyScalar(10);
+      //this.camera.lookAt(tmpVec);
+
+      //this.camera.position.sub(tmpVec);
+      //this.camera.position.multiplyScalar(10);
+
+      //this.camera.lookAt({ x: 0, y: 0, z: 0});
+
+      //this.controls.target = this.character.binding.object.position;
     };
 
     var demo = new SimpleDemo();

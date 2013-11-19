@@ -922,11 +922,19 @@ define([], function() {
       }
     },
 
-    KinematicCharacterController_setJumpSeed: function(descriptor) {
+    KinematicCharacterController_setJumpSpeed: function(descriptor) {
       var controller = this.characterControllers[descriptor.controllerId];
 
       if (controller) {
         controller.setJumpSpeed(descriptor.jumpSpeed);
+      }
+    },
+
+    KinematicCharacterController_setFallSpeed: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        controller.setFallSpeed(descriptor.fallSpeed);
       }
     },
 
@@ -979,6 +987,18 @@ define([], function() {
 
       if (controller) {
         controller.setMaxSlope(descriptor.slopeRadians);
+      }
+    },
+
+    KinematicCharacterController_warp: function(descriptor) {
+      var controller = this.characterControllers[descriptor.controllerId];
+
+      if (controller) {
+        this.tmpVec[0].setX(descriptor.origin.x);
+        this.tmpVec[0].setY(descriptor.origin.y);
+        this.tmpVec[0].setZ(descriptor.origin.z);
+
+        controller.warp(this.tmpVec[0]);
       }
     },
 
