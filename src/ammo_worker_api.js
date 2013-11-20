@@ -45,11 +45,27 @@ define([], function() {
     },
 
     init: function() {
-      var bufferSize = (this.maxBodies * 7 * 8) + (this.maxVehicles * this.maxWheelsPerVehicle * 7 * 8) +
-          (this.maxKinematicCharacterControllers * 7);
+      var bufferSize = 
+            // FLOAT64 Types
+            (8 * 
+              (
+                // Rigid Bodies
+                (this.maxBodies * 7 ) + 
+                // Vehicles
+                (this.maxVehicles * this.maxWheelsPerVehicle * 7) +
+                // Character Controllers
+                (this.maxKinematicCharacterControllers * 7)
+              )
+            );
 
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+
+      this.OFFSET_RIGID_BODY = 0;
+      this.OFFSET_VEHICLE = this.maxBodies * 7;
+      this.OFFSET_KINEMATIC_CHARACTER = this.OFFSET_VEHICLE + (this.maxVehicles * this.maxWheelsPerVehicle * 7);
+      this.OFFSET_GHOST_COLLISION = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7;
+
+      importScripts('./js/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -105,6 +121,8 @@ define([], function() {
         new ArrayBuffer(bufferSize)
       ];
 
+      this.ghostCollisions = {};
+
       this.fire('ready');
     },
 
@@ -125,6 +143,7 @@ define([], function() {
 
       this.simulationTimerId = setInterval(function() {
         var vehicle, update, i, j, pos, now = Date.now(),
+            buf,
             delta = (now - last) / 1000;
 
 
@@ -139,14 +158,15 @@ define([], function() {
             if (that.bodies[i]) {
               that.tmpTrans[0].setIdentity();
               that.bodies[i].getMotionState().getWorldTransform(that.tmpTrans[0]);
+              pos = that.OFFSET_RIGID_BODY + (i * 7);
 
-              update[i * 7 + 0] = that.tmpTrans[0].getOrigin().x();
-              update[i * 7 + 1] = that.tmpTrans[0].getOrigin().y();
-              update[i * 7 + 2] = that.tmpTrans[0].getOrigin().z();
-              update[i * 7 + 3] = that.tmpTrans[0].getRotation().x();
-              update[i * 7 + 4] = that.tmpTrans[0].getRotation().y();
-              update[i * 7 + 5] = that.tmpTrans[0].getRotation().z();
-              update[i * 7 + 6] = that.tmpTrans[0].getRotation().w();
+              update[pos + 0] = that.tmpTrans[0].getOrigin().x();
+              update[pos + 1] = that.tmpTrans[0].getOrigin().y();
+              update[pos + 2] = that.tmpTrans[0].getOrigin().z();
+              update[pos + 3] = that.tmpTrans[0].getRotation().x();
+              update[pos + 4] = that.tmpTrans[0].getRotation().y();
+              update[pos + 5] = that.tmpTrans[0].getRotation().z();
+              update[pos + 6] = that.tmpTrans[0].getRotation().w();
             }
           }
 
@@ -156,7 +176,7 @@ define([], function() {
 
               for ( j = 0; j < vehicle.getNumWheels() + 1; j++ ) {
                 that.tmpTrans[0] = vehicle.getWheelInfo(j).get_m_worldTransform();
-                pos = (that.maxBodies * 7) + (i * that.maxWheelsPerVehicle * 7) + (j * 7);
+                pos = that.OFFSET_VEHICLE + (i * that.maxWheelsPerVehicle * 7) + (j * 7);
 
                 update[pos + 0] = that.tmpTrans[0].getOrigin().x();
                 update[pos + 1] = that.tmpTrans[0].getOrigin().y();
@@ -171,8 +191,8 @@ define([], function() {
 
           for (i in that.characterControllers) {
             if (that.characterControllers[i]) {
-              var trans = that.characterControllers[i].getGhostObject().getWorldTransform();//that.tmpTrans[0]);
-              pos = (that.maxBodies * 7) + (that.maxVehicles * that.maxWheelsPerVehicle * 7) + (i * 7);
+              var trans = that.characterControllers[i].getGhostObject().getWorldTransform();
+              pos = that.OFFSET_KINEMATIC_CHARACTER + (i * 7);
 
               update[pos + 0] = trans.getOrigin().x();
               update[pos + 1] = trans.getOrigin().y();
@@ -184,13 +204,28 @@ define([], function() {
             }  
           }
 
-          that.ghosts.forEach(function(ghost/*, idx*/) {
-            var pairCache = Ammo.castObject(ghost.getOverlappingPairCache(), Ammo.btOverlappingPairCache);
+          that.ghosts.forEach(function(ghost, id) {
+            var newCollisions;
 
-            var num = pairCache.getNumOverlappingPairs();
+            var i, 
+                idx,
+                num = ghost.getNumOverlappingObjects(),
+                body;
 
             if (num > 0) {
-              // TODO: figure this out
+              newCollisions = {};
+              for (var i = 0; i < num; i++) {
+                body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btRigidBody);
+                newCollisions[body.id] = true;
+              }
+
+              for (var idx in that.ghostCollisions[id]) {
+                if (newCollisions[id]) {
+
+                } else {
+                   
+                }
+              }
             }
           }.bind(this));
 

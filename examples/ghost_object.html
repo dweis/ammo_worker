@@ -24,7 +24,7 @@
     SimpleDemo.prototype.initDemo = function() {
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
-      this.proxy.createGhostObject({ shape: 'sphere', radius: 10 },
+      this.proxy.createGhostObject({ shape: 'sphere', radius: 0.5 },
           { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0, w: 1 }).then(function(ghost) {
             ghost.addToWorld();
         console.log('ghost', arguments);
