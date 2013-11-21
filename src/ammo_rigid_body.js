@@ -1,4 +1,4 @@
-define([], function() {
+define([ './ammo_base_object' ], function(AmmoBaseObject) {
   function AmmoRigidBody(proxy, bodyId) {
     this.proxy = proxy;
     this.bodyId = bodyId;
@@ -8,6 +8,8 @@ define([], function() {
     this.linearVelocity = { x: 0, y: 0, z: 0 };
     this.angularVelocity = { x: 0, y: 0, z: 0 };
   } 
+
+  AmmoRigidBody.prototype = new AmmoBaseObject();
 
   AmmoRigidBody.prototype.update = function() {
     if (this.binding && this.binding.update) {

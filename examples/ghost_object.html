@@ -27,6 +27,9 @@
       this.proxy.createGhostObject({ shape: 'sphere', radius: 0.5 },
           { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0, w: 1 }).then(function(ghost) {
             ghost.addToWorld();
+        ghost.on('ghost_enter', function() {
+          console.log('someone is up in my space!', arguments);
+        });
         console.log('ghost', arguments);
       });
 
@@ -56,6 +59,9 @@
       }).then(function(rigidBody) {
         rigidBody.addToWorld();
         this.bodies.push(rigidBody);
+        rigidBody.on('ghost_enter', function() {
+          console.log('I have collided with a ghost object!', arguments);
+        });
       }.bind(this));
 
       o.traverse(function(o) {

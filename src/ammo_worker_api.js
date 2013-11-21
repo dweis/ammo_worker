@@ -143,9 +143,7 @@ define([], function() {
 
       this.simulationTimerId = setInterval(function() {
         var vehicle, update, i, j, pos, now = Date.now(),
-            buf,
             delta = (now - last) / 1000;
-
 
         that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);
 
@@ -207,6 +205,8 @@ define([], function() {
           that.ghosts.forEach(function(ghost, id) {
             var newCollisions;
 
+            that.ghostCollisions[id] = that.ghostCollisions[id] || {};
+
             var i, 
                 idx,
                 num = ghost.getNumOverlappingObjects(),
@@ -214,18 +214,30 @@ define([], function() {
 
             if (num > 0) {
               newCollisions = {};
-              for (var i = 0; i < num; i++) {
+
+              for (i = 0; i < num; i++) {
                 body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btRigidBody);
                 newCollisions[body.id] = true;
-              }
 
-              for (var idx in that.ghostCollisions[id]) {
-                if (newCollisions[id]) {
-
-                } else {
-                   
+                if (!that.ghostCollisions[id][body.id]) {
+                  that.fire('ghost_enter', { 
+                    objectA: { type: 'ghost', id: id },
+                    objectB: { type: 'rigidBody', id: body.id }
+                  });  
                 }
               }
+
+              for (idx in that.ghostCollisions[id]) {
+                if (!newCollisions[idx]) {
+                  that.fire('ghost_exit', { 
+                    objectA: { type: 'ghost', id: id },
+                    objectB: { type: 'rigidBody', id: body.id }
+                  });
+                  that.ghostCollisions[id][idx] = false; 
+                }
+              }
+
+              that.ghostCollisions[id] = newCollisions;
             }
           }.bind(this));
 

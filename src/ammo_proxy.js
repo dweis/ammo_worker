@@ -54,6 +54,22 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
       kinematicCharacterControllers[id] = undefined;
     });
 
+    this.worker.on('ghost_enter', _.bind(function(descriptor) {
+      var objA = this.getObjectByDescriptor(descriptor.objectA),
+          objB = this.getObjectByDescriptor(descriptor.objectB);
+
+      objA.trigger('ghost_enter', objB, objA);
+      objB.trigger('ghost_enter', objA, objB); 
+    }, this));
+
+    this.worker.on('ghost_exit', _.bind(function(descriptor) {
+      var objA = this.getObjectByDescriptor(descriptor.objectA),
+          objB = this.getObjectByDescriptor(descriptor.objectB);
+
+      objA.trigger('ghost_exit', objB, objA);
+      objB.trigger('ghost_exit', objA, objB); 
+    }, this));
+
     function proxyMethod(method) {
       context[method] = function() {
         return context.worker[method].apply(context.worker, arguments);
@@ -70,6 +86,19 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
     this.setIterations(opts.iterations);
     this.setGravity(opts.gravity);
   }
+
+  AmmoProxy.prototype.getObjectByDescriptor = function(descriptor) {
+    switch (descriptor.type) {
+      case 'rigidBody':
+        return this.bodies[descriptor.id];
+
+      case 'ghost':
+        return this.ghosts[descriptor.id];
+
+      default:
+        return console.error('unknown type: ', descriptor.type);
+    }
+  };
 
   AmmoProxy.prototype.execute = function(method, descriptor) {
     return this.worker[method](descriptor);
