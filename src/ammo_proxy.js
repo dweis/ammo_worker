@@ -17,6 +17,8 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
     opts.maxBodies = opts.maxBodies || 1000;
     opts.maxVehicles = opts.maxVehicles || 32;
     opts.maxWheelsPerVehicle = opts.maxWheelsPerVehicle || 8;
+    opts.maxKinematicCharacterControllers = opts.maxKinematicCharacterControllers || 16;
+    opts.maxGhostObjects = opts.maxGhostObjects || 500;
 
     var bodies = this.bodies = [];
     var constraints = this.constraints = [];
@@ -314,6 +316,10 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
     this.next = new Float64Array(data);
   };
 
+  AmmoProxy.prototype.createGhostObjectFromObject = function(object, shape) {
+    return this.adapter.createGhostObjectFromObject(object, shape);
+  };
+
   AmmoProxy.prototype.createRigidBodyFromObject = function(object, mass, shape) {
     return this.adapter.createRigidBodyFromObject(object, mass, shape); 
   };
@@ -321,6 +327,10 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
 
   AmmoProxy.prototype.createKinematicCharacterControllerFromObject = function(object, shape, stepHeight) {
     return this.adapter.createKinematicCharacterControllerFromObject(object, shape, stepHeight);
+  };
+
+  AmmoProxy.prototype.getGhostObjectOffset = function(ghostObjectId) {
+    return (this.opts.maxBodies * 7) + (this.opts.maxVehicles * 8 * 7) + (this.opts.maxKinematicCharacterControllers * 7) + (ghostObjectId * 7);
   };
 
   AmmoProxy.prototype.getRigidBodyOffset = function(bodyId) {

@@ -22,20 +22,26 @@
     SimpleDemo.prototype = new DemoScene();
 
     SimpleDemo.prototype.initDemo = function() {
-      var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
+      var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 }),
+          material2 = new THREE.MeshLambertMaterial({ color: 0xFF0000 });
 
-      this.proxy.createGhostObject({ shape: 'sphere', radius: 0.5 },
-          { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0, w: 1 }).then(function(ghost) {
+      var o  = new THREE.Mesh(new THREE.CubeGeometry(1, 1, 1), material2);
+      this.scene.add(o);
+      o.position.x = -4;
+      o.position.y = 5;
+      o.position.z = 1;
+
+      this.proxy.createGhostObjectFromObject(o, { shape: 'auto', strategy: 'compound_bounding_box' }).then(function(ghost) {
             ghost.addToWorld();
         ghost.on('ghost_enter', function() {
           console.log('someone is up in my space!', arguments);
         });
-        console.log('ghost', arguments);
-      });
+        this.ghost = ghost;
+      }.bind(this));
 
       this.bodies = [];
       for (var i = 0; i < 100; i++) {
-        var o = this._createBox(material);
+        o = this._createBox(material);
         this.scene.add(o);
       }
     };
@@ -74,6 +80,9 @@
     SimpleDemo.prototype.updateBodies = function() {
       for (var i in this.bodies) {
         this.bodies[i].update();
+      }
+      if (this.ghost) {
+        this.ghost.update();
       }
     };
 

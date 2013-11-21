@@ -2585,6 +2585,7 @@ define('ammo_worker_api',[], function() {
     this.maxVehicles = 32;
     this.maxWheelsPerVehicle = 8;
     this.maxKinematicCharacterControllers = 16;
+    this.maxGhostObjects = 500;
 
     for (var i in opts) {
       if (opts.hasOwnProperty(i)) {
@@ -2632,7 +2633,8 @@ define('ammo_worker_api',[], function() {
                 // Vehicles
                 (this.maxVehicles * this.maxWheelsPerVehicle * 7) +
                 // Character Controllers
-                (this.maxKinematicCharacterControllers * 7)
+                (this.maxKinematicCharacterControllers * 7) + 
+                (this.maxGhostObjects * 7)
               )
             );
 
@@ -2640,7 +2642,7 @@ define('ammo_worker_api',[], function() {
       this.OFFSET_RIGID_BODY = 0;
       this.OFFSET_VEHICLE = this.maxBodies * 7;
       this.OFFSET_KINEMATIC_CHARACTER = this.OFFSET_VEHICLE + (this.maxVehicles * this.maxWheelsPerVehicle * 7);
-      this.OFFSET_GHOST_COLLISION = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7;
+      this.OFFSET_GHOST_OBJECT = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7;
 
       //import Scripts('./js/ammo.js');
       importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
@@ -2781,41 +2783,54 @@ define('ammo_worker_api',[], function() {
           }
 
           that.ghosts.forEach(function(ghost, id) {
-            var newCollisions;
+            if (ghost) {
+              var trans = ghost.getWorldTransform();
+              pos = that.OFFSET_GHOST_OBJECT + (id * 7);
 
-            that.ghostCollisions[id] = that.ghostCollisions[id] || {};
+              update[pos + 0] = trans.getOrigin().x();
+              update[pos + 1] = trans.getOrigin().y();
+              update[pos + 2] = trans.getOrigin().z();
+              update[pos + 3] = trans.getRotation().x();
+              update[pos + 4] = trans.getRotation().y();
+              update[pos + 5] = trans.getRotation().z();
+              update[pos + 6] = trans.getRotation().w();
 
-            var i, 
-                idx,
-                num = ghost.getNumOverlappingObjects(),
-                body;
+              var newCollisions;
 
-            if (num > 0) {
-              newCollisions = {};
+              that.ghostCollisions[id] = that.ghostCollisions[id] || {};
 
-              for (i = 0; i < num; i++) {
-                body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btRigidBody);
-                newCollisions[body.id] = true;
+              var i, 
+                  idx,
+                  num = ghost.getNumOverlappingObjects(),
+                  body;
 
-                if (!that.ghostCollisions[id][body.id]) {
-                  that.fire('ghost_enter', { 
-                    objectA: { type: 'ghost', id: id },
-                    objectB: { type: 'rigidBody', id: body.id }
-                  });  
+              if (num > 0) {
+                newCollisions = {};
+
+                for (i = 0; i < num; i++) {
+                  body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btRigidBody);
+                  newCollisions[body.id] = true;
+
+                  if (!that.ghostCollisions[id][body.id]) {
+                    that.fire('ghost_enter', { 
+                      objectA: { type: 'ghost', id: id },
+                      objectB: { type: 'rigidBody', id: body.id }
+                    });  
+                  }
                 }
-              }
 
-              for (idx in that.ghostCollisions[id]) {
-                if (!newCollisions[idx]) {
-                  that.fire('ghost_exit', { 
-                    objectA: { type: 'ghost', id: id },
-                    objectB: { type: 'rigidBody', id: body.id }
-                  });
-                  that.ghostCollisions[id][idx] = false; 
+                for (idx in that.ghostCollisions[id]) {
+                  if (!newCollisions[idx]) {
+                    that.fire('ghost_exit', { 
+                      objectA: { type: 'ghost', id: id },
+                      objectB: { type: 'rigidBody', id: body.id }
+                    });
+                    that.ghostCollisions[id][idx] = false; 
+                  }
                 }
-              }
 
-              that.ghostCollisions[id] = newCollisions;
+                that.ghostCollisions[id] = newCollisions;
+              }
             }
           }.bind(this));
 
@@ -4500,6 +4515,12 @@ define('ammo_ghost_object',[ './ammo_base_object' ], function(AmmoBaseObject) {
     });
   };
 
+  AmmoGhostObject.prototype.update = function() {
+    if (this.binding && this.binding.update) {
+      this.binding.update();
+    }
+  };
+
   return AmmoGhostObject;
 });
 
@@ -4699,6 +4720,34 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
 
     deferred.then(_.bind(function(kinematicCharacterController) {
       kinematicCharacterController.binding = this.createBinding(object, this.proxy.getKinematicCharacterControllerOffset(kinematicCharacterController.controllerId));
+    }, this));
+
+    return deferred;
+  };
+
+  THREEAdapter.prototype.createGhostObjectFromObject = function(object, shape) {
+    if (!shape) {
+      shape = this._getShapeJSON(object);
+    } else if (shape.shape === 'auto') {
+      shape = this._getShapeJSON(object, { strategy: shape.strategy });
+    }
+
+    var position = {
+        x: object.position.x,
+        y: object.position.y,
+        z: object.position.z
+      },
+      quaternion = {
+        x: object.quaternion.x,
+        y: object.quaternion.y,
+        z: object.quaternion.z,
+        w: object.quaternion.w
+      };
+
+    var deferred = this.proxy.createGhostObject(shape, position, quaternion);
+
+    deferred.then(_.bind(function(ghostObject) {
+      ghostObject.binding = this.createBinding(object, this.proxy.getGhostObjectOffset(ghostObject.ghostId));
     }, this));
 
     return deferred;
@@ -5011,6 +5060,8 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     opts.maxBodies = opts.maxBodies || 1000;
     opts.maxVehicles = opts.maxVehicles || 32;
     opts.maxWheelsPerVehicle = opts.maxWheelsPerVehicle || 8;
+    opts.maxKinematicCharacterControllers = opts.maxKinematicCharacterControllers || 16;
+    opts.maxGhostObjects = opts.maxGhostObjects || 500;
 
     var bodies = this.bodies = [];
     var constraints = this.constraints = [];
@@ -5308,6 +5359,10 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     this.next = new Float64Array(data);
   };
 
+  AmmoProxy.prototype.createGhostObjectFromObject = function(object, shape) {
+    return this.adapter.createGhostObjectFromObject(object, shape);
+  };
+
   AmmoProxy.prototype.createRigidBodyFromObject = function(object, mass, shape) {
     return this.adapter.createRigidBodyFromObject(object, mass, shape); 
   };
@@ -5315,6 +5370,10 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
 
   AmmoProxy.prototype.createKinematicCharacterControllerFromObject = function(object, shape, stepHeight) {
     return this.adapter.createKinematicCharacterControllerFromObject(object, shape, stepHeight);
+  };
+
+  AmmoProxy.prototype.getGhostObjectOffset = function(ghostObjectId) {
+    return (this.opts.maxBodies * 7) + (this.opts.maxVehicles * 8 * 7) + (this.opts.maxKinematicCharacterControllers * 7) + (ghostObjectId * 7);
   };
 
   AmmoProxy.prototype.getRigidBodyOffset = function(bodyId) {

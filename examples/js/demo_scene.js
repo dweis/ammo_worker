@@ -100,7 +100,7 @@ DemoScene.prototype._initScene = function() {
   var ground = new THREE.Mesh(new THREE.CubeGeometry(1000,0.01,1000, 1, 1, 1),groundMaterial); 
   //ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
   ground.receiveShadow = true;
-  ground.position.y = -3;
+  ground.position.y = 0;
   scene.add(ground);
   scene.updateMatrixWorld();
 

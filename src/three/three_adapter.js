@@ -63,6 +63,34 @@ define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
     return deferred;
   };
 
+  THREEAdapter.prototype.createGhostObjectFromObject = function(object, shape) {
+    if (!shape) {
+      shape = this._getShapeJSON(object);
+    } else if (shape.shape === 'auto') {
+      shape = this._getShapeJSON(object, { strategy: shape.strategy });
+    }
+
+    var position = {
+        x: object.position.x,
+        y: object.position.y,
+        z: object.position.z
+      },
+      quaternion = {
+        x: object.quaternion.x,
+        y: object.quaternion.y,
+        z: object.quaternion.z,
+        w: object.quaternion.w
+      };
+
+    var deferred = this.proxy.createGhostObject(shape, position, quaternion);
+
+    deferred.then(_.bind(function(ghostObject) {
+      ghostObject.binding = this.createBinding(object, this.proxy.getGhostObjectOffset(ghostObject.ghostId));
+    }, this));
+
+    return deferred;
+  };
+
   THREEAdapter.prototype._getShapeJSON = function(o, opts) {
     opts = opts || {};
     opts.strategy = opts.strategy || 'convex_hull_mesh';

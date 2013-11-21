@@ -20,5 +20,11 @@ define([ './ammo_base_object' ], function(AmmoBaseObject) {
     });
   };
 
+  AmmoGhostObject.prototype.update = function() {
+    if (this.binding && this.binding.update) {
+      this.binding.update();
+    }
+  };
+
   return AmmoGhostObject;
 });

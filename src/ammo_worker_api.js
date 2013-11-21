@@ -7,6 +7,7 @@ define([], function() {
     this.maxVehicles = 32;
     this.maxWheelsPerVehicle = 8;
     this.maxKinematicCharacterControllers = 16;
+    this.maxGhostObjects = 500;
 
     for (var i in opts) {
       if (opts.hasOwnProperty(i)) {
@@ -54,7 +55,8 @@ define([], function() {
                 // Vehicles
                 (this.maxVehicles * this.maxWheelsPerVehicle * 7) +
                 // Character Controllers
-                (this.maxKinematicCharacterControllers * 7)
+                (this.maxKinematicCharacterControllers * 7) + 
+                (this.maxGhostObjects * 7)
               )
             );
 
@@ -62,7 +64,7 @@ define([], function() {
       this.OFFSET_RIGID_BODY = 0;
       this.OFFSET_VEHICLE = this.maxBodies * 7;
       this.OFFSET_KINEMATIC_CHARACTER = this.OFFSET_VEHICLE + (this.maxVehicles * this.maxWheelsPerVehicle * 7);
-      this.OFFSET_GHOST_COLLISION = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7;
+      this.OFFSET_GHOST_OBJECT = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7;
 
       //import Scripts('./js/ammo.js');
       importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
@@ -203,41 +205,54 @@ define([], function() {
           }
 
           that.ghosts.forEach(function(ghost, id) {
-            var newCollisions;
+            if (ghost) {
+              var trans = ghost.getWorldTransform();
+              pos = that.OFFSET_GHOST_OBJECT + (id * 7);
 
-            that.ghostCollisions[id] = that.ghostCollisions[id] || {};
+              update[pos + 0] = trans.getOrigin().x();
+              update[pos + 1] = trans.getOrigin().y();
+              update[pos + 2] = trans.getOrigin().z();
+              update[pos + 3] = trans.getRotation().x();
+              update[pos + 4] = trans.getRotation().y();
+              update[pos + 5] = trans.getRotation().z();
+              update[pos + 6] = trans.getRotation().w();
 
-            var i, 
-                idx,
-                num = ghost.getNumOverlappingObjects(),
-                body;
+              var newCollisions;
 
-            if (num > 0) {
-              newCollisions = {};
+              that.ghostCollisions[id] = that.ghostCollisions[id] || {};
 
-              for (i = 0; i < num; i++) {
-                body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btRigidBody);
-                newCollisions[body.id] = true;
+              var i, 
+                  idx,
+                  num = ghost.getNumOverlappingObjects(),
+                  body;
 
-                if (!that.ghostCollisions[id][body.id]) {
-                  that.fire('ghost_enter', { 
-                    objectA: { type: 'ghost', id: id },
-                    objectB: { type: 'rigidBody', id: body.id }
-                  });  
+              if (num > 0) {
+                newCollisions = {};
+
+                for (i = 0; i < num; i++) {
+                  body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btRigidBody);
+                  newCollisions[body.id] = true;
+
+                  if (!that.ghostCollisions[id][body.id]) {
+                    that.fire('ghost_enter', { 
+                      objectA: { type: 'ghost', id: id },
+                      objectB: { type: 'rigidBody', id: body.id }
+                    });  
+                  }
                 }
-              }
 
-              for (idx in that.ghostCollisions[id]) {
-                if (!newCollisions[idx]) {
-                  that.fire('ghost_exit', { 
-                    objectA: { type: 'ghost', id: id },
-                    objectB: { type: 'rigidBody', id: body.id }
-                  });
-                  that.ghostCollisions[id][idx] = false; 
+                for (idx in that.ghostCollisions[id]) {
+                  if (!newCollisions[idx]) {
+                    that.fire('ghost_exit', { 
+                      objectA: { type: 'ghost', id: id },
+                      objectB: { type: 'rigidBody', id: body.id }
+                    });
+                    that.ghostCollisions[id][idx] = false; 
+                  }
                 }
-              }
 
-              that.ghostCollisions[id] = newCollisions;
+                that.ghostCollisions[id] = newCollisions;
+              }
             }
           }.bind(this));
 
