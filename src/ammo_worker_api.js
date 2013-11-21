@@ -64,8 +64,8 @@ define([], function() {
       this.OFFSET_KINEMATIC_CHARACTER = this.OFFSET_VEHICLE + (this.maxVehicles * this.maxWheelsPerVehicle * 7);
       this.OFFSET_GHOST_COLLISION = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7;
 
-      importScripts('./js/ammo.js');
-      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      //import Scripts('./js/ammo.js');
+      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),
