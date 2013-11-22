@@ -1,5 +1,5 @@
 /* global importScripts */
-define([], function() {
+define([ 'vendor/ammo' ], function(ammo) {
   "use strict";
 
   function AmmoWorkerAPI(opts) {
@@ -67,7 +67,7 @@ define([], function() {
       this.OFFSET_GHOST_OBJECT = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7;
 
       //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+      //import Scripts('http://assets.verold.com/verold_api/lib/ammo.js');
 
       this.tmpVec = [
         new Ammo.btVector3(),

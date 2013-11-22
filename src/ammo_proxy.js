@@ -1,4 +1,4 @@
-define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 
+define([ 'when', 'underscore', 'text!gen/ammo_worker_api.js', 'ammo_rigid_body', 'ammo_vehicle', 
          'ammo_point2point_constraint', 'ammo_hinge_constraint', 'ammo_slider_constraint',
          'ammo_ghost_object', 'ammo_kinematic_character_controller', 'three/three_adapter' ], 
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
@@ -9,6 +9,9 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
       'stopSimulation', 'getStats'
     ];
+
+    this.createWorker();
+    return;
 
     opts = this.opts = opts || {};
     opts.gravity = opts.gravity || { x: 0, y: -9.82, z: 0};
@@ -88,6 +91,22 @@ define([ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehic
     this.setIterations(opts.iterations);
     this.setGravity(opts.gravity);
   }
+
+  AmmoProxy.prototype.createWorker = function() {
+    window.URL = window.URL || window.webkitURL;
+
+    var blob;
+    try {
+        blob = new Blob([AmmoWorkerAPI], { type: 'application/javascript' });
+    } catch (e) { // Backwards-compatibility
+        window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
+        blob = new BlobBuilder();
+        blob.append(response);
+        blob = blob.getBlob();
+    }
+    var url = URL.createObjectURL(blob);
+    this.worker = new Worker(url);
+  };
 
   AmmoProxy.prototype.getObjectByDescriptor = function(descriptor) {
     switch (descriptor.type) {

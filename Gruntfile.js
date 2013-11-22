@@ -1,7 +1,30 @@
 module.exports = function(grunt) {
   grunt.initConfig({
     requirejs: {
-      minified: {
+      worker_minified: {
+        options: {
+          baseUrl: './src',
+
+          name: 'vendor/almond',
+          include: [ 'ammo_worker_api' ],
+          out: 'src/gen/ammo_worker_api.js',
+
+          optimize: 'uglify2',
+          inlineText: true,
+
+          paths: {
+            underscore: 'vendor/underscore',
+            when: 'vendor/when',
+            text: 'vendor/text'
+          },
+
+          wrap: {
+            startFile: 'src/start.frag',
+            endFile: 'src/end_worker.frag'
+          }
+        }
+      },
+      proxy_minified: {
         options: {
           baseUrl: './src',
 
@@ -14,7 +37,8 @@ module.exports = function(grunt) {
 
           paths: {
             underscore: 'vendor/underscore',
-            when: 'vendor/when'
+            when: 'vendor/when',
+            text: 'vendor/text'
           },
 
           wrap: {
@@ -23,7 +47,30 @@ module.exports = function(grunt) {
           }
         }
       },
-      development: {
+      worker_development: {
+        options: {
+          baseUrl: './src',
+
+          name: 'vendor/almond',
+          include: [ 'ammo_worker_api' ],
+          out: 'src/gen/ammo_worker_api.js',
+
+          optimize: 'none',
+          inlineText: true,
+
+          paths: {
+            underscore: 'vendor/underscore',
+            when: 'vendor/when',
+            text: 'vendor/text'
+          },
+
+          wrap: {
+            startFile: 'src/start.frag',
+            endFile: 'src/end_worker.frag'
+          }
+        }
+      },
+      proxy_development: {
         options: {
           baseUrl: './src',
 
@@ -36,12 +83,19 @@ module.exports = function(grunt) {
 
           paths: {
             underscore: 'vendor/underscore',
-            when: 'vendor/when'
+            when: 'vendor/when',
+            text: 'vendor/text'
           },
 
           wrap: {
             startFile: 'src/start.frag',
             endFile: 'src/end.frag'
+          },
+
+          shim: {
+            'vendor/ammo': {
+              exports: 'Ammo.btRigidBody'
+            }
           }
         }
       }
@@ -57,7 +111,7 @@ module.exports = function(grunt) {
     watch: {
       js: {
         files: [ 'src/**/*.js' ],
-        tasks: [ 'requirejs', 'jshint' ],
+        tasks: [ 'requirejs:worker_development', 'requirejs:proxy_development', 'jshint' ],
         options: {
           spawn: false
         }
@@ -69,5 +123,5 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-requirejs');
 
-  grunt.registerTask('default', [ 'jshint', 'requirejs' ]);
+  grunt.registerTask('default', [ 'jshint', 'requirejs:worker_development', 'requirejs:proxy_development' ]);
 };

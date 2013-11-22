@@ -2576,1374 +2576,394 @@ define('when',['require'],function (require) {
 
 }).call(this);
 
-/* global importScripts */
-define('ammo_worker_api',[], function() {
-  
+/**
+ * @license RequireJS text 2.0.10 Copyright (c) 2010-2012, The Dojo Foundation All Rights Reserved.
+ * Available via the MIT or new BSD license.
+ * see: http://github.com/requirejs/text for details
+ */
+/*jslint regexp: true */
+/*global require, XMLHttpRequest, ActiveXObject,
+  define, window, process, Packages,
+  java, location, Components, FileUtils */
 
-  function AmmoWorkerAPI(opts) {
-    this.maxBodies = 1000;
-    this.maxVehicles = 32;
-    this.maxWheelsPerVehicle = 8;
-    this.maxKinematicCharacterControllers = 16;
-    this.maxGhostObjects = 500;
+define('text',['module'], function (module) {
+    
 
-    for (var i in opts) {
-      if (opts.hasOwnProperty(i)) {
-        this[i] = opts[i];
-      }
-    }
-  }
+    var text, fs, Cc, Ci, xpcIsWindows,
+        progIds = ['Msxml2.XMLHTTP', 'Microsoft.XMLHTTP', 'Msxml2.XMLHTTP.4.0'],
+        xmlRegExp = /^\s*<\?xml(\s)+version=[\'\"](\d)*.(\d)*[\'\"](\s)*\?>/im,
+        bodyRegExp = /<body[^>]*>\s*([\s\S]+)\s*<\/body>/im,
+        hasLocation = typeof location !== 'undefined' && location.href,
+        defaultProtocol = hasLocation && location.protocol && location.protocol.replace(/\:/, ''),
+        defaultHostName = hasLocation && location.hostname,
+        defaultPort = hasLocation && (location.port || undefined),
+        buildMap = {},
+        masterConfig = (module.config && module.config()) || {};
 
-  AmmoWorkerAPI.prototype = {
-    collisionFlags: {
-      CF_STATIC_OBJECT: 1, 
-      CF_KINEMATIC_OBJECT: 2, 
-      CF_NO_CONTACT_RESPONSE: 4, 
-      CF_CUSTOM_MATERIAL_CALLBACK: 8, 
-      CF_CHARACTER_OBJECT: 16, 
-      CF_DISABLE_VISUALIZE_OBJECT: 32, 
-      CF_DISABLE_SPU_COLLISION_PROCESSING: 64 
-    },
+    text = {
+        version: '2.0.10',
 
-    activationStates: {
-      ACTIVE_TAG: 1,
-      ISLAND_SLEEPING: 2,
-      WANTS_DEACTIVATION: 3,
-      DISABLE_DEACTIVATION: 4,
-      DISABLE_SIMULATION: 5
-    }, 
-
-    collisionFilterGroups:  {
-      DefaultFilter: 1,
-      StaticFilter: 2,
-      KinematicFilter: 4,
-      DebrisFilter: 8,
-      SensorTrigger: 16,
-      CharacterFilter: 32,
-      AllFilter: -1 //all bits sets: DefaultFilter | StaticFilter | KinematicFilter | DebrisFilter | SensorTrigger
-    },
-
-    init: function() {
-      var bufferSize = 
-            // FLOAT64 Types
-            (8 * 
-              (
-                // Rigid Bodies
-                (this.maxBodies * 7 ) + 
-                // Vehicles
-                (this.maxVehicles * this.maxWheelsPerVehicle * 7) +
-                // Character Controllers
-                (this.maxKinematicCharacterControllers * 7) + 
-                (this.maxGhostObjects * 7)
-              )
-            );
-
-
-      this.OFFSET_RIGID_BODY = 0;
-      this.OFFSET_VEHICLE = this.maxBodies * 7;
-      this.OFFSET_KINEMATIC_CHARACTER = this.OFFSET_VEHICLE + (this.maxVehicles * this.maxWheelsPerVehicle * 7);
-      this.OFFSET_GHOST_OBJECT = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7;
-
-      //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
-
-      this.tmpVec = [
-        new Ammo.btVector3(),
-        new Ammo.btVector3(),
-        new Ammo.btVector3(),
-        new Ammo.btVector3()
-      ];
-
-      this.tmpQuaternion = [
-        new Ammo.btQuaternion(),
-        new Ammo.btQuaternion()
-      ];
-
-      this.tmpTrans = [
-        new Ammo.btTransform(),
-        new Ammo.btTransform()
-      ];
-
-      this.bodies = [];
-      this.vehicles = [];
-      this.constraints = [];
-      this.ghosts = [];
-      this.characterControllers = [];
-
-      this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
-      this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
-
-      this.overlappingPairCache = new Ammo.btDbvtBroadphase();
-
-      /*
-      this.tmpVec[0].setX(-1000);
-      this.tmpVec[0].setY(-1000);
-      this.tmpVec[0].setZ(-1000);
-      this.tmpVec[1].setX(1000);
-      this.tmpVec[1].setY(1000);
-      this.tmpVec[1].setZ(1000);
-      this.overlappingPairCache = new Ammo.btAxisSweep3(this.tmpVec[0], this.tmpVec[1]);
-      */
-      
-      this.solver = new Ammo.btSequentialImpulseConstraintSolver();
-      this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(this.dispatcher,
-          this.overlappingPairCache, this.solver, this.collisionConfiguration);
-
-      this.ghostPairCallback = new Ammo.btGhostPairCallback();
-      this.dynamicsWorld.getPairCache().setInternalGhostPairCallback(this.ghostPairCallback);
-
-      this.dynamicsWorld.getDispatchInfo().set_m_allowedCcdPenetration(0.0001);
-
-      this.buffers = [
-        new ArrayBuffer(bufferSize),
-        new ArrayBuffer(bufferSize),
-        new ArrayBuffer(bufferSize),
-        new ArrayBuffer(bufferSize)
-      ];
-
-      this.ghostCollisions = {};
-
-      this.fire('ready');
-    },
-
-    getStats: function(undefined, fn) {
-      return fn({
-        totalTime: this.totalTime,
-        frames: this.frames,
-        fps: this.fps,
-        buffersReady: this.buffers.length
-      });
-    },
-
-    startSimulation: function() {
-      var that = this, last = Date.now();
-
-      that.totalTime = 0;
-      that.frames = 0;
-
-      this.simulationTimerId = setInterval(function() {
-        var vehicle, update, i, j, pos, now = Date.now(),
-            delta = (now - last) / 1000;
-
-        that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);
-
-        if (that.buffers.length > 0) {
-          update = new Float64Array(that.buffers.pop());
-        }
-
-        if (update && update.buffer instanceof ArrayBuffer) {
-          for (i in that.bodies) {
-            if (that.bodies[i]) {
-              that.tmpTrans[0].setIdentity();
-              that.bodies[i].getMotionState().getWorldTransform(that.tmpTrans[0]);
-              pos = that.OFFSET_RIGID_BODY + (i * 7);
-
-              update[pos + 0] = that.tmpTrans[0].getOrigin().x();
-              update[pos + 1] = that.tmpTrans[0].getOrigin().y();
-              update[pos + 2] = that.tmpTrans[0].getOrigin().z();
-              update[pos + 3] = that.tmpTrans[0].getRotation().x();
-              update[pos + 4] = that.tmpTrans[0].getRotation().y();
-              update[pos + 5] = that.tmpTrans[0].getRotation().z();
-              update[pos + 6] = that.tmpTrans[0].getRotation().w();
-            }
-          }
-
-          for (i in that.vehicles) {
-            if (that.vehicles[i]) {
-              vehicle = that.vehicles[i];
-
-              for ( j = 0; j < vehicle.getNumWheels() + 1; j++ ) {
-                that.tmpTrans[0] = vehicle.getWheelInfo(j).get_m_worldTransform();
-                pos = that.OFFSET_VEHICLE + (i * that.maxWheelsPerVehicle * 7) + (j * 7);
-
-                update[pos + 0] = that.tmpTrans[0].getOrigin().x();
-                update[pos + 1] = that.tmpTrans[0].getOrigin().y();
-                update[pos + 2] = that.tmpTrans[0].getOrigin().z();
-                update[pos + 3] = that.tmpTrans[0].getRotation().x();
-                update[pos + 4] = that.tmpTrans[0].getRotation().y();
-                update[pos + 5] = that.tmpTrans[0].getRotation().z();
-                update[pos + 6] = that.tmpTrans[0].getRotation().w();
-              }
-            }
-          }
-
-          for (i in that.characterControllers) {
-            if (that.characterControllers[i]) {
-              var trans = that.characterControllers[i].getGhostObject().getWorldTransform();
-              pos = that.OFFSET_KINEMATIC_CHARACTER + (i * 7);
-
-              update[pos + 0] = trans.getOrigin().x();
-              update[pos + 1] = trans.getOrigin().y();
-              update[pos + 2] = trans.getOrigin().z();
-              update[pos + 3] = trans.getRotation().x();
-              update[pos + 4] = trans.getRotation().y();
-              update[pos + 5] = trans.getRotation().z();
-              update[pos + 6] = trans.getRotation().w();
-            }  
-          }
-
-          that.ghosts.forEach(function(ghost, id) {
-            if (ghost) {
-              var trans = ghost.getWorldTransform();
-              pos = that.OFFSET_GHOST_OBJECT + (id * 7);
-
-              update[pos + 0] = trans.getOrigin().x();
-              update[pos + 1] = trans.getOrigin().y();
-              update[pos + 2] = trans.getOrigin().z();
-              update[pos + 3] = trans.getRotation().x();
-              update[pos + 4] = trans.getRotation().y();
-              update[pos + 5] = trans.getRotation().z();
-              update[pos + 6] = trans.getRotation().w();
-
-              that.ghostCollisions[id] = that.ghostCollisions[id] || {};
-
-              var i, 
-                  idx,
-                  num = ghost.getNumOverlappingObjects(),
-                  newCollisions = {},
-                  body;
-
-              if (num > 0) {
-                for (i = 0; i < num; i++) {
-                  body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btRigidBody);
-                  newCollisions[body.id] = true;
-
-                  if (!that.ghostCollisions[id][body.id]) {
-                    that.fire('ghost_enter', { 
-                      objectA: { type: 'ghost', id: id },
-                      objectB: { type: 'rigidBody', id: body.id }
-                    });  
-                  }
+        strip: function (content) {
+            //Strips <?xml ...?> declarations so that external SVG and XML
+            //documents can be added to a document without worry. Also, if the string
+            //is an HTML document, only the part inside the body tag is returned.
+            if (content) {
+                content = content.replace(xmlRegExp, "");
+                var matches = content.match(bodyRegExp);
+                if (matches) {
+                    content = matches[1];
                 }
-              } 
+            } else {
+                content = "";
+            }
+            return content;
+        },
 
-              for (idx in that.ghostCollisions[id]) {
-                if (!newCollisions[idx]) {
-                  that.fire('ghost_exit', { 
-                    objectA: { type: 'ghost', id: id },
-                    objectB: { type: 'rigidBody', id: idx }
-                  });
-                  that.ghostCollisions[id][idx] = false; 
+        jsEscape: function (content) {
+            return content.replace(/(['\\])/g, '\\$1')
+                .replace(/[\f]/g, "\\f")
+                .replace(/[\b]/g, "\\b")
+                .replace(/[\n]/g, "\\n")
+                .replace(/[\t]/g, "\\t")
+                .replace(/[\r]/g, "\\r")
+                .replace(/[\u2028]/g, "\\u2028")
+                .replace(/[\u2029]/g, "\\u2029");
+        },
+
+        createXhr: masterConfig.createXhr || function () {
+            //Would love to dump the ActiveX crap in here. Need IE 6 to die first.
+            var xhr, i, progId;
+            if (typeof XMLHttpRequest !== "undefined") {
+                return new XMLHttpRequest();
+            } else if (typeof ActiveXObject !== "undefined") {
+                for (i = 0; i < 3; i += 1) {
+                    progId = progIds[i];
+                    try {
+                        xhr = new ActiveXObject(progId);
+                    } catch (e) {}
+
+                    if (xhr) {
+                        progIds = [progId];  // so faster next time
+                        break;
+                    }
                 }
-              }
-              that.ghostCollisions[id] = newCollisions;
             }
-          }.bind(this));
 
-          that.fire('update', update.buffer, [update.buffer]);
-          that.frames ++;
+            return xhr;
+        },
 
-          last = now;
-          that.totalTime += delta;
-          that.fps = Math.round( that.frames / that.totalTime );
-        }
-      }, this.step * 1000);
-    },
+        /**
+         * Parses a resource name into its component parts. Resource names
+         * look like: module/name.ext!strip, where the !strip part is
+         * optional.
+         * @param {String} name the resource name
+         * @returns {Object} with properties "moduleName", "ext" and "strip"
+         * where strip is a boolean.
+         */
+        parseName: function (name) {
+            var modName, ext, temp,
+                strip = false,
+                index = name.indexOf("."),
+                isRelative = name.indexOf('./') === 0 ||
+                             name.indexOf('../') === 0;
 
-    stopSimulation: function() {
-      if (this.simulationTimerId) {
-        clearInterval(this.simulationTimerId);
-      }
-    },
-
-    swap: function(buf) {
-      if (buf instanceof ArrayBuffer) {
-        this.buffers.push(buf);
-      }
-    },
-
-    setStep: function(step) {
-      this.step = step;
-    },
-
-    setIterations: function(iterations) {
-      this.iterations = iterations;
-    },
-
-    setGravity: function(gravity) {
-      this.tmpVec[0].setX(gravity.x);
-      this.tmpVec[0].setY(gravity.y);
-      this.tmpVec[0].setZ(gravity.z);
-      this.dynamicsWorld.setGravity(this.tmpVec[0]);
-    },
-
-    _createCompoundShape: function(shape) {
-      var compound = new Ammo.btCompoundShape(),
-          localTransform = this.tmpTrans[0],
-          child,
-          childShape;
-
-      if (shape.children && shape.children.length) {
-        for (var idx in shape.children) {
-          if (shape.children.hasOwnProperty(idx)) {
-            child = shape.children[idx];
-            childShape = this._createShape(child);
-            localTransform.setIdentity();
-            this.tmpVec[0].setX(child.localTransform.position.x);
-            this.tmpVec[0].setY(child.localTransform.position.y);
-            this.tmpVec[0].setZ(child.localTransform.position.z);
-            localTransform.setOrigin(this.tmpVec[0]);
-            this.tmpQuaternion[0].setX(child.localTransform.rotation.x);
-            this.tmpQuaternion[0].setY(child.localTransform.rotation.y);
-            this.tmpQuaternion[0].setZ(child.localTransform.rotation.z);
-            this.tmpQuaternion[0].setW(child.localTransform.rotation.w);
-            localTransform.setRotation(this.tmpQuaternion[0]);
-            compound.addChildShape(localTransform, childShape);
-          }
-        }
-      }
-
-      return compound;
-    },
-
-    _createConvexHullMeshShape: function(shape) {
-      var colShape;
-
-      if (!shape.vertices) {
-        throw new Error('You must supply a list of vertices!');
-      }
-
-      colShape = new Ammo.btConvexHullShape();
-
-      for (var i = 0; i < shape.vertices.length/3; i+=3) {
-        this.tmpVec[0].setX(shape.vertices[i*3+0]);
-        this.tmpVec[0].setY(shape.vertices[i*3+1]);
-        this.tmpVec[0].setZ(shape.vertices[i*3+2]);
-        colShape.addPoint(this.tmpVec[0]); 
-      }
-
-      return colShape;
-    },
-
-    _createTriangleMeshShape: function(shape, type) {
-      var i, mesh, className;
-
-      if (!shape.triangles) {
-        throw new Error('You must supply a list of triangles!');
-      }
-
-      switch (type) {
-        case 'bvh':
-          className = 'btBvhTriangleMeshShape';
-          break;
-
-        case 'convex':
-          className = 'btConvexTriangleMeshShape';
-          break;
-
-        default:
-          throw new Error('You must supply a valid mesh type!');
-      }
-
-      mesh = new Ammo.btTriangleMesh(true, true);
-
-      for (i = 0; i < shape.triangles.length/9; i ++) {
-        this.tmpVec[0].setX(shape.triangles[i * 9 + 0]);
-        this.tmpVec[0].setY(shape.triangles[i * 9 + 1]);
-        this.tmpVec[0].setZ(shape.triangles[i * 9 + 2]);
-
-        this.tmpVec[1].setX(shape.triangles[i * 9 + 3]);
-        this.tmpVec[1].setY(shape.triangles[i * 9 + 4]);
-        this.tmpVec[1].setZ(shape.triangles[i * 9 + 5]);
-
-        this.tmpVec[2].setX(shape.triangles[i * 9 + 6]);
-        this.tmpVec[2].setY(shape.triangles[i * 9 + 7]);
-        this.tmpVec[2].setZ(shape.triangles[i * 9 + 8]);
-
-        mesh.addTriangle(this.tmpVec[0], this.tmpVec[1], this.tmpVec[2], false);
-      }
-
-      return new Ammo[className](mesh, true, true);
-    },
-
-    _createShape: function(shape) {
-      var colShape;
-      switch(shape.shape) {
-      case 'box':
-        this.tmpVec[0].setX(shape.halfExtents.x);
-        this.tmpVec[0].setY(shape.halfExtents.y);
-        this.tmpVec[0].setZ(shape.halfExtents.z);
-        colShape = new Ammo.btBoxShape(this.tmpVec[0]);
-        break;
-      case 'sphere':
-        colShape = new Ammo.btSphereShape(shape.radius);
-        break;
-      case 'staticplane':
-        this.tmpVec[0].setX(shape.normal.x);
-        this.tmpVec[0].setY(shape.normal.y);
-        this.tmpVec[0].setZ(shape.normal.z);
-        colShape = new Ammo.btStaticPlaneShape(this.tmpVec[0], shape.distance);
-        break;
-      case 'cylinder':
-        this.tmpVec[0].setX(shape.width);
-        this.tmpVec[0].setY(shape.height);
-        this.tmpVec[0].setZ(shape.depth);
-        colShape = new Ammo.btCylinderShape(this.tmpVec[0]);
-        break;
-      case 'capsule':
-        colShape = new Ammo.btCapsuleShape(shape.radius, shape.height);
-        break;
-      case 'cone':
-        colShape = new Ammo.btConeShape(shape.radius, shape.height);
-        break;
-      case 'compound':
-        colShape = this._createCompoundShape(shape);
-        break;
-      case 'convex_hull_mesh':
-        colShape = this._createConvexHullMeshShape(shape);
-        break;
-      case 'convex_triangle_mesh':
-        colShape = this._createTriangleMeshShape(shape, 'convex');
-        break;
-      case 'bvh_triangle_mesh':
-        colShape = this._createTriangleMeshShape(shape, 'bvh');
-        break;
-      default:
-        return console.error('Unknown shape: ' + shape.shape);
-      }
-      return colShape;
-    },
-
-    Broadphase_aabbTest: function(descriptor, fn) {
-      var that = this;
-
-      if (!this.aabbCallback) {
-        this.aabbCallback = new Ammo.ConcreteBroadphaseAabbCallback();
-        this.aabbCallback.bodies = [];
-
-        (function() {
-          Ammo.customizeVTable(that.aabbCallback, [{
-            original: Ammo.ConcreteBroadphaseAabbCallback.prototype.process,
-            replacement: function(thisPtr, proxyPtr) {
-              var proxy = Ammo.wrapPointer(proxyPtr, Ammo.btBroadphaseProxy);
-              var clientObject = Ammo.wrapPointer(proxy.get_m_clientObject(), Ammo.btRigidBody);
-              var _this = Ammo.wrapPointer(thisPtr, Ammo.ConcreteBroadphaseAabbCallback);
-
-              if (clientObject.id) {
-                _this.bodies.push(clientObject.id);
-              }
-
-              return true;
+            if (index !== -1 && (!isRelative || index > 1)) {
+                modName = name.substring(0, index);
+                ext = name.substring(index + 1, name.length);
+            } else {
+                modName = name;
             }
-          }]);
-        })();
-      }
 
-      this.tmpVec[0].setX(descriptor.min.x);
-      this.tmpVec[0].setY(descriptor.min.y);
-      this.tmpVec[0].setZ(descriptor.min.z);
+            temp = ext || modName;
+            index = temp.indexOf("!");
+            if (index !== -1) {
+                //Pull off the strip arg.
+                strip = temp.substring(index + 1) === "strip";
+                temp = temp.substring(0, index);
+                if (ext) {
+                    ext = temp;
+                } else {
+                    modName = temp;
+                }
+            }
 
-      this.tmpVec[1].setX(descriptor.max.x);
-      this.tmpVec[1].setY(descriptor.max.y);
-      this.tmpVec[1].setZ(descriptor.max.z);
+            return {
+                moduleName: modName,
+                ext: ext,
+                strip: strip
+            };
+        },
 
-      this.aabbCallback.bodies = [];
-      this.dynamicsWorld
-        .getBroadphase()
-        .aabbTest(this.tmpVec[0], this.tmpVec[1],
-          this.aabbCallback);
+        xdRegExp: /^((\w+)\:)?\/\/([^\/\\]+)/,
 
-      fn(this.aabbCallback.bodies);
-    },
+        /**
+         * Is an URL on another domain. Only works for browser use, returns
+         * false in non-browser environments. Only used to know if an
+         * optimized .js version of a text resource should be loaded
+         * instead.
+         * @param {String} url
+         * @returns Boolean
+         */
+        useXhr: function (url, protocol, hostname, port) {
+            var uProtocol, uHostName, uPort,
+                match = text.xdRegExp.exec(url);
+            if (!match) {
+                return true;
+            }
+            uProtocol = match[2];
+            uHostName = match[3];
 
-    Vehicle_create: function(descriptor, fn) {
-      var vehicleTuning = new Ammo.btVehicleTuning(),
-          body = this.bodies[descriptor.bodyId],
-          vehicle;
+            uHostName = uHostName.split(':');
+            uPort = uHostName[1];
+            uHostName = uHostName[0];
 
-      if (!body) {
-        return console.error('could not find body');
-      }
+            return (!uProtocol || uProtocol === protocol) &&
+                   (!uHostName || uHostName.toLowerCase() === hostname.toLowerCase()) &&
+                   ((!uPort && !uHostName) || uPort === port);
+        },
 
-      if (descriptor.tuning) {
-        if (descriptor.tuning.suspensionStiffness) {
-          vehicleTuning.set_m_suspensionStiffness(descriptor.tuning.suspensionStiffness);
+        finishLoad: function (name, strip, content, onLoad) {
+            content = strip ? text.strip(content) : content;
+            if (masterConfig.isBuild) {
+                buildMap[name] = content;
+            }
+            onLoad(content);
+        },
+
+        load: function (name, req, onLoad, config) {
+            //Name has format: some.module.filext!strip
+            //The strip part is optional.
+            //if strip is present, then that means only get the string contents
+            //inside a body tag in an HTML string. For XML/SVG content it means
+            //removing the <?xml ...?> declarations so the content can be inserted
+            //into the current doc without problems.
+
+            // Do not bother with the work if a build and text will
+            // not be inlined.
+            if (config.isBuild && !config.inlineText) {
+                onLoad();
+                return;
+            }
+
+            masterConfig.isBuild = config.isBuild;
+
+            var parsed = text.parseName(name),
+                nonStripName = parsed.moduleName +
+                    (parsed.ext ? '.' + parsed.ext : ''),
+                url = req.toUrl(nonStripName),
+                useXhr = (masterConfig.useXhr) ||
+                         text.useXhr;
+
+            // Do not load if it is an empty: url
+            if (url.indexOf('empty:') === 0) {
+                onLoad();
+                return;
+            }
+
+            //Load the text. Use XHR if possible and in a browser.
+            if (!hasLocation || useXhr(url, defaultProtocol, defaultHostName, defaultPort)) {
+                text.get(url, function (content) {
+                    text.finishLoad(name, parsed.strip, content, onLoad);
+                }, function (err) {
+                    if (onLoad.error) {
+                        onLoad.error(err);
+                    }
+                });
+            } else {
+                //Need to fetch the resource across domains. Assume
+                //the resource has been optimized into a JS module. Fetch
+                //by the module name + extension, but do not include the
+                //!strip part to avoid file system issues.
+                req([nonStripName], function (content) {
+                    text.finishLoad(parsed.moduleName + '.' + parsed.ext,
+                                    parsed.strip, content, onLoad);
+                });
+            }
+        },
+
+        write: function (pluginName, moduleName, write, config) {
+            if (buildMap.hasOwnProperty(moduleName)) {
+                var content = text.jsEscape(buildMap[moduleName]);
+                write.asModule(pluginName + "!" + moduleName,
+                               "define(function () { return '" +
+                                   content +
+                               "';});\n");
+            }
+        },
+
+        writeFile: function (pluginName, moduleName, req, write, config) {
+            var parsed = text.parseName(moduleName),
+                extPart = parsed.ext ? '.' + parsed.ext : '',
+                nonStripName = parsed.moduleName + extPart,
+                //Use a '.js' file name so that it indicates it is a
+                //script that can be loaded across domains.
+                fileName = req.toUrl(parsed.moduleName + extPart) + '.js';
+
+            //Leverage own load() method to load plugin value, but only
+            //write out values that do not have the strip argument,
+            //to avoid any potential issues with ! in file names.
+            text.load(nonStripName, req, function (value) {
+                //Use own write() method to construct full module value.
+                //But need to create shell that translates writeFile's
+                //write() to the right interface.
+                var textWrite = function (contents) {
+                    return write(fileName, contents);
+                };
+                textWrite.asModule = function (moduleName, contents) {
+                    return write.asModule(moduleName, fileName, contents);
+                };
+
+                text.write(pluginName, nonStripName, textWrite, config);
+            }, config);
         }
-
-        if (descriptor.tuning.suspensionCompression) {
-          vehicleTuning.set_m_suspensionCompression(descriptor.tuning.suspensionCompression);
-        }
-
-        if (descriptor.tuning.suspensionDamping) {
-          vehicleTuning.set_m_suspensionDamping(descriptor.tuning.suspensionDamping);
-        }
-
-        if (descriptor.tuning.maxSuspensionTravelCm) {
-          vehicleTuning.set_m_maxSuspensionTravelCm(descriptor.tuning.maxSuspensionTravelCm);
-        }
-
-        if (descriptor.tuning.maxSuspensionForce) {
-          vehicleTuning.set_m_maxSuspensionForce(descriptor.tuning.maxSuspensionForce);
-        }
-
-        if (descriptor.tuning.frictionSlip) {
-          vehicleTuning.set_m_frictionSlip(descriptor.tuning.frictionSlip);
-        }
-      }
-
-      vehicle = new Ammo.btRaycastVehicle(vehicleTuning, body, new Ammo.btDefaultVehicleRaycaster(this.dynamicsWorld));
-      vehicle.tuning = vehicleTuning;
-
-      body.setActivationState(this.activationStates.DISABLE_DEACTIVATION);
-      vehicle.setCoordinateSystem(0, 1, 2);
-
-      this.dynamicsWorld.addVehicle(vehicle);
-      var idx = this.vehicles.push(vehicle) - 1;
-      vehicle.id = idx;
-
-      if (typeof fn === 'function') {
-        fn(idx);
-      }
-    },
-
-    Vehicle_addWheel: function(descriptor, fn) {
-      var vehicle = this.vehicles[descriptor.vehicleId];
-
-      if (vehicle !== undefined) {
-        var tuning = vehicle.tuning,
-            connectionPoint = this.tmpVec[0],
-            wheelDirection = this.tmpVec[1],
-            wheelAxle = this.tmpVec[2];
-
-
-        if (typeof descriptor.tuning === 'object') {
-          tuning = new Ammo.btVehicleTuning();
-
-          if (descriptor.tuning.suspensionStiffness) {
-            tuning.set_m_suspensionStiffness(descriptor.tuning.suspensionStiffness);
-          }
-
-          if (descriptor.tuning.suspensionCompression) {
-            tuning.set_m_suspensionCompression(descriptor.tuning.suspensionCompression);
-          }
-
-          if (descriptor.tuning.suspensionDamping) {
-            tuning.set_m_suspensionDamping(descriptor.tuning.suspensionDamping);
-          }
-
-          if (descriptor.tuning.maxSuspensionTravelCm) {
-            tuning.set_m_maxSuspensionTravelCm(descriptor.tuning.maxSuspensionTravelCm);
-          }
-
-          if (descriptor.tuning.maxSuspensionForce) {
-            tuning.set_m_maxSuspensionForce(descriptor.tuning.maxSuspensionForce);
-          }
-
-          if (descriptor.tuning.frictionSlip) {
-            tuning.set_m_frictionSlip(descriptor.tuning.frictionSlip);
-          }
-        } 
-
-        connectionPoint.setX(descriptor.connectionPoint.x);
-        connectionPoint.setY(descriptor.connectionPoint.y);
-        connectionPoint.setZ(descriptor.connectionPoint.z);
-
-        wheelDirection.setX(descriptor.wheelDirection.x);
-        wheelDirection.setY(descriptor.wheelDirection.y);
-        wheelDirection.setZ(descriptor.wheelDirection.z);
-
-        wheelAxle.setX(descriptor.wheelAxle.x);
-        wheelAxle.setY(descriptor.wheelAxle.y);
-        wheelAxle.setZ(descriptor.wheelAxle.z);
-
-        vehicle.addWheel(
-          connectionPoint,
-          wheelDirection,
-          wheelAxle,
-          descriptor.suspensionRestLength,
-          descriptor.wheelRadius,
-          tuning,
-          descriptor.isFrontWheel
-        );
-
-        if (typeof fn === 'function') {
-          fn(vehicle.getNumWheels() - 1);
-        }
-      }
-    },
-
-    Vehicle_setSteeringValue: function(descriptor) {
-      var vehicle = this.vehicles[descriptor.vehicleId];
-      if (vehicle) {
-        this.vehicles[descriptor.vehicleId].setSteeringValue(descriptor.steeringValue, descriptor.wheelIndex);
-      }
-    },
-
-    Vehicle_setBrake: function(descriptor) {
-      var vehicle = this.vehicles[descriptor.vehicleId];
-      if (vehicle) {
-        this.vehicles[descriptor.vehicleId].setBrake(descriptor.brake, descriptor.wheelIndex);
-      }
-    },
-
-    Vehicle_setWheelInfo: function(descriptor) {  
-      var vehicle = this.vehicles[descriptor.vehicleId],
-          info;
-      if (vehicle) {
-
-        info = this.vehicles[descriptor.vehicleId].getWheelInfo(descriptor.wheelIndex);
-
-        for (var i in descriptor.properties) {
-          if (descriptor.properties.hasOwnProperty(i)) {
-            info['set_m_' + i](descriptor.properties[i]); 
-          }
-        }
-      }
-    },
-
-    Vehicle_applyEngineForce: function(descriptor) {
-      var vehicle = this.vehicles[descriptor.vehicleId];
-      if (vehicle) {
-        this.vehicles[descriptor.vehicleId].applyEngineForce(descriptor.force, descriptor.wheelIndex);
-      }
-    },
-
-    Point2PointConstraint_create: function(descriptor, fn) {
-      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
-            this.bodies[descriptor.rigidBodyIdB],
-          constraint,
-          id;
-
-      if (rigidBodyA) {
-        this.tmpVec[0].setX(descriptor.pivotA.x);
-        this.tmpVec[0].setY(descriptor.pivotA.y);
-        this.tmpVec[0].setZ(descriptor.pivotA.z); 
-
-        if (rigidBodyB) {
-          rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
-          this.tmpVec[1].setX(descriptor.pivotB.x);
-          this.tmpVec[1].setY(descriptor.pivotB.y);
-          this.tmpVec[1].setZ(descriptor.pivotB.z); 
-          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB, this.tmpVec[0], this.tmpVec[1]);
-        } else {
-          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB);
-        }
-
-        id = this.constraints.push(constraint) - 1;
-
-        this.dynamicsWorld.addConstraint(constraint);
-        constraint.enableFeedback();
-
-        if (typeof fn === 'function') {
-          fn(id);
-        }
-      }
-    },
-
-    SliderConstraint_create: function(descriptor, fn) {
-      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
-            this.bodies[descriptor.rigidBodyIdB],
-          constraint,
-          id;
-
-      if (rigidBodyA) {
-        var transformA = new Ammo.btTransform();
-
-        this.tmpVec[0].setX(descriptor.frameInA.position.x);
-        this.tmpVec[0].setY(descriptor.frameInA.position.y);
-        this.tmpVec[0].setZ(descriptor.frameInA.position.z);
-
-        this.tmpQuaternion[0].setX(descriptor.frameInA.rotation.x);
-        this.tmpQuaternion[0].setY(descriptor.frameInA.rotation.y);
-        this.tmpQuaternion[0].setZ(descriptor.frameInA.rotation.z);
-        this.tmpQuaternion[0].setW(descriptor.frameInA.rotation.w);
-
-        transformA.setOrigin(this.tmpVec[0]);
-        transformA.setRotation(this.tmpQuaternion[0]);
-
-        if (rigidBodyB) {
-          var transformB = new Ammo.btTransform();
-
-          this.tmpVec[1].setX(descriptor.frameInB.position.x);
-          this.tmpVec[1].setY(descriptor.frameInB.position.y);
-          this.tmpVec[1].setZ(descriptor.frameInB.position.z);
-
-          this.tmpQuaternion[1].setX(descriptor.frameInB.rotation.x);
-          this.tmpQuaternion[1].setY(descriptor.frameInB.rotation.y);
-          this.tmpQuaternion[1].setZ(descriptor.frameInB.rotation.z);
-          this.tmpQuaternion[1].setW(descriptor.frameInB.rotation.w);
-
-          transformB.setOrigin(this.tmpVec[1]);
-          transformB.setRotation(this.tmpQuaternion[1]);
-
-          constraint = new Ammo.btSliderConstraint(rigidBodyA, rigidBodyB, 
-            transformA, transformB);
-        } else {
-
-        }
-
-        id = this.constraints.push(constraint) - 1;
-
-        this.dynamicsWorld.addConstraint(constraint);
-        constraint.enableFeedback();
-
-        if (typeof fn === 'function') {
-          fn(id);
-        }
-      }
-    },
-
-    SliderConstraint_setLowerLinLimit: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
-
-      if (constraint) {
-        constraint.setLowerLinLimit(descriptor.limit);
-      }
-    },
-
-    SliderConstraint_setUpperLinLimit: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
-
-      if (constraint) {
-        constraint.setUpperLinLimit(descriptor.limit);
-      }
-    },
-
-    SliderConstraint_setLowerAngLimit: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
-
-      if (constraint) {
-        constraint.setLowerAngLimit(descriptor.limit);
-      }
-    },
-
-    SliderConstraint_setUpperAngLimit: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
-
-      if (constraint) {
-        constraint.setUpperAngLimit(descriptor.limit);
-      }
-    },
-
-    HingeConstraint_create: function(descriptor, fn) {
-      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
-            this.bodies[descriptor.rigidBodyIdB],
-          constraint,
-          id;
-
-      if (rigidBodyA) {
-        this.tmpVec[0].setX(descriptor.pivotA.x);
-        this.tmpVec[0].setY(descriptor.pivotA.y);
-        this.tmpVec[0].setZ(descriptor.pivotA.z); 
-        this.tmpVec[1].setX(descriptor.axisA.x);
-        this.tmpVec[1].setX(descriptor.axisA.y);
-        this.tmpVec[1].setX(descriptor.axisA.z);
-
-        if (rigidBodyB) {
-          rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
-          this.tmpVec[2].setX(descriptor.pivotB.x);
-          this.tmpVec[2].setY(descriptor.pivotB.y);
-          this.tmpVec[2].setZ(descriptor.pivotB.z); 
-          this.tmpVec[3].setX(descriptor.axisB.x);
-          this.tmpVec[3].setY(descriptor.axisB.y);
-          this.tmpVec[3].setZ(descriptor.axisB.z); 
-          constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
-              this.tmpVec[0], this.tmpVec[2], this.tmpVec[1], this.tmpVec[3]);
-        } else {
-          constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
-              this.tmpVec[0], this.tmpVec[1]);
-        }
-
-        id = this.constraints.push(constraint) - 1;
-
-        this.dynamicsWorld.addConstraint(constraint);
-        constraint.enableFeedback();
-
-        if (typeof fn === 'function') {
-          fn(id);
-        }
-      }
-    },
-
-    HingeConstraint_setLimit: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
-
-      if (constraint) {
-        constraint.setLimit(descriptor.low, descriptor.high, descriptor.softness,
-              descriptor.biasFactor, descriptor.relaxationFactor);
-      }
-    },
-
-    /*
-    DynamicsWorld_rayTestAllHits: function(descriptor, fn) {
-      this.tmpVec[0].setX(descriptor.rayFromWorld.x);
-      this.tmpVec[0].setY(descriptor.rayFromWorld.y);
-      this.tmpVec[0].setZ(descriptor.rayFromWorld.z);
-      this.tmpVec[1].setX(descriptor.rayToWorld.x);
-      this.tmpVec[1].setY(descriptor.rayToWorld.y);
-      this.tmpVec[1].setZ(descriptor.rayToWorld.z);
-
-      var callback = new Ammo.AllHitsRayResultCallback(this.tmpVec[0], this.tmpVec[1]);
-
-      this.dynamicsWorld.rayTest(this.tmpVec[0], this.tmpVec[1], callback);
-
-      if (callback.hasHit()) {
-        console.log('hits', callback.m_hitFractions.size());
-      } else {
-        if (typeof fn === 'function') {
-          fn();
-        }
-      }
-
-      Ammo.destroy(callback);
-    },
-    */
-
-    DynamicsWorld_rayTestClosest: function(descriptor, fn) {
-      this.tmpVec[0].setX(descriptor.rayFromWorld.x);
-      this.tmpVec[0].setY(descriptor.rayFromWorld.y);
-      this.tmpVec[0].setZ(descriptor.rayFromWorld.z);
-      this.tmpVec[1].setX(descriptor.rayToWorld.x);
-      this.tmpVec[1].setY(descriptor.rayToWorld.y);
-      this.tmpVec[1].setZ(descriptor.rayToWorld.z);
-
-      var callback = new Ammo.ClosestRayResultCallback(this.tmpVec[0], this.tmpVec[1]);
-
-      this.dynamicsWorld.rayTest(this.tmpVec[0], this.tmpVec[1], callback);
-
-      if (callback.hasHit()) {
-        var body = Ammo.castObject(callback.get_m_collisionObject(), Ammo.btRigidBody);
-
-        if (body.id) {
-          if (typeof fn === 'function') {
-            fn({
-              type: 'btRigidBody', 
-              bodyId: body.id,
-              hitPointWorld: {
-                x: callback.get_m_hitPointWorld().x(),
-                y: callback.get_m_hitPointWorld().y(),
-                z: callback.get_m_hitPointWorld().z()
-              },
-              hitNormalWorld: {
-                x: callback.get_m_hitNormalWorld().x(),
-                y: callback.get_m_hitNormalWorld().y(),
-                z: callback.get_m_hitNormalWorld().z()
-              }
-            });
-          }
-        }
-      } else {
-        if (typeof fn === 'function') {
-          fn();
-        }
-      }
-
-      Ammo.destroy(callback);
-    },
-
-    DynamicsWorld_addRigidBody: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-
-      if (body) {
-        this.dynamicsWorld.addRigidBody(body, descriptor.group, descriptor.mask);
-      }
-    },
-
-    DynamicsWorld_addGhostObject: function(descriptor) {
-      var ghost = this.ghosts[descriptor.ghostId];
-
-      if (ghost) {
-        this.dynamicsWorld.addCollisionObject(ghost, descriptor.group, descriptor.mask);  
-      }
-    },
-
-    GhostObject_create: function(descriptor, fn) {
-      var colShape = this._createShape(descriptor.shape),
-          origin = this.tmpVec[0],
-          rotation = this.tmpQuaternion[0],
-          ghostObject;
-
-      if (!colShape) {
-        return console.error('Invalid collision shape!');
-      }
-
-      this.tmpTrans[0].setIdentity();
-
-      origin.setX(descriptor.position.x);
-      origin.setY(descriptor.position.y);
-      origin.setZ(descriptor.position.z);
-
-      rotation.setX(descriptor.quaternion.x);
-      rotation.setY(descriptor.quaternion.y);
-      rotation.setZ(descriptor.quaternion.z);
-      rotation.setW(descriptor.quaternion.w);
-
-      this.tmpTrans[0].setOrigin(origin);
-      this.tmpTrans[0].setRotation(rotation);
-
-      ghostObject = new Ammo.btPairCachingGhostObject();
-      ghostObject.setWorldTransform(this.tmpTrans[0]);
-
-      ghostObject.setCollisionShape(colShape);
-      ghostObject.setCollisionFlags(this.collisionFlags.CF_NO_CONTACT_RESPONSE); // no collision response 
-
-      var idx = this.ghosts.push(ghostObject) - 1;
-      ghostObject.id = idx;
-
-      if (typeof fn === 'function') {
-        fn(idx);
-      }
-    },
-
-    KinematicCharacterController_create: function(descriptor, fn) {
-      var colShape,
-          startTransform = this.tmpTrans[0],
-          origin = this.tmpVec[1],
-          rotation = this.tmpQuaternion[0],
-          ghost,
-          controller;
-
-      startTransform.setIdentity();
-
-      colShape = this._createShape(descriptor.shape);
-
-      if (!colShape) {
-        throw('Invalid collision shape!');
-      }
-
-      origin.setX(descriptor.position.x);
-      origin.setY(descriptor.position.y);
-      origin.setZ(descriptor.position.z);
-
-      rotation.setX(descriptor.quaternion.x);
-      rotation.setY(descriptor.quaternion.y);
-      rotation.setZ(descriptor.quaternion.z);
-      rotation.setW(descriptor.quaternion.w);
-
-      startTransform.setOrigin(origin);
-      startTransform.setRotation(rotation);
-
-      ghost = new Ammo.btPairCachingGhostObject();
-      ghost.setWorldTransform(startTransform);
-
-      ghost.setCollisionShape(colShape);
-      ghost.setCollisionFlags(this.collisionFlags.CF_CHARACTER_OBJECT);
-
-      controller = new Ammo.btKinematicCharacterController (ghost, colShape, descriptor.stepHeight);
-
-      this.dynamicsWorld.addCollisionObject(ghost, this.collisionFilterGroups.CharacterFilter,
-        this.collisionFilterGroups.StaticFilter | this.collisionFilterGroups.DefaultFilter);
-
-      this.dynamicsWorld.addAction(controller);
-
-      var idx = this.characterControllers.push(controller) - 1;
-      this.ghost = ghost;
-      controller.id = idx;
-
-      if (typeof fn === 'function') {
-        fn(idx);
-      }
-    },
-
-    KinematicCharacterController_setWalkDirection: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
-
-      if (controller) {
-        this.tmpVec[0].setX(descriptor.direction.x);
-        this.tmpVec[0].setY(descriptor.direction.y);
-        this.tmpVec[0].setZ(descriptor.direction.z);
-
-        controller.setWalkDirection(this.tmpVec[0]);
-      }
-    },
-
-    KinematicCharacterController_jump: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
-
-      if (controller) {
-        controller.jump();
-      }
-    },
-
-    KinematicCharacterController_setJumpSpeed: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
-
-      if (controller) {
-        controller.setJumpSpeed(descriptor.jumpSpeed);
-      }
-    },
-
-    KinematicCharacterController_setFallSpeed: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
-
-      if (controller) {
-        controller.setFallSpeed(descriptor.fallSpeed);
-      }
-    },
-
-    KinematicCharacterController_setMaxJumpHeight: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
-
-      if (controller) {
-        controller.setMaxJumpHeight(descriptor.maxJumpHeight);
-      }
-    },
-
-    KinematicCharacterController_setGravity: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
-
-      if (controller) {
-        controller.setGravity(descriptor.gravity);
-      }
-    },
-
-    KinematicCharacterController_setUpAxis: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
-
-      if (controller) {
-        controller.setUpAxis(descriptor.upAxis);
-      }
-    },
-
-    KinematicCharacterController_setVelocityForTimeInterval: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
-
-      if (controller) {
-        this.tmpVec[0].setX(descriptor.velocity.x);
-        this.tmpVec[0].setY(descriptor.velocity.y);
-        this.tmpVec[0].setZ(descriptor.velocity.z);
-
-        controller.setVelocityForTimeInterval(this.tmpVec[0], descriptor.interval);
-      }
-    },
-
-    KinematicCharacterController_setUseGhostSweepTest: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
-
-      if (controller) {
-        controller.setUseGhostSweepTest(descriptor.useGhostSweepTest);
-      }
-    },
-
-    KinematicCharacterController_setMaxSlope: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
-
-      if (controller) {
-        controller.setMaxSlope(descriptor.slopeRadians);
-      }
-    },
-
-    KinematicCharacterController_warp: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
-
-      if (controller) {
-        this.tmpVec[0].setX(descriptor.origin.x);
-        this.tmpVec[0].setY(descriptor.origin.y);
-        this.tmpVec[0].setZ(descriptor.origin.z);
-
-        controller.warp(this.tmpVec[0]);
-      }
-    },
-
-    RigidBody_create: function(descriptor, fn) {
-      var colShape,
-          startTransform = this.tmpTrans[0],
-          isDynamic = (descriptor.mass !== 0),
-          localInertia = this.tmpVec[0],
-          origin = this.tmpVec[1],
-          rotation = this.tmpQuaternion[0],
-          myMotionState,
-          rbInfo,
-          body;
-
-      startTransform.setIdentity();
-      localInertia.setZero();
-
-      colShape = this._createShape(descriptor.shape);
-
-      if (!colShape) {
-        throw('Invalid collision shape!');
-      }
-
-      if (isDynamic) {
-        colShape.calculateLocalInertia(descriptor.mass,localInertia);
-      }
-
-      origin.setX(descriptor.position.x);
-      origin.setY(descriptor.position.y);
-      origin.setZ(descriptor.position.z);
-
-      rotation.setX(descriptor.quaternion.x);
-      rotation.setY(descriptor.quaternion.y);
-      rotation.setZ(descriptor.quaternion.z);
-      rotation.setW(descriptor.quaternion.w);
-
-      startTransform.setOrigin(origin);
-      startTransform.setRotation(rotation);
-
-      myMotionState = new Ammo.btDefaultMotionState(startTransform);
-      rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
-      body = new Ammo.btRigidBody(rbInfo);
-
-      var idx = this.bodies.push(body) - 1;
-      body.id = idx;
-
-      if (typeof fn === 'function') {
-        fn(idx);
-      }
-    },
-
-    RigidBody_setType: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-
-      if (body) {
-        switch (descriptor.type) {
-        case 'static':
-          body.setCollisionFlags(this.collisionFlags.CF_STATIC_OBJECT);
-          body.setActivationState(this.activationStates.DISABLE_SIMULATION);
-          break;
-        case 'kinematic':
-          body.setCollisionFlags(this.collisionFlags.CF_KINEMATIC_OBJECT);
-          body.setActivationState(this.activationStates.DISABLE_DEACTIVATION);
-          break;
-        default:
-          console.warn('unknown body type: ' + descriptor.type + ', defaulting to dynamic');
-          body.setCollisionFlags(0);
-          break;
-        case 'dynamic':
-          body.setCollisionFlags(0);
-          break;
-        }
-      }
-    },
-
-    RigidBody_setWorldTransform: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId],
-          position,
-          rotation;
-      
-      if (body) {
-        this.tmpTrans[0].setIdentity();
-        body.getMotionState().getWorldTransform(this.tmpTrans[0]);
-        position = this.tmpTrans[0].getOrigin();
-        rotation = this.tmpTrans[0].getRotation();
-
-        if (descriptor.position) {
-          position.setX(descriptor.position.x);
-          position.setY(descriptor.position.y);
-          position.setZ(descriptor.position.z);
-        }
-
-        if (descriptor.rotation) {
-          rotation.setX(descriptor.rotation.x);
-          rotation.setY(descriptor.rotation.y);
-          rotation.setZ(descriptor.rotation.z);
-          rotation.setW(descriptor.rotation.w);
-        }
-
-        if (body.isKinematicObject()) {
-          body.getMotionState().setWorldTransform(this.tmpTrans[0]);
-        } else {
-          body.setWorldTransform(this.tmpTrans[0]);
-        }
-      }
-    },
-
-    RigidBody_clearForces: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-      
-      if (body) {
-        body.clearForces();
-        body.activate();
-      }
-    },
-
-    RigidBody_applyForce: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-      
-      if (body) {
-        this.tmpVec[0].setX(descriptor.force.x);
-        this.tmpVec[0].setY(descriptor.force.y);
-        this.tmpVec[0].setZ(descriptor.force.z);
-        this.tmpVec[1].setX(descriptor.relativePosition.x);
-        this.tmpVec[1].setY(descriptor.relativePosition.y);
-        this.tmpVec[1].setZ(descriptor.relativePosition.z);
-
-        body.applyForce(this.tmpVec[0], this.tmpVec[1]);
-        body.activate();
-      } 
-    },
-
-    RigidBody_applyCentralForce: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-      
-      if (body) {
-        this.tmpVec[0].setX(descriptor.force.x);
-        this.tmpVec[0].setY(descriptor.force.y);
-        this.tmpVec[0].setZ(descriptor.force.z);
-
-        body.applyCentralForce(this.tmpVec[0]);
-        body.activate();
-      } 
-    },
-
-    RigidBody_applyImpulse: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-      
-      if (body) {
-        this.tmpVec[0].setX(descriptor.impulse.x);
-        this.tmpVec[0].setY(descriptor.impulse.y);
-        this.tmpVec[0].setZ(descriptor.impulse.z);
-        this.tmpVec[1].setX(descriptor.relativePosition.x);
-        this.tmpVec[1].setY(descriptor.relativePosition.y);
-        this.tmpVec[1].setZ(descriptor.relativePosition.z);
-
-        body.applyImpulse(this.tmpVec[0], this.tmpVec[1]);
-        body.activate();
-      } 
-    },
-
-    RigidBody_applyCentralImpulse: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-      
-      if (body) {
-        this.tmpVec[0].setX(descriptor.force.x);
-        this.tmpVec[0].setY(descriptor.force.y);
-        this.tmpVec[0].setZ(descriptor.force.z);
-
-        body.applyCentralImpulse(this.tmpVec[0]);
-        body.activate();
-      } 
-    },
-
-    RigidBody_applyTorque: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-      
-      if (body) {
-        this.tmpVec[0].setX(descriptor.torque.x);
-        this.tmpVec[0].setY(descriptor.torque.y);
-        this.tmpVec[0].setZ(descriptor.torque.z);
-        
-        body.applyTorque(this.tmpVec[0]);
-        body.activate();
-      }
-    },
-
-    RigidBody_setRestitution: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-
-      if (body) {
-        body.setRestitution(descriptor.restitution);
-      }
-    },
-
-    RigidBody_setFriction: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-
-      if (body) {
-        body.setFriction(descriptor.friction);
-      }
-    },
-
-    RigidBody_setDamping: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-
-      if (body) {
-        body.setDamping(descriptor.linearDamping, descriptor.angularDamping);
-      }
-    },
-
-    RigidBody_setLinearFactor: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-
-      if (body) {
-        this.tmpVec[0].setX(descriptor.linearFactor.x); 
-        this.tmpVec[0].setY(descriptor.linearFactor.y); 
-        this.tmpVec[0].setZ(descriptor.linearFactor.z); 
-        body.setLinearFactor(this.tmpVec[0]);
-      }
-    },
-
-    RigidBody_setAngularFactor: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-
-      if (body) {
-        this.tmpVec[0].setX(descriptor.angularFactor.x); 
-        this.tmpVec[0].setY(descriptor.angularFactor.y); 
-        this.tmpVec[0].setZ(descriptor.angularFactor.z); 
-        body.setAngularFactor(this.tmpVec[0]);
-      }
-    },
-
-    RigidBody_setLinearVelocity: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-
-      if (body) {
-        this.tmpVec[0].setX(descriptor.linearVelocity.x); 
-        this.tmpVec[0].setY(descriptor.linearVelocity.y); 
-        this.tmpVec[0].setZ(descriptor.linearVelocity.z); 
-        body.setLinearVelocity(this.tmpVec[0]);
-      }
-    },
-
-    RigidBody_setAngularVelocity: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
-
-      if (body) {
-        this.tmpVec[0].setX(descriptor.angularVelocity.x); 
-        this.tmpVec[0].setY(descriptor.angularVelocity.y); 
-        this.tmpVec[0].setZ(descriptor.angularVelocity.z); 
-        body.setAngularVelocity(this.tmpVec[0]);
-      }
-    },
-
-    Constraint_destroy: function(id) {
-      var constraint = this.constraints[id];
-
-      if (constraint) {
-        this.dynamicsWorld.removeConstraint(constraint);
-        Ammo.destroy(constraint);
-        this.constraints[id] = undefined;
-        this.trigger('Constraint_destroy', id);
-      }
-    },
-
-    RigidBody_destroy: function(id) {
-      var body = this.bodies[id];
-
-      if (body) {
-        this.dynamicsWorld.removeRigidBody(body);
-        Ammo.destroy(body);
-        this.bodies[id] = undefined;
-        this.trigger('RigidBody_destroy', id);
-      }
-    },
-
-    Vehicle_destroy: function(id) {
-      var vehicle = this.vehicles[id];
-
-      if (vehicle) {
-        this.dynamicsWorld.removeVehicle(vehicle);
-        Ammo.destroy(vehicle);
-        this.vehicles[id] = undefined;
-        this.trigger('Vehicle_destroy', id);
-      }
-    },
-
-    GhostObject_destroy: function(id) {
-      var ghost = this.ghosts[id];
-
-      if (ghost) {
-        this.dynamicsWorld.removeCollisionObject(ghost);
-        Ammo.destroy(ghost);
-        this.ghosts[id] = undefined;
-        this.trigger('GhostObject_destroy', id);
-      }
-    },
-
-    shutdown: function() {
-      Ammo.destroy(this.collisionConfiguration);
-      Ammo.destroy(this.dispatcher);
-      Ammo.destroy(this.overlappingPairCache);
-      Ammo.destroy(this.solver);
+    };
+
+    if (masterConfig.env === 'node' || (!masterConfig.env &&
+            typeof process !== "undefined" &&
+            process.versions &&
+            !!process.versions.node &&
+            !process.versions['node-webkit'])) {
+        //Using special require.nodeRequire, something added by r.js.
+        fs = require.nodeRequire('fs');
+
+        text.get = function (url, callback, errback) {
+            try {
+                var file = fs.readFileSync(url, 'utf8');
+                //Remove BOM (Byte Mark Order) from utf8 files if it is there.
+                if (file.indexOf('\uFEFF') === 0) {
+                    file = file.substring(1);
+                }
+                callback(file);
+            } catch (e) {
+                errback(e);
+            }
+        };
+    } else if (masterConfig.env === 'xhr' || (!masterConfig.env &&
+            text.createXhr())) {
+        text.get = function (url, callback, errback, headers) {
+            var xhr = text.createXhr(), header;
+            xhr.open('GET', url, true);
+
+            //Allow plugins direct access to xhr headers
+            if (headers) {
+                for (header in headers) {
+                    if (headers.hasOwnProperty(header)) {
+                        xhr.setRequestHeader(header.toLowerCase(), headers[header]);
+                    }
+                }
+            }
+
+            //Allow overrides specified in config
+            if (masterConfig.onXhr) {
+                masterConfig.onXhr(xhr, url);
+            }
+
+            xhr.onreadystatechange = function (evt) {
+                var status, err;
+                //Do not explicitly handle errors, those should be
+                //visible via console output in the browser.
+                if (xhr.readyState === 4) {
+                    status = xhr.status;
+                    if (status > 399 && status < 600) {
+                        //An http 4xx or 5xx error. Signal an error.
+                        err = new Error(url + ' HTTP status: ' + status);
+                        err.xhr = xhr;
+                        errback(err);
+                    } else {
+                        callback(xhr.responseText);
+                    }
+
+                    if (masterConfig.onXhrComplete) {
+                        masterConfig.onXhrComplete(xhr, url);
+                    }
+                }
+            };
+            xhr.send(null);
+        };
+    } else if (masterConfig.env === 'rhino' || (!masterConfig.env &&
+            typeof Packages !== 'undefined' && typeof java !== 'undefined')) {
+        //Why Java, why is this so awkward?
+        text.get = function (url, callback) {
+            var stringBuffer, line,
+                encoding = "utf-8",
+                file = new java.io.File(url),
+                lineSeparator = java.lang.System.getProperty("line.separator"),
+                input = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(file), encoding)),
+                content = '';
+            try {
+                stringBuffer = new java.lang.StringBuffer();
+                line = input.readLine();
+
+                // Byte Order Mark (BOM) - The Unicode Standard, version 3.0, page 324
+                // http://www.unicode.org/faq/utf_bom.html
+
+                // Note that when we use utf-8, the BOM should appear as "EF BB BF", but it doesn't due to this bug in the JDK:
+                // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4508058
+                if (line && line.length() && line.charAt(0) === 0xfeff) {
+                    // Eat the BOM, since we've already found the encoding on this file,
+                    // and we plan to concatenating this buffer with others; the BOM should
+                    // only appear at the top of a file.
+                    line = line.substring(1);
+                }
+
+                if (line !== null) {
+                    stringBuffer.append(line);
+                }
+
+                while ((line = input.readLine()) !== null) {
+                    stringBuffer.append(lineSeparator);
+                    stringBuffer.append(line);
+                }
+                //Make sure we return a JavaScript string and not a Java string.
+                content = String(stringBuffer.toString()); //String
+            } finally {
+                input.close();
+            }
+            callback(content);
+        };
+    } else if (masterConfig.env === 'xpconnect' || (!masterConfig.env &&
+            typeof Components !== 'undefined' && Components.classes &&
+            Components.interfaces)) {
+        //Avert your gaze!
+        Cc = Components.classes,
+        Ci = Components.interfaces;
+        Components.utils['import']('resource://gre/modules/FileUtils.jsm');
+        xpcIsWindows = ('@mozilla.org/windows-registry-key;1' in Cc);
+
+        text.get = function (url, callback) {
+            var inStream, convertStream, fileObj,
+                readData = {};
+
+            if (xpcIsWindows) {
+                url = url.replace(/\//g, '\\');
+            }
+
+            fileObj = new FileUtils.File(url);
+
+            //XPCOM, you so crazy
+            try {
+                inStream = Cc['@mozilla.org/network/file-input-stream;1']
+                           .createInstance(Ci.nsIFileInputStream);
+                inStream.init(fileObj, 1, 0, false);
+
+                convertStream = Cc['@mozilla.org/intl/converter-input-stream;1']
+                                .createInstance(Ci.nsIConverterInputStream);
+                convertStream.init(inStream, "utf-8", inStream.available(),
+                Ci.nsIConverterInputStream.DEFAULT_REPLACEMENT_CHARACTER);
+
+                convertStream.readString(inStream.available(), readData);
+                convertStream.close();
+                inStream.close();
+                callback(readData.value);
+            } catch (e) {
+                throw new Error((fileObj && fileObj.path || '') + ': ' + e);
+            }
+        };
     }
-  };
-
-  return AmmoWorkerAPI;
+    return text;
 });
+
+define('text!gen/ammo_worker_api.js',[],function () { return '(function (root, factory) {\n  if (typeof define === \'function\' && define.amd) {\n    define(factory);\n  } else {\n    root.AmmoProxy = factory();\n  }\n}(this, function () {\n\n/**\n * almond 0.2.5 Copyright (c) 2011-2012, The Dojo Foundation All Rights Reserved.\n * Available via the MIT or new BSD license.\n * see: http://github.com/jrburke/almond for details\n */\n//Going sloppy to avoid \'use strict\' string cost, but strict practices should\n//be followed.\n/*jslint sloppy: true */\n/*global setTimeout: false */\n\nvar requirejs, require, define;\n(function (undef) {\n    var main, req, makeMap, handlers,\n        defined = {},\n        waiting = {},\n        config = {},\n        defining = {},\n        hasOwn = Object.prototype.hasOwnProperty,\n        aps = [].slice;\n\n    function hasProp(obj, prop) {\n        return hasOwn.call(obj, prop);\n    }\n\n    /**\n     * Given a relative module name, like ./something, normalize it to\n     * a real name that can be mapped to a path.\n     * @param {String} name the relative name\n     * @param {String} baseName a real name that the name arg is relative\n     * to.\n     * @returns {String} normalized name\n     */\n    function normalize(name, baseName) {\n        var nameParts, nameSegment, mapValue, foundMap,\n            foundI, foundStarMap, starI, i, j, part,\n            baseParts = baseName && baseName.split("/"),\n            map = config.map,\n            starMap = (map && map[\'*\']) || {};\n\n        //Adjust any relative paths.\n        if (name && name.charAt(0) === ".") {\n            //If have a base name, try to normalize against it,\n            //otherwise, assume it is a top-level require that will\n            //be relative to baseUrl in the end.\n            if (baseName) {\n                //Convert baseName to array, and lop off the last part,\n                //so that . matches that "directory" and not name of the baseName\'s\n                //module. For instance, baseName of "one/two/three", maps to\n                //"one/two/three.js", but we want the directory, "one/two" for\n                //this normalization.\n                baseParts = baseParts.slice(0, baseParts.length - 1);\n\n                name = baseParts.concat(name.split("/"));\n\n                //start trimDots\n                for (i = 0; i < name.length; i += 1) {\n                    part = name[i];\n                    if (part === ".") {\n                        name.splice(i, 1);\n                        i -= 1;\n                    } else if (part === "..") {\n                        if (i === 1 && (name[2] === \'..\' || name[0] === \'..\')) {\n                            //End of the line. Keep at least one non-dot\n                            //path segment at the front so it can be mapped\n                            //correctly to disk. Otherwise, there is likely\n                            //no path mapping for a path starting with \'..\'.\n                            //This can still fail, but catches the most reasonable\n                            //uses of ..\n                            break;\n                        } else if (i > 0) {\n                            name.splice(i - 1, 2);\n                            i -= 2;\n                        }\n                    }\n                }\n                //end trimDots\n\n                name = name.join("/");\n            } else if (name.indexOf(\'./\') === 0) {\n                // No baseName, so this is ID is resolved relative\n                // to baseUrl, pull off the leading dot.\n                name = name.substring(2);\n            }\n        }\n\n        //Apply map config if available.\n        if ((baseParts || starMap) && map) {\n            nameParts = name.split(\'/\');\n\n            for (i = nameParts.length; i > 0; i -= 1) {\n                nameSegment = nameParts.slice(0, i).join("/");\n\n                if (baseParts) {\n                    //Find the longest baseName segment match in the config.\n                    //So, do joins on the biggest to smallest lengths of baseParts.\n                    for (j = baseParts.length; j > 0; j -= 1) {\n                        mapValue = map[baseParts.slice(0, j).join(\'/\')];\n\n                        //baseName segment has  config, find if it has one for\n                        //this name.\n                        if (mapValue) {\n                            mapValue = mapValue[nameSegment];\n                            if (mapValue) {\n                                //Match, update name to the new value.\n                                foundMap = mapValue;\n                                foundI = i;\n                                break;\n                            }\n                        }\n                    }\n                }\n\n                if (foundMap) {\n                    break;\n                }\n\n                //Check for a star map match, but just hold on to it,\n                //if there is a shorter segment match later in a matching\n                //config, then favor over this star map.\n                if (!foundStarMap && starMap && starMap[nameSegment]) {\n                    foundStarMap = starMap[nameSegment];\n                    starI = i;\n                }\n            }\n\n            if (!foundMap && foundStarMap) {\n                foundMap = foundStarMap;\n                foundI = starI;\n            }\n\n            if (foundMap) {\n                nameParts.splice(0, foundI, foundMap);\n                name = nameParts.join(\'/\');\n            }\n        }\n\n        return name;\n    }\n\n    function makeRequire(relName, forceSync) {\n        return function () {\n            //A version of a require function that passes a moduleName\n            //value for items that may need to\n            //look up paths relative to the moduleName\n            return req.apply(undef, aps.call(arguments, 0).concat([relName, forceSync]));\n        };\n    }\n\n    function makeNormalize(relName) {\n        return function (name) {\n            return normalize(name, relName);\n        };\n    }\n\n    function makeLoad(depName) {\n        return function (value) {\n            defined[depName] = value;\n        };\n    }\n\n    function callDep(name) {\n        if (hasProp(waiting, name)) {\n            var args = waiting[name];\n            delete waiting[name];\n            defining[name] = true;\n            main.apply(undef, args);\n        }\n\n        if (!hasProp(defined, name) && !hasProp(defining, name)) {\n            throw new Error(\'No \' + name);\n        }\n        return defined[name];\n    }\n\n    //Turns a plugin!resource to [plugin, resource]\n    //with the plugin being undefined if the name\n    //did not have a plugin prefix.\n    function splitPrefix(name) {\n        var prefix,\n            index = name ? name.indexOf(\'!\') : -1;\n        if (index > -1) {\n            prefix = name.substring(0, index);\n            name = name.substring(index + 1, name.length);\n        }\n        return [prefix, name];\n    }\n\n    /**\n     * Makes a name map, normalizing the name, and using a plugin\n     * for normalization if necessary. Grabs a ref to plugin\n     * too, as an optimization.\n     */\n    makeMap = function (name, relName) {\n        var plugin,\n            parts = splitPrefix(name),\n            prefix = parts[0];\n\n        name = parts[1];\n\n        if (prefix) {\n            prefix = normalize(prefix, relName);\n            plugin = callDep(prefix);\n        }\n\n        //Normalize according\n        if (prefix) {\n            if (plugin && plugin.normalize) {\n                name = plugin.normalize(name, makeNormalize(relName));\n            } else {\n                name = normalize(name, relName);\n            }\n        } else {\n            name = normalize(name, relName);\n            parts = splitPrefix(name);\n            prefix = parts[0];\n            name = parts[1];\n            if (prefix) {\n                plugin = callDep(prefix);\n            }\n        }\n\n        //Using ridiculous property names for space reasons\n        return {\n            f: prefix ? prefix + \'!\' + name : name, //fullName\n            n: name,\n            pr: prefix,\n            p: plugin\n        };\n    };\n\n    function makeConfig(name) {\n        return function () {\n            return (config && config.config && config.config[name]) || {};\n        };\n    }\n\n    handlers = {\n        require: function (name) {\n            return makeRequire(name);\n        },\n        exports: function (name) {\n            var e = defined[name];\n            if (typeof e !== \'undefined\') {\n                return e;\n            } else {\n                return (defined[name] = {});\n            }\n        },\n        module: function (name) {\n            return {\n                id: name,\n                uri: \'\',\n                exports: defined[name],\n                config: makeConfig(name)\n            };\n        }\n    };\n\n    main = function (name, deps, callback, relName) {\n        var cjsModule, depName, ret, map, i,\n            args = [],\n            usingExports;\n\n        //Use name if no relName\n        relName = relName || name;\n\n        //Call the callback to define the module, if necessary.\n        if (typeof callback === \'function\') {\n\n            //Pull out the defined dependencies and pass the ordered\n            //values to the callback.\n            //Default to [require, exports, module] if no deps\n            deps = !deps.length && callback.length ? [\'require\', \'exports\', \'module\'] : deps;\n            for (i = 0; i < deps.length; i += 1) {\n                map = makeMap(deps[i], relName);\n                depName = map.f;\n\n                //Fast path CommonJS standard dependencies.\n                if (depName === "require") {\n                    args[i] = handlers.require(name);\n                } else if (depName === "exports") {\n                    //CommonJS module spec 1.1\n                    args[i] = handlers.exports(name);\n                    usingExports = true;\n                } else if (depName === "module") {\n                    //CommonJS module spec 1.1\n                    cjsModule = args[i] = handlers.module(name);\n                } else if (hasProp(defined, depName) ||\n                           hasProp(waiting, depName) ||\n                           hasProp(defining, depName)) {\n                    args[i] = callDep(depName);\n                } else if (map.p) {\n                    map.p.load(map.n, makeRequire(relName, true), makeLoad(depName), {});\n                    args[i] = defined[depName];\n                } else {\n                    throw new Error(name + \' missing \' + depName);\n                }\n            }\n\n            ret = callback.apply(defined[name], args);\n\n            if (name) {\n                //If setting exports via "module" is in play,\n                //favor that over return value and exports. After that,\n                //favor a non-undefined return value over exports use.\n                if (cjsModule && cjsModule.exports !== undef &&\n                        cjsModule.exports !== defined[name]) {\n                    defined[name] = cjsModule.exports;\n                } else if (ret !== undef || !usingExports) {\n                    //Use the return value from the function.\n                    defined[name] = ret;\n                }\n            }\n        } else if (name) {\n            //May just be an object definition for the module. Only\n            //worry about defining if have a module name.\n            defined[name] = callback;\n        }\n    };\n\n    requirejs = require = req = function (deps, callback, relName, forceSync, alt) {\n        if (typeof deps === "string") {\n            if (handlers[deps]) {\n                //callback in this case is really relName\n                return handlers[deps](callback);\n            }\n            //Just return the module wanted. In this scenario, the\n            //deps arg is the module name, and second arg (if passed)\n            //is just the relName.\n            //Normalize module name, if it contains . or ..\n            return callDep(makeMap(deps, callback).f);\n        } else if (!deps.splice) {\n            //deps is a config object, not an array.\n            config = deps;\n            if (callback.splice) {\n                //callback is an array, which means it is a dependency list.\n                //Adjust args if there are dependencies\n                deps = callback;\n                callback = relName;\n                relName = null;\n            } else {\n                deps = undef;\n            }\n        }\n\n        //Support require([\'a\'])\n        callback = callback || function () {};\n\n        //If relName is a function, it is an errback handler,\n        //so remove it.\n        if (typeof relName === \'function\') {\n            relName = forceSync;\n            forceSync = alt;\n        }\n\n        //Simulate async callback;\n        if (forceSync) {\n            main(undef, deps, callback, relName);\n        } else {\n            //Using a non-zero value because of concern for what old browsers\n            //do, and latest browsers "upgrade" to 4 if lower value is used:\n            //http://www.whatwg.org/specs/web-apps/current-work/multipage/timers.html#dom-windowtimers-settimeout:\n            //If want a value immediately, use require(\'id\') instead -- something\n            //that works in almond on the global level, but not guaranteed and\n            //unlikely to work in other AMD implementations.\n            setTimeout(function () {\n                main(undef, deps, callback, relName);\n            }, 4);\n        }\n\n        return req;\n    };\n\n    /**\n     * Just drops the config on the floor, but returns req in case\n     * the config return value is used.\n     */\n    req.config = function (cfg) {\n        config = cfg;\n        if (config.deps) {\n            req(config.deps, config.callback);\n        }\n        return req;\n    };\n\n    define = function (name, deps, callback) {\n\n        //This module may not have dependencies\n        if (!deps.splice) {\n            //deps is not an array, so probably means\n            //an object literal or factory function for\n            //the value. Adjust args.\n            callback = deps;\n            deps = [];\n        }\n\n        if (!hasProp(defined, name) && !hasProp(waiting, name)) {\n            waiting[name] = [name, deps, callback];\n        }\n    };\n\n    define.amd = {\n        jQuery: true\n    };\n}());\n\ndefine("vendor/almond", function(){});\n\n/* global importScripts */\ndefine(\'ammo_worker_api\',[], function() {\n  \n\n  function AmmoWorkerAPI(opts) {\n    this.maxBodies = 1000;\n    this.maxVehicles = 32;\n    this.maxWheelsPerVehicle = 8;\n    this.maxKinematicCharacterControllers = 16;\n    this.maxGhostObjects = 500;\n\n    for (var i in opts) {\n      if (opts.hasOwnProperty(i)) {\n        this[i] = opts[i];\n      }\n    }\n  }\n\n  AmmoWorkerAPI.prototype = {\n    collisionFlags: {\n      CF_STATIC_OBJECT: 1, \n      CF_KINEMATIC_OBJECT: 2, \n      CF_NO_CONTACT_RESPONSE: 4, \n      CF_CUSTOM_MATERIAL_CALLBACK: 8, \n      CF_CHARACTER_OBJECT: 16, \n      CF_DISABLE_VISUALIZE_OBJECT: 32, \n      CF_DISABLE_SPU_COLLISION_PROCESSING: 64 \n    },\n\n    activationStates: {\n      ACTIVE_TAG: 1,\n      ISLAND_SLEEPING: 2,\n      WANTS_DEACTIVATION: 3,\n      DISABLE_DEACTIVATION: 4,\n      DISABLE_SIMULATION: 5\n    }, \n\n    collisionFilterGroups:  {\n      DefaultFilter: 1,\n      StaticFilter: 2,\n      KinematicFilter: 4,\n      DebrisFilter: 8,\n      SensorTrigger: 16,\n      CharacterFilter: 32,\n      AllFilter: -1 //all bits sets: DefaultFilter | StaticFilter | KinematicFilter | DebrisFilter | SensorTrigger\n    },\n\n    init: function() {\n      var bufferSize = \n            // FLOAT64 Types\n            (8 * \n              (\n                // Rigid Bodies\n                (this.maxBodies * 7 ) + \n                // Vehicles\n                (this.maxVehicles * this.maxWheelsPerVehicle * 7) +\n                // Character Controllers\n                (this.maxKinematicCharacterControllers * 7) + \n                (this.maxGhostObjects * 7)\n              )\n            );\n\n\n      this.OFFSET_RIGID_BODY = 0;\n      this.OFFSET_VEHICLE = this.maxBodies * 7;\n      this.OFFSET_KINEMATIC_CHARACTER = this.OFFSET_VEHICLE + (this.maxVehicles * this.maxWheelsPerVehicle * 7);\n      this.OFFSET_GHOST_OBJECT = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7;\n\n      //import Scripts(\'./js/ammo.js\');\n      importScripts(\'http://assets.verold.com/verold_api/lib/ammo.js\');\n\n      this.tmpVec = [\n        new Ammo.btVector3(),\n        new Ammo.btVector3(),\n        new Ammo.btVector3(),\n        new Ammo.btVector3()\n      ];\n\n      this.tmpQuaternion = [\n        new Ammo.btQuaternion(),\n        new Ammo.btQuaternion()\n      ];\n\n      this.tmpTrans = [\n        new Ammo.btTransform(),\n        new Ammo.btTransform()\n      ];\n\n      this.bodies = [];\n      this.vehicles = [];\n      this.constraints = [];\n      this.ghosts = [];\n      this.characterControllers = [];\n\n      this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();\n      this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);\n\n      this.overlappingPairCache = new Ammo.btDbvtBroadphase();\n\n      /*\n      this.tmpVec[0].setX(-1000);\n      this.tmpVec[0].setY(-1000);\n      this.tmpVec[0].setZ(-1000);\n      this.tmpVec[1].setX(1000);\n      this.tmpVec[1].setY(1000);\n      this.tmpVec[1].setZ(1000);\n      this.overlappingPairCache = new Ammo.btAxisSweep3(this.tmpVec[0], this.tmpVec[1]);\n      */\n      \n      this.solver = new Ammo.btSequentialImpulseConstraintSolver();\n      this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(this.dispatcher,\n          this.overlappingPairCache, this.solver, this.collisionConfiguration);\n\n      this.ghostPairCallback = new Ammo.btGhostPairCallback();\n      this.dynamicsWorld.getPairCache().setInternalGhostPairCallback(this.ghostPairCallback);\n\n      this.dynamicsWorld.getDispatchInfo().set_m_allowedCcdPenetration(0.0001);\n\n      this.buffers = [\n        new ArrayBuffer(bufferSize),\n        new ArrayBuffer(bufferSize),\n        new ArrayBuffer(bufferSize),\n        new ArrayBuffer(bufferSize)\n      ];\n\n      this.ghostCollisions = {};\n\n      this.fire(\'ready\');\n    },\n\n    getStats: function(undefined, fn) {\n      return fn({\n        totalTime: this.totalTime,\n        frames: this.frames,\n        fps: this.fps,\n        buffersReady: this.buffers.length\n      });\n    },\n\n    startSimulation: function() {\n      var that = this, last = Date.now();\n\n      that.totalTime = 0;\n      that.frames = 0;\n\n      this.simulationTimerId = setInterval(function() {\n        var vehicle, update, i, j, pos, now = Date.now(),\n            delta = (now - last) / 1000;\n\n        that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);\n\n        if (that.buffers.length > 0) {\n          update = new Float64Array(that.buffers.pop());\n        }\n\n        if (update && update.buffer instanceof ArrayBuffer) {\n          for (i in that.bodies) {\n            if (that.bodies[i]) {\n              that.tmpTrans[0].setIdentity();\n              that.bodies[i].getMotionState().getWorldTransform(that.tmpTrans[0]);\n              pos = that.OFFSET_RIGID_BODY + (i * 7);\n\n              update[pos + 0] = that.tmpTrans[0].getOrigin().x();\n              update[pos + 1] = that.tmpTrans[0].getOrigin().y();\n              update[pos + 2] = that.tmpTrans[0].getOrigin().z();\n              update[pos + 3] = that.tmpTrans[0].getRotation().x();\n              update[pos + 4] = that.tmpTrans[0].getRotation().y();\n              update[pos + 5] = that.tmpTrans[0].getRotation().z();\n              update[pos + 6] = that.tmpTrans[0].getRotation().w();\n            }\n          }\n\n          for (i in that.vehicles) {\n            if (that.vehicles[i]) {\n              vehicle = that.vehicles[i];\n\n              for ( j = 0; j < vehicle.getNumWheels() + 1; j++ ) {\n                that.tmpTrans[0] = vehicle.getWheelInfo(j).get_m_worldTransform();\n                pos = that.OFFSET_VEHICLE + (i * that.maxWheelsPerVehicle * 7) + (j * 7);\n\n                update[pos + 0] = that.tmpTrans[0].getOrigin().x();\n                update[pos + 1] = that.tmpTrans[0].getOrigin().y();\n                update[pos + 2] = that.tmpTrans[0].getOrigin().z();\n                update[pos + 3] = that.tmpTrans[0].getRotation().x();\n                update[pos + 4] = that.tmpTrans[0].getRotation().y();\n                update[pos + 5] = that.tmpTrans[0].getRotation().z();\n                update[pos + 6] = that.tmpTrans[0].getRotation().w();\n              }\n            }\n          }\n\n          for (i in that.characterControllers) {\n            if (that.characterControllers[i]) {\n              var trans = that.characterControllers[i].getGhostObject().getWorldTransform();\n              pos = that.OFFSET_KINEMATIC_CHARACTER + (i * 7);\n\n              update[pos + 0] = trans.getOrigin().x();\n              update[pos + 1] = trans.getOrigin().y();\n              update[pos + 2] = trans.getOrigin().z();\n              update[pos + 3] = trans.getRotation().x();\n              update[pos + 4] = trans.getRotation().y();\n              update[pos + 5] = trans.getRotation().z();\n              update[pos + 6] = trans.getRotation().w();\n            }  \n          }\n\n          that.ghosts.forEach(function(ghost, id) {\n            if (ghost) {\n              var trans = ghost.getWorldTransform();\n              pos = that.OFFSET_GHOST_OBJECT + (id * 7);\n\n              update[pos + 0] = trans.getOrigin().x();\n              update[pos + 1] = trans.getOrigin().y();\n              update[pos + 2] = trans.getOrigin().z();\n              update[pos + 3] = trans.getRotation().x();\n              update[pos + 4] = trans.getRotation().y();\n              update[pos + 5] = trans.getRotation().z();\n              update[pos + 6] = trans.getRotation().w();\n\n              that.ghostCollisions[id] = that.ghostCollisions[id] || {};\n\n              var i, \n                  idx,\n                  num = ghost.getNumOverlappingObjects(),\n                  newCollisions = {},\n                  body;\n\n              if (num > 0) {\n                for (i = 0; i < num; i++) {\n                  body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btRigidBody);\n                  newCollisions[body.id] = true;\n\n                  if (!that.ghostCollisions[id][body.id]) {\n                    that.fire(\'ghost_enter\', { \n                      objectA: { type: \'ghost\', id: id },\n                      objectB: { type: \'rigidBody\', id: body.id }\n                    });  \n                  }\n                }\n              } \n\n              for (idx in that.ghostCollisions[id]) {\n                if (!newCollisions[idx]) {\n                  that.fire(\'ghost_exit\', { \n                    objectA: { type: \'ghost\', id: id },\n                    objectB: { type: \'rigidBody\', id: idx }\n                  });\n                  that.ghostCollisions[id][idx] = false; \n                }\n              }\n              that.ghostCollisions[id] = newCollisions;\n            }\n          }.bind(this));\n\n          that.fire(\'update\', update.buffer, [update.buffer]);\n          that.frames ++;\n\n          last = now;\n          that.totalTime += delta;\n          that.fps = Math.round( that.frames / that.totalTime );\n        }\n      }, this.step * 1000);\n    },\n\n    stopSimulation: function() {\n      if (this.simulationTimerId) {\n        clearInterval(this.simulationTimerId);\n      }\n    },\n\n    swap: function(buf) {\n      if (buf instanceof ArrayBuffer) {\n        this.buffers.push(buf);\n      }\n    },\n\n    setStep: function(step) {\n      this.step = step;\n    },\n\n    setIterations: function(iterations) {\n      this.iterations = iterations;\n    },\n\n    setGravity: function(gravity) {\n      this.tmpVec[0].setX(gravity.x);\n      this.tmpVec[0].setY(gravity.y);\n      this.tmpVec[0].setZ(gravity.z);\n      this.dynamicsWorld.setGravity(this.tmpVec[0]);\n    },\n\n    _createCompoundShape: function(shape) {\n      var compound = new Ammo.btCompoundShape(),\n          localTransform = this.tmpTrans[0],\n          child,\n          childShape;\n\n      if (shape.children && shape.children.length) {\n        for (var idx in shape.children) {\n          if (shape.children.hasOwnProperty(idx)) {\n            child = shape.children[idx];\n            childShape = this._createShape(child);\n            localTransform.setIdentity();\n            this.tmpVec[0].setX(child.localTransform.position.x);\n            this.tmpVec[0].setY(child.localTransform.position.y);\n            this.tmpVec[0].setZ(child.localTransform.position.z);\n            localTransform.setOrigin(this.tmpVec[0]);\n            this.tmpQuaternion[0].setX(child.localTransform.rotation.x);\n            this.tmpQuaternion[0].setY(child.localTransform.rotation.y);\n            this.tmpQuaternion[0].setZ(child.localTransform.rotation.z);\n            this.tmpQuaternion[0].setW(child.localTransform.rotation.w);\n            localTransform.setRotation(this.tmpQuaternion[0]);\n            compound.addChildShape(localTransform, childShape);\n          }\n        }\n      }\n\n      return compound;\n    },\n\n    _createConvexHullMeshShape: function(shape) {\n      var colShape;\n\n      if (!shape.vertices) {\n        throw new Error(\'You must supply a list of vertices!\');\n      }\n\n      colShape = new Ammo.btConvexHullShape();\n\n      for (var i = 0; i < shape.vertices.length/3; i+=3) {\n        this.tmpVec[0].setX(shape.vertices[i*3+0]);\n        this.tmpVec[0].setY(shape.vertices[i*3+1]);\n        this.tmpVec[0].setZ(shape.vertices[i*3+2]);\n        colShape.addPoint(this.tmpVec[0]); \n      }\n\n      return colShape;\n    },\n\n    _createTriangleMeshShape: function(shape, type) {\n      var i, mesh, className;\n\n      if (!shape.triangles) {\n        throw new Error(\'You must supply a list of triangles!\');\n      }\n\n      switch (type) {\n        case \'bvh\':\n          className = \'btBvhTriangleMeshShape\';\n          break;\n\n        case \'convex\':\n          className = \'btConvexTriangleMeshShape\';\n          break;\n\n        default:\n          throw new Error(\'You must supply a valid mesh type!\');\n      }\n\n      mesh = new Ammo.btTriangleMesh(true, true);\n\n      for (i = 0; i < shape.triangles.length/9; i ++) {\n        this.tmpVec[0].setX(shape.triangles[i * 9 + 0]);\n        this.tmpVec[0].setY(shape.triangles[i * 9 + 1]);\n        this.tmpVec[0].setZ(shape.triangles[i * 9 + 2]);\n\n        this.tmpVec[1].setX(shape.triangles[i * 9 + 3]);\n        this.tmpVec[1].setY(shape.triangles[i * 9 + 4]);\n        this.tmpVec[1].setZ(shape.triangles[i * 9 + 5]);\n\n        this.tmpVec[2].setX(shape.triangles[i * 9 + 6]);\n        this.tmpVec[2].setY(shape.triangles[i * 9 + 7]);\n        this.tmpVec[2].setZ(shape.triangles[i * 9 + 8]);\n\n        mesh.addTriangle(this.tmpVec[0], this.tmpVec[1], this.tmpVec[2], false);\n      }\n\n      return new Ammo[className](mesh, true, true);\n    },\n\n    _createShape: function(shape) {\n      var colShape;\n      switch(shape.shape) {\n      case \'box\':\n        this.tmpVec[0].setX(shape.halfExtents.x);\n        this.tmpVec[0].setY(shape.halfExtents.y);\n        this.tmpVec[0].setZ(shape.halfExtents.z);\n        colShape = new Ammo.btBoxShape(this.tmpVec[0]);\n        break;\n      case \'sphere\':\n        colShape = new Ammo.btSphereShape(shape.radius);\n        break;\n      case \'staticplane\':\n        this.tmpVec[0].setX(shape.normal.x);\n        this.tmpVec[0].setY(shape.normal.y);\n        this.tmpVec[0].setZ(shape.normal.z);\n        colShape = new Ammo.btStaticPlaneShape(this.tmpVec[0], shape.distance);\n        break;\n      case \'cylinder\':\n        this.tmpVec[0].setX(shape.width);\n        this.tmpVec[0].setY(shape.height);\n        this.tmpVec[0].setZ(shape.depth);\n        colShape = new Ammo.btCylinderShape(this.tmpVec[0]);\n        break;\n      case \'capsule\':\n        colShape = new Ammo.btCapsuleShape(shape.radius, shape.height);\n        break;\n      case \'cone\':\n        colShape = new Ammo.btConeShape(shape.radius, shape.height);\n        break;\n      case \'compound\':\n        colShape = this._createCompoundShape(shape);\n        break;\n      case \'convex_hull_mesh\':\n        colShape = this._createConvexHullMeshShape(shape);\n        break;\n      case \'convex_triangle_mesh\':\n        colShape = this._createTriangleMeshShape(shape, \'convex\');\n        break;\n      case \'bvh_triangle_mesh\':\n        colShape = this._createTriangleMeshShape(shape, \'bvh\');\n        break;\n      default:\n        return console.error(\'Unknown shape: \' + shape.shape);\n      }\n      return colShape;\n    },\n\n    Broadphase_aabbTest: function(descriptor, fn) {\n      var that = this;\n\n      if (!this.aabbCallback) {\n        this.aabbCallback = new Ammo.ConcreteBroadphaseAabbCallback();\n        this.aabbCallback.bodies = [];\n\n        (function() {\n          Ammo.customizeVTable(that.aabbCallback, [{\n            original: Ammo.ConcreteBroadphaseAabbCallback.prototype.process,\n            replacement: function(thisPtr, proxyPtr) {\n              var proxy = Ammo.wrapPointer(proxyPtr, Ammo.btBroadphaseProxy);\n              var clientObject = Ammo.wrapPointer(proxy.get_m_clientObject(), Ammo.btRigidBody);\n              var _this = Ammo.wrapPointer(thisPtr, Ammo.ConcreteBroadphaseAabbCallback);\n\n              if (clientObject.id) {\n                _this.bodies.push(clientObject.id);\n              }\n\n              return true;\n            }\n          }]);\n        })();\n      }\n\n      this.tmpVec[0].setX(descriptor.min.x);\n      this.tmpVec[0].setY(descriptor.min.y);\n      this.tmpVec[0].setZ(descriptor.min.z);\n\n      this.tmpVec[1].setX(descriptor.max.x);\n      this.tmpVec[1].setY(descriptor.max.y);\n      this.tmpVec[1].setZ(descriptor.max.z);\n\n      this.aabbCallback.bodies = [];\n      this.dynamicsWorld\n        .getBroadphase()\n        .aabbTest(this.tmpVec[0], this.tmpVec[1],\n          this.aabbCallback);\n\n      fn(this.aabbCallback.bodies);\n    },\n\n    Vehicle_create: function(descriptor, fn) {\n      var vehicleTuning = new Ammo.btVehicleTuning(),\n          body = this.bodies[descriptor.bodyId],\n          vehicle;\n\n      if (!body) {\n        return console.error(\'could not find body\');\n      }\n\n      if (descriptor.tuning) {\n        if (descriptor.tuning.suspensionStiffness) {\n          vehicleTuning.set_m_suspensionStiffness(descriptor.tuning.suspensionStiffness);\n        }\n\n        if (descriptor.tuning.suspensionCompression) {\n          vehicleTuning.set_m_suspensionCompression(descriptor.tuning.suspensionCompression);\n        }\n\n        if (descriptor.tuning.suspensionDamping) {\n          vehicleTuning.set_m_suspensionDamping(descriptor.tuning.suspensionDamping);\n        }\n\n        if (descriptor.tuning.maxSuspensionTravelCm) {\n          vehicleTuning.set_m_maxSuspensionTravelCm(descriptor.tuning.maxSuspensionTravelCm);\n        }\n\n        if (descriptor.tuning.maxSuspensionForce) {\n          vehicleTuning.set_m_maxSuspensionForce(descriptor.tuning.maxSuspensionForce);\n        }\n\n        if (descriptor.tuning.frictionSlip) {\n          vehicleTuning.set_m_frictionSlip(descriptor.tuning.frictionSlip);\n        }\n      }\n\n      vehicle = new Ammo.btRaycastVehicle(vehicleTuning, body, new Ammo.btDefaultVehicleRaycaster(this.dynamicsWorld));\n      vehicle.tuning = vehicleTuning;\n\n      body.setActivationState(this.activationStates.DISABLE_DEACTIVATION);\n      vehicle.setCoordinateSystem(0, 1, 2);\n\n      this.dynamicsWorld.addVehicle(vehicle);\n      var idx = this.vehicles.push(vehicle) - 1;\n      vehicle.id = idx;\n\n      if (typeof fn === \'function\') {\n        fn(idx);\n      }\n    },\n\n    Vehicle_addWheel: function(descriptor, fn) {\n      var vehicle = this.vehicles[descriptor.vehicleId];\n\n      if (vehicle !== undefined) {\n        var tuning = vehicle.tuning,\n            connectionPoint = this.tmpVec[0],\n            wheelDirection = this.tmpVec[1],\n            wheelAxle = this.tmpVec[2];\n\n\n        if (typeof descriptor.tuning === \'object\') {\n          tuning = new Ammo.btVehicleTuning();\n\n          if (descriptor.tuning.suspensionStiffness) {\n            tuning.set_m_suspensionStiffness(descriptor.tuning.suspensionStiffness);\n          }\n\n          if (descriptor.tuning.suspensionCompression) {\n            tuning.set_m_suspensionCompression(descriptor.tuning.suspensionCompression);\n          }\n\n          if (descriptor.tuning.suspensionDamping) {\n            tuning.set_m_suspensionDamping(descriptor.tuning.suspensionDamping);\n          }\n\n          if (descriptor.tuning.maxSuspensionTravelCm) {\n            tuning.set_m_maxSuspensionTravelCm(descriptor.tuning.maxSuspensionTravelCm);\n          }\n\n          if (descriptor.tuning.maxSuspensionForce) {\n            tuning.set_m_maxSuspensionForce(descriptor.tuning.maxSuspensionForce);\n          }\n\n          if (descriptor.tuning.frictionSlip) {\n            tuning.set_m_frictionSlip(descriptor.tuning.frictionSlip);\n          }\n        } \n\n        connectionPoint.setX(descriptor.connectionPoint.x);\n        connectionPoint.setY(descriptor.connectionPoint.y);\n        connectionPoint.setZ(descriptor.connectionPoint.z);\n\n        wheelDirection.setX(descriptor.wheelDirection.x);\n        wheelDirection.setY(descriptor.wheelDirection.y);\n        wheelDirection.setZ(descriptor.wheelDirection.z);\n\n        wheelAxle.setX(descriptor.wheelAxle.x);\n        wheelAxle.setY(descriptor.wheelAxle.y);\n        wheelAxle.setZ(descriptor.wheelAxle.z);\n\n        vehicle.addWheel(\n          connectionPoint,\n          wheelDirection,\n          wheelAxle,\n          descriptor.suspensionRestLength,\n          descriptor.wheelRadius,\n          tuning,\n          descriptor.isFrontWheel\n        );\n\n        if (typeof fn === \'function\') {\n          fn(vehicle.getNumWheels() - 1);\n        }\n      }\n    },\n\n    Vehicle_setSteeringValue: function(descriptor) {\n      var vehicle = this.vehicles[descriptor.vehicleId];\n      if (vehicle) {\n        this.vehicles[descriptor.vehicleId].setSteeringValue(descriptor.steeringValue, descriptor.wheelIndex);\n      }\n    },\n\n    Vehicle_setBrake: function(descriptor) {\n      var vehicle = this.vehicles[descriptor.vehicleId];\n      if (vehicle) {\n        this.vehicles[descriptor.vehicleId].setBrake(descriptor.brake, descriptor.wheelIndex);\n      }\n    },\n\n    Vehicle_setWheelInfo: function(descriptor) {  \n      var vehicle = this.vehicles[descriptor.vehicleId],\n          info;\n      if (vehicle) {\n\n        info = this.vehicles[descriptor.vehicleId].getWheelInfo(descriptor.wheelIndex);\n\n        for (var i in descriptor.properties) {\n          if (descriptor.properties.hasOwnProperty(i)) {\n            info[\'set_m_\' + i](descriptor.properties[i]); \n          }\n        }\n      }\n    },\n\n    Vehicle_applyEngineForce: function(descriptor) {\n      var vehicle = this.vehicles[descriptor.vehicleId];\n      if (vehicle) {\n        this.vehicles[descriptor.vehicleId].applyEngineForce(descriptor.force, descriptor.wheelIndex);\n      }\n    },\n\n    Point2PointConstraint_create: function(descriptor, fn) {\n      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],\n          rigidBodyB = typeof descriptor.rigidBodyIdB !== \'undefined\' && \n            this.bodies[descriptor.rigidBodyIdB],\n          constraint,\n          id;\n\n      if (rigidBodyA) {\n        this.tmpVec[0].setX(descriptor.pivotA.x);\n        this.tmpVec[0].setY(descriptor.pivotA.y);\n        this.tmpVec[0].setZ(descriptor.pivotA.z); \n\n        if (rigidBodyB) {\n          rigidBodyB = this.bodies[descriptor.rigidBodyIdB];\n          this.tmpVec[1].setX(descriptor.pivotB.x);\n          this.tmpVec[1].setY(descriptor.pivotB.y);\n          this.tmpVec[1].setZ(descriptor.pivotB.z); \n          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB, this.tmpVec[0], this.tmpVec[1]);\n        } else {\n          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB);\n        }\n\n        id = this.constraints.push(constraint) - 1;\n\n        this.dynamicsWorld.addConstraint(constraint);\n        constraint.enableFeedback();\n\n        if (typeof fn === \'function\') {\n          fn(id);\n        }\n      }\n    },\n\n    SliderConstraint_create: function(descriptor, fn) {\n      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],\n          rigidBodyB = typeof descriptor.rigidBodyIdB !== \'undefined\' && \n            this.bodies[descriptor.rigidBodyIdB],\n          constraint,\n          id;\n\n      if (rigidBodyA) {\n        var transformA = new Ammo.btTransform();\n\n        this.tmpVec[0].setX(descriptor.frameInA.position.x);\n        this.tmpVec[0].setY(descriptor.frameInA.position.y);\n        this.tmpVec[0].setZ(descriptor.frameInA.position.z);\n\n        this.tmpQuaternion[0].setX(descriptor.frameInA.rotation.x);\n        this.tmpQuaternion[0].setY(descriptor.frameInA.rotation.y);\n        this.tmpQuaternion[0].setZ(descriptor.frameInA.rotation.z);\n        this.tmpQuaternion[0].setW(descriptor.frameInA.rotation.w);\n\n        transformA.setOrigin(this.tmpVec[0]);\n        transformA.setRotation(this.tmpQuaternion[0]);\n\n        if (rigidBodyB) {\n          var transformB = new Ammo.btTransform();\n\n          this.tmpVec[1].setX(descriptor.frameInB.position.x);\n          this.tmpVec[1].setY(descriptor.frameInB.position.y);\n          this.tmpVec[1].setZ(descriptor.frameInB.position.z);\n\n          this.tmpQuaternion[1].setX(descriptor.frameInB.rotation.x);\n          this.tmpQuaternion[1].setY(descriptor.frameInB.rotation.y);\n          this.tmpQuaternion[1].setZ(descriptor.frameInB.rotation.z);\n          this.tmpQuaternion[1].setW(descriptor.frameInB.rotation.w);\n\n          transformB.setOrigin(this.tmpVec[1]);\n          transformB.setRotation(this.tmpQuaternion[1]);\n\n          constraint = new Ammo.btSliderConstraint(rigidBodyA, rigidBodyB, \n            transformA, transformB);\n        } else {\n\n        }\n\n        id = this.constraints.push(constraint) - 1;\n\n        this.dynamicsWorld.addConstraint(constraint);\n        constraint.enableFeedback();\n\n        if (typeof fn === \'function\') {\n          fn(id);\n        }\n      }\n    },\n\n    SliderConstraint_setLowerLinLimit: function(descriptor) {\n      var constraint = this.constraints[descriptor.constraintId];\n\n      if (constraint) {\n        constraint.setLowerLinLimit(descriptor.limit);\n      }\n    },\n\n    SliderConstraint_setUpperLinLimit: function(descriptor) {\n      var constraint = this.constraints[descriptor.constraintId];\n\n      if (constraint) {\n        constraint.setUpperLinLimit(descriptor.limit);\n      }\n    },\n\n    SliderConstraint_setLowerAngLimit: function(descriptor) {\n      var constraint = this.constraints[descriptor.constraintId];\n\n      if (constraint) {\n        constraint.setLowerAngLimit(descriptor.limit);\n      }\n    },\n\n    SliderConstraint_setUpperAngLimit: function(descriptor) {\n      var constraint = this.constraints[descriptor.constraintId];\n\n      if (constraint) {\n        constraint.setUpperAngLimit(descriptor.limit);\n      }\n    },\n\n    HingeConstraint_create: function(descriptor, fn) {\n      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],\n          rigidBodyB = typeof descriptor.rigidBodyIdB !== \'undefined\' && \n            this.bodies[descriptor.rigidBodyIdB],\n          constraint,\n          id;\n\n      if (rigidBodyA) {\n        this.tmpVec[0].setX(descriptor.pivotA.x);\n        this.tmpVec[0].setY(descriptor.pivotA.y);\n        this.tmpVec[0].setZ(descriptor.pivotA.z); \n        this.tmpVec[1].setX(descriptor.axisA.x);\n        this.tmpVec[1].setX(descriptor.axisA.y);\n        this.tmpVec[1].setX(descriptor.axisA.z);\n\n        if (rigidBodyB) {\n          rigidBodyB = this.bodies[descriptor.rigidBodyIdB];\n          this.tmpVec[2].setX(descriptor.pivotB.x);\n          this.tmpVec[2].setY(descriptor.pivotB.y);\n          this.tmpVec[2].setZ(descriptor.pivotB.z); \n          this.tmpVec[3].setX(descriptor.axisB.x);\n          this.tmpVec[3].setY(descriptor.axisB.y);\n          this.tmpVec[3].setZ(descriptor.axisB.z); \n          constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,\n              this.tmpVec[0], this.tmpVec[2], this.tmpVec[1], this.tmpVec[3]);\n        } else {\n          constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,\n              this.tmpVec[0], this.tmpVec[1]);\n        }\n\n        id = this.constraints.push(constraint) - 1;\n\n        this.dynamicsWorld.addConstraint(constraint);\n        constraint.enableFeedback();\n\n        if (typeof fn === \'function\') {\n          fn(id);\n        }\n      }\n    },\n\n    HingeConstraint_setLimit: function(descriptor) {\n      var constraint = this.constraints[descriptor.constraintId];\n\n      if (constraint) {\n        constraint.setLimit(descriptor.low, descriptor.high, descriptor.softness,\n              descriptor.biasFactor, descriptor.relaxationFactor);\n      }\n    },\n\n    /*\n    DynamicsWorld_rayTestAllHits: function(descriptor, fn) {\n      this.tmpVec[0].setX(descriptor.rayFromWorld.x);\n      this.tmpVec[0].setY(descriptor.rayFromWorld.y);\n      this.tmpVec[0].setZ(descriptor.rayFromWorld.z);\n      this.tmpVec[1].setX(descriptor.rayToWorld.x);\n      this.tmpVec[1].setY(descriptor.rayToWorld.y);\n      this.tmpVec[1].setZ(descriptor.rayToWorld.z);\n\n      var callback = new Ammo.AllHitsRayResultCallback(this.tmpVec[0], this.tmpVec[1]);\n\n      this.dynamicsWorld.rayTest(this.tmpVec[0], this.tmpVec[1], callback);\n\n      if (callback.hasHit()) {\n        console.log(\'hits\', callback.m_hitFractions.size());\n      } else {\n        if (typeof fn === \'function\') {\n          fn();\n        }\n      }\n\n      Ammo.destroy(callback);\n    },\n    */\n\n    DynamicsWorld_rayTestClosest: function(descriptor, fn) {\n      this.tmpVec[0].setX(descriptor.rayFromWorld.x);\n      this.tmpVec[0].setY(descriptor.rayFromWorld.y);\n      this.tmpVec[0].setZ(descriptor.rayFromWorld.z);\n      this.tmpVec[1].setX(descriptor.rayToWorld.x);\n      this.tmpVec[1].setY(descriptor.rayToWorld.y);\n      this.tmpVec[1].setZ(descriptor.rayToWorld.z);\n\n      var callback = new Ammo.ClosestRayResultCallback(this.tmpVec[0], this.tmpVec[1]);\n\n      this.dynamicsWorld.rayTest(this.tmpVec[0], this.tmpVec[1], callback);\n\n      if (callback.hasHit()) {\n        var body = Ammo.castObject(callback.get_m_collisionObject(), Ammo.btRigidBody);\n\n        if (body.id) {\n          if (typeof fn === \'function\') {\n            fn({\n              type: \'btRigidBody\', \n              bodyId: body.id,\n              hitPointWorld: {\n                x: callback.get_m_hitPointWorld().x(),\n                y: callback.get_m_hitPointWorld().y(),\n                z: callback.get_m_hitPointWorld().z()\n              },\n              hitNormalWorld: {\n                x: callback.get_m_hitNormalWorld().x(),\n                y: callback.get_m_hitNormalWorld().y(),\n                z: callback.get_m_hitNormalWorld().z()\n              }\n            });\n          }\n        }\n      } else {\n        if (typeof fn === \'function\') {\n          fn();\n        }\n      }\n\n      Ammo.destroy(callback);\n    },\n\n    DynamicsWorld_addRigidBody: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n\n      if (body) {\n        this.dynamicsWorld.addRigidBody(body, descriptor.group, descriptor.mask);\n      }\n    },\n\n    DynamicsWorld_addGhostObject: function(descriptor) {\n      var ghost = this.ghosts[descriptor.ghostId];\n\n      if (ghost) {\n        this.dynamicsWorld.addCollisionObject(ghost, descriptor.group, descriptor.mask);  \n      }\n    },\n\n    GhostObject_create: function(descriptor, fn) {\n      var colShape = this._createShape(descriptor.shape),\n          origin = this.tmpVec[0],\n          rotation = this.tmpQuaternion[0],\n          ghostObject;\n\n      if (!colShape) {\n        return console.error(\'Invalid collision shape!\');\n      }\n\n      this.tmpTrans[0].setIdentity();\n\n      origin.setX(descriptor.position.x);\n      origin.setY(descriptor.position.y);\n      origin.setZ(descriptor.position.z);\n\n      rotation.setX(descriptor.quaternion.x);\n      rotation.setY(descriptor.quaternion.y);\n      rotation.setZ(descriptor.quaternion.z);\n      rotation.setW(descriptor.quaternion.w);\n\n      this.tmpTrans[0].setOrigin(origin);\n      this.tmpTrans[0].setRotation(rotation);\n\n      ghostObject = new Ammo.btPairCachingGhostObject();\n      ghostObject.setWorldTransform(this.tmpTrans[0]);\n\n      ghostObject.setCollisionShape(colShape);\n      ghostObject.setCollisionFlags(this.collisionFlags.CF_NO_CONTACT_RESPONSE); // no collision response \n\n      var idx = this.ghosts.push(ghostObject) - 1;\n      ghostObject.id = idx;\n\n      if (typeof fn === \'function\') {\n        fn(idx);\n      }\n    },\n\n    KinematicCharacterController_create: function(descriptor, fn) {\n      var colShape,\n          startTransform = this.tmpTrans[0],\n          origin = this.tmpVec[1],\n          rotation = this.tmpQuaternion[0],\n          ghost,\n          controller;\n\n      startTransform.setIdentity();\n\n      colShape = this._createShape(descriptor.shape);\n\n      if (!colShape) {\n        throw(\'Invalid collision shape!\');\n      }\n\n      origin.setX(descriptor.position.x);\n      origin.setY(descriptor.position.y);\n      origin.setZ(descriptor.position.z);\n\n      rotation.setX(descriptor.quaternion.x);\n      rotation.setY(descriptor.quaternion.y);\n      rotation.setZ(descriptor.quaternion.z);\n      rotation.setW(descriptor.quaternion.w);\n\n      startTransform.setOrigin(origin);\n      startTransform.setRotation(rotation);\n\n      ghost = new Ammo.btPairCachingGhostObject();\n      ghost.setWorldTransform(startTransform);\n\n      ghost.setCollisionShape(colShape);\n      ghost.setCollisionFlags(this.collisionFlags.CF_CHARACTER_OBJECT);\n\n      controller = new Ammo.btKinematicCharacterController (ghost, colShape, descriptor.stepHeight);\n\n      this.dynamicsWorld.addCollisionObject(ghost, this.collisionFilterGroups.CharacterFilter,\n        this.collisionFilterGroups.StaticFilter | this.collisionFilterGroups.DefaultFilter);\n\n      this.dynamicsWorld.addAction(controller);\n\n      var idx = this.characterControllers.push(controller) - 1;\n      this.ghost = ghost;\n      controller.id = idx;\n\n      if (typeof fn === \'function\') {\n        fn(idx);\n      }\n    },\n\n    KinematicCharacterController_setWalkDirection: function(descriptor) {\n      var controller = this.characterControllers[descriptor.controllerId];\n\n      if (controller) {\n        this.tmpVec[0].setX(descriptor.direction.x);\n        this.tmpVec[0].setY(descriptor.direction.y);\n        this.tmpVec[0].setZ(descriptor.direction.z);\n\n        controller.setWalkDirection(this.tmpVec[0]);\n      }\n    },\n\n    KinematicCharacterController_jump: function(descriptor) {\n      var controller = this.characterControllers[descriptor.controllerId];\n\n      if (controller) {\n        controller.jump();\n      }\n    },\n\n    KinematicCharacterController_setJumpSpeed: function(descriptor) {\n      var controller = this.characterControllers[descriptor.controllerId];\n\n      if (controller) {\n        controller.setJumpSpeed(descriptor.jumpSpeed);\n      }\n    },\n\n    KinematicCharacterController_setFallSpeed: function(descriptor) {\n      var controller = this.characterControllers[descriptor.controllerId];\n\n      if (controller) {\n        controller.setFallSpeed(descriptor.fallSpeed);\n      }\n    },\n\n    KinematicCharacterController_setMaxJumpHeight: function(descriptor) {\n      var controller = this.characterControllers[descriptor.controllerId];\n\n      if (controller) {\n        controller.setMaxJumpHeight(descriptor.maxJumpHeight);\n      }\n    },\n\n    KinematicCharacterController_setGravity: function(descriptor) {\n      var controller = this.characterControllers[descriptor.controllerId];\n\n      if (controller) {\n        controller.setGravity(descriptor.gravity);\n      }\n    },\n\n    KinematicCharacterController_setUpAxis: function(descriptor) {\n      var controller = this.characterControllers[descriptor.controllerId];\n\n      if (controller) {\n        controller.setUpAxis(descriptor.upAxis);\n      }\n    },\n\n    KinematicCharacterController_setVelocityForTimeInterval: function(descriptor) {\n      var controller = this.characterControllers[descriptor.controllerId];\n\n      if (controller) {\n        this.tmpVec[0].setX(descriptor.velocity.x);\n        this.tmpVec[0].setY(descriptor.velocity.y);\n        this.tmpVec[0].setZ(descriptor.velocity.z);\n\n        controller.setVelocityForTimeInterval(this.tmpVec[0], descriptor.interval);\n      }\n    },\n\n    KinematicCharacterController_setUseGhostSweepTest: function(descriptor) {\n      var controller = this.characterControllers[descriptor.controllerId];\n\n      if (controller) {\n        controller.setUseGhostSweepTest(descriptor.useGhostSweepTest);\n      }\n    },\n\n    KinematicCharacterController_setMaxSlope: function(descriptor) {\n      var controller = this.characterControllers[descriptor.controllerId];\n\n      if (controller) {\n        controller.setMaxSlope(descriptor.slopeRadians);\n      }\n    },\n\n    KinematicCharacterController_warp: function(descriptor) {\n      var controller = this.characterControllers[descriptor.controllerId];\n\n      if (controller) {\n        this.tmpVec[0].setX(descriptor.origin.x);\n        this.tmpVec[0].setY(descriptor.origin.y);\n        this.tmpVec[0].setZ(descriptor.origin.z);\n\n        controller.warp(this.tmpVec[0]);\n      }\n    },\n\n    RigidBody_create: function(descriptor, fn) {\n      var colShape,\n          startTransform = this.tmpTrans[0],\n          isDynamic = (descriptor.mass !== 0),\n          localInertia = this.tmpVec[0],\n          origin = this.tmpVec[1],\n          rotation = this.tmpQuaternion[0],\n          myMotionState,\n          rbInfo,\n          body;\n\n      startTransform.setIdentity();\n      localInertia.setZero();\n\n      colShape = this._createShape(descriptor.shape);\n\n      if (!colShape) {\n        throw(\'Invalid collision shape!\');\n      }\n\n      if (isDynamic) {\n        colShape.calculateLocalInertia(descriptor.mass,localInertia);\n      }\n\n      origin.setX(descriptor.position.x);\n      origin.setY(descriptor.position.y);\n      origin.setZ(descriptor.position.z);\n\n      rotation.setX(descriptor.quaternion.x);\n      rotation.setY(descriptor.quaternion.y);\n      rotation.setZ(descriptor.quaternion.z);\n      rotation.setW(descriptor.quaternion.w);\n\n      startTransform.setOrigin(origin);\n      startTransform.setRotation(rotation);\n\n      myMotionState = new Ammo.btDefaultMotionState(startTransform);\n      rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);\n      body = new Ammo.btRigidBody(rbInfo);\n\n      var idx = this.bodies.push(body) - 1;\n      body.id = idx;\n\n      if (typeof fn === \'function\') {\n        fn(idx);\n      }\n    },\n\n    RigidBody_setType: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n\n      if (body) {\n        switch (descriptor.type) {\n        case \'static\':\n          body.setCollisionFlags(this.collisionFlags.CF_STATIC_OBJECT);\n          body.setActivationState(this.activationStates.DISABLE_SIMULATION);\n          break;\n        case \'kinematic\':\n          body.setCollisionFlags(this.collisionFlags.CF_KINEMATIC_OBJECT);\n          body.setActivationState(this.activationStates.DISABLE_DEACTIVATION);\n          break;\n        default:\n          console.warn(\'unknown body type: \' + descriptor.type + \', defaulting to dynamic\');\n          body.setCollisionFlags(0);\n          break;\n        case \'dynamic\':\n          body.setCollisionFlags(0);\n          break;\n        }\n      }\n    },\n\n    RigidBody_setWorldTransform: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId],\n          position,\n          rotation;\n      \n      if (body) {\n        this.tmpTrans[0].setIdentity();\n        body.getMotionState().getWorldTransform(this.tmpTrans[0]);\n        position = this.tmpTrans[0].getOrigin();\n        rotation = this.tmpTrans[0].getRotation();\n\n        if (descriptor.position) {\n          position.setX(descriptor.position.x);\n          position.setY(descriptor.position.y);\n          position.setZ(descriptor.position.z);\n        }\n\n        if (descriptor.rotation) {\n          rotation.setX(descriptor.rotation.x);\n          rotation.setY(descriptor.rotation.y);\n          rotation.setZ(descriptor.rotation.z);\n          rotation.setW(descriptor.rotation.w);\n        }\n\n        if (body.isKinematicObject()) {\n          body.getMotionState().setWorldTransform(this.tmpTrans[0]);\n        } else {\n          body.setWorldTransform(this.tmpTrans[0]);\n        }\n      }\n    },\n\n    RigidBody_clearForces: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n      \n      if (body) {\n        body.clearForces();\n        body.activate();\n      }\n    },\n\n    RigidBody_applyForce: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n      \n      if (body) {\n        this.tmpVec[0].setX(descriptor.force.x);\n        this.tmpVec[0].setY(descriptor.force.y);\n        this.tmpVec[0].setZ(descriptor.force.z);\n        this.tmpVec[1].setX(descriptor.relativePosition.x);\n        this.tmpVec[1].setY(descriptor.relativePosition.y);\n        this.tmpVec[1].setZ(descriptor.relativePosition.z);\n\n        body.applyForce(this.tmpVec[0], this.tmpVec[1]);\n        body.activate();\n      } \n    },\n\n    RigidBody_applyCentralForce: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n      \n      if (body) {\n        this.tmpVec[0].setX(descriptor.force.x);\n        this.tmpVec[0].setY(descriptor.force.y);\n        this.tmpVec[0].setZ(descriptor.force.z);\n\n        body.applyCentralForce(this.tmpVec[0]);\n        body.activate();\n      } \n    },\n\n    RigidBody_applyImpulse: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n      \n      if (body) {\n        this.tmpVec[0].setX(descriptor.impulse.x);\n        this.tmpVec[0].setY(descriptor.impulse.y);\n        this.tmpVec[0].setZ(descriptor.impulse.z);\n        this.tmpVec[1].setX(descriptor.relativePosition.x);\n        this.tmpVec[1].setY(descriptor.relativePosition.y);\n        this.tmpVec[1].setZ(descriptor.relativePosition.z);\n\n        body.applyImpulse(this.tmpVec[0], this.tmpVec[1]);\n        body.activate();\n      } \n    },\n\n    RigidBody_applyCentralImpulse: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n      \n      if (body) {\n        this.tmpVec[0].setX(descriptor.force.x);\n        this.tmpVec[0].setY(descriptor.force.y);\n        this.tmpVec[0].setZ(descriptor.force.z);\n\n        body.applyCentralImpulse(this.tmpVec[0]);\n        body.activate();\n      } \n    },\n\n    RigidBody_applyTorque: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n      \n      if (body) {\n        this.tmpVec[0].setX(descriptor.torque.x);\n        this.tmpVec[0].setY(descriptor.torque.y);\n        this.tmpVec[0].setZ(descriptor.torque.z);\n        \n        body.applyTorque(this.tmpVec[0]);\n        body.activate();\n      }\n    },\n\n    RigidBody_setRestitution: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n\n      if (body) {\n        body.setRestitution(descriptor.restitution);\n      }\n    },\n\n    RigidBody_setFriction: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n\n      if (body) {\n        body.setFriction(descriptor.friction);\n      }\n    },\n\n    RigidBody_setDamping: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n\n      if (body) {\n        body.setDamping(descriptor.linearDamping, descriptor.angularDamping);\n      }\n    },\n\n    RigidBody_setLinearFactor: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n\n      if (body) {\n        this.tmpVec[0].setX(descriptor.linearFactor.x); \n        this.tmpVec[0].setY(descriptor.linearFactor.y); \n        this.tmpVec[0].setZ(descriptor.linearFactor.z); \n        body.setLinearFactor(this.tmpVec[0]);\n      }\n    },\n\n    RigidBody_setAngularFactor: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n\n      if (body) {\n        this.tmpVec[0].setX(descriptor.angularFactor.x); \n        this.tmpVec[0].setY(descriptor.angularFactor.y); \n        this.tmpVec[0].setZ(descriptor.angularFactor.z); \n        body.setAngularFactor(this.tmpVec[0]);\n      }\n    },\n\n    RigidBody_setLinearVelocity: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n\n      if (body) {\n        this.tmpVec[0].setX(descriptor.linearVelocity.x); \n        this.tmpVec[0].setY(descriptor.linearVelocity.y); \n        this.tmpVec[0].setZ(descriptor.linearVelocity.z); \n        body.setLinearVelocity(this.tmpVec[0]);\n      }\n    },\n\n    RigidBody_setAngularVelocity: function(descriptor) {\n      var body = this.bodies[descriptor.bodyId];\n\n      if (body) {\n        this.tmpVec[0].setX(descriptor.angularVelocity.x); \n        this.tmpVec[0].setY(descriptor.angularVelocity.y); \n        this.tmpVec[0].setZ(descriptor.angularVelocity.z); \n        body.setAngularVelocity(this.tmpVec[0]);\n      }\n    },\n\n    Constraint_destroy: function(id) {\n      var constraint = this.constraints[id];\n\n      if (constraint) {\n        this.dynamicsWorld.removeConstraint(constraint);\n        Ammo.destroy(constraint);\n        this.constraints[id] = undefined;\n        this.trigger(\'Constraint_destroy\', id);\n      }\n    },\n\n    RigidBody_destroy: function(id) {\n      var body = this.bodies[id];\n\n      if (body) {\n        this.dynamicsWorld.removeRigidBody(body);\n        Ammo.destroy(body);\n        this.bodies[id] = undefined;\n        this.trigger(\'RigidBody_destroy\', id);\n      }\n    },\n\n    Vehicle_destroy: function(id) {\n      var vehicle = this.vehicles[id];\n\n      if (vehicle) {\n        this.dynamicsWorld.removeVehicle(vehicle);\n        Ammo.destroy(vehicle);\n        this.vehicles[id] = undefined;\n        this.trigger(\'Vehicle_destroy\', id);\n      }\n    },\n\n    GhostObject_destroy: function(id) {\n      var ghost = this.ghosts[id];\n\n      if (ghost) {\n        this.dynamicsWorld.removeCollisionObject(ghost);\n        Ammo.destroy(ghost);\n        this.ghosts[id] = undefined;\n        this.trigger(\'GhostObject_destroy\', id);\n      }\n    },\n\n    shutdown: function() {\n      Ammo.destroy(this.collisionConfiguration);\n      Ammo.destroy(this.dispatcher);\n      Ammo.destroy(this.overlappingPairCache);\n      Ammo.destroy(this.solver);\n    }\n  };\n\n  return AmmoWorkerAPI;\n});\n  return require(\'ammo_worker_api\');\n}));\n';});
 
 // This event system code is borrowed from the backbone project, http://backbonejs.org
 define('vendor/backbone.events',['underscore'], function(_) {
@@ -5037,7 +4057,7 @@ define('three/three_adapter',[ 'underscore', 'three/three_binding' ], function(_
   return THREEAdapter;
 });
 
-define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body', 'ammo_vehicle', 
+define('ammo_proxy',[ 'when', 'underscore', 'text!gen/ammo_worker_api.js', 'ammo_rigid_body', 'ammo_vehicle', 
          'ammo_point2point_constraint', 'ammo_hinge_constraint', 'ammo_slider_constraint',
          'ammo_ghost_object', 'ammo_kinematic_character_controller', 'three/three_adapter' ], 
       function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
@@ -5048,6 +4068,9 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
       'stopSimulation', 'getStats'
     ];
+
+    this.createWorker();
+    return;
 
     opts = this.opts = opts || {};
     opts.gravity = opts.gravity || { x: 0, y: -9.82, z: 0};
@@ -5127,6 +4150,22 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
     this.setIterations(opts.iterations);
     this.setGravity(opts.gravity);
   }
+
+  AmmoProxy.prototype.createWorker = function() {
+    window.URL = window.URL || window.webkitURL;
+
+    var blob;
+    try {
+        blob = new Blob([AmmoWorkerAPI], { type: 'application/javascript' });
+    } catch (e) { // Backwards-compatibility
+        window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
+        blob = new BlobBuilder();
+        blob.append(response);
+        blob = blob.getBlob();
+    }
+    var url = URL.createObjectURL(blob);
+    this.worker = new Worker(url);
+  };
 
   AmmoProxy.prototype.getObjectByDescriptor = function(descriptor) {
     switch (descriptor.type) {
