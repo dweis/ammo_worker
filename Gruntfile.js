@@ -96,7 +96,7 @@ module.exports = function(grunt) {
           },
 
           wrap: {
-            startFile: [ 'src/start.frag', 'src/vendor/ammo.min.js' ],
+            startFile: [ 'src/vendor/ammo.js', 'src/start.frag' ],
             endFile: 'src/end_worker.frag'
           }
         }

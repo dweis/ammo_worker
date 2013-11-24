@@ -20,7 +20,7 @@ define([ 'underscore' ],function(_) {
       tuning: tuning
     };
 
-    return this.proxy.execute('Vehicle_addWheel', descriptor);
+    return this.proxy.execute('Vehicle_addWheel', descriptor, true);
   };
 
   AmmoVehicle.prototype.setWheelInfo = function(wheelIndex, properties) {

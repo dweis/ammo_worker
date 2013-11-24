@@ -1,6 +1,8 @@
 define([ 'underscore' ], function(_) {
   "use strict";
 
+  //throw new Error('Test Error');
+
   function makeWorkerConsole(context){
     function makeConsole(method) {
       return function() {
