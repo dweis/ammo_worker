@@ -38,8 +38,14 @@
         ghost.on('ghost_exit', function() {
           console.log('ghost_out');
         });
+        ghost.on('ghost_exit', function() {
+          console.log('bye bye!');
+        });
         this.ghost = ghost;
-      }.bind(this));
+      }.bind(this))
+      .otherwise(function(err) {
+        console.error('An error occured while adding the ghost object', err.message);   
+      });
 
       this.bodies = [];
       //for (var i = 0; i < 10; i++) {
@@ -76,6 +82,9 @@
         });
         rigidBody.on('ghost_exit', function() {
           console.log('body_out');
+        });
+        rigidBody.on('ghost_exit', function() {
+          console.log('leaving ghost!');
         });
       }.bind(this));
 

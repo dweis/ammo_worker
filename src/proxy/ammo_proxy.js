@@ -73,8 +73,13 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       var objA = this.getObjectByDescriptor(descriptor.objectA),
           objB = this.getObjectByDescriptor(descriptor.objectB);
 
-      objA.trigger('ghost_enter', objB, objA);
-      objB.trigger('ghost_enter', objA, objB); 
+      if (objA && _.isFunction(objA.trigger)) {
+        objA.trigger('ghost_enter', objB, objA);
+      }
+
+      if (objB && _.isFunction(objB.trigger)) {
+        objB.trigger('ghost_enter', objA, objB); 
+      }
     }, this));
 
     this.on('ghost_exit', _.bind(function(descriptor) {
