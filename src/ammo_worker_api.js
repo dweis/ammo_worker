@@ -67,7 +67,7 @@ define([], function() {
       this.OFFSET_GHOST_OBJECT = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7;
 
       //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+     importScripts('http://assets.verold.com/verold_api/lib/ammo.js?bust=v3');
 
       this.tmpVec = [
         new Ammo.btVector3(),

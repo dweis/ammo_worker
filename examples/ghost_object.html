@@ -36,8 +36,14 @@
         ghost.on('ghost_enter', function() {
           console.log('someone is up in my space!', arguments);
         });
+        ghost.on('ghost_exit', function() {
+          console.log('bye bye!');
+        });
         this.ghost = ghost;
-      }.bind(this));
+      }.bind(this))
+      .otherwise(function(err) {
+        console.error('An error occured while adding the ghost object', err.message);   
+      });
 
       this.bodies = [];
       for (var i = 0; i < 100; i++) {
@@ -67,6 +73,9 @@
         this.bodies.push(rigidBody);
         rigidBody.on('ghost_enter', function() {
           console.log('I have collided with a ghost object!', arguments);
+        });
+        rigidBody.on('ghost_exit', function() {
+          console.log('leaving ghost!');
         });
       }.bind(this));
 

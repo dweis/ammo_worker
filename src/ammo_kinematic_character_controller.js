@@ -1,4 +1,4 @@
-define([], function() {
+define([ './ammo_base_object' ], function(AmmoBaseObject) {
   function AmmoKinematicCharacterController(proxy, controllerId) {
     this.proxy = proxy;
     this.controllerId = controllerId;
@@ -8,6 +8,8 @@ define([], function() {
     this.linearVelocity = { x: 0, y: 0, z: 0 };
     this.angularVelocity = { x: 0, y: 0, z: 0 };
   } 
+
+  AmmoKinematicCharacterController.prototype = new AmmoBaseObject();
 
   AmmoKinematicCharacterController.prototype.update = function() {
     if (this.binding && this.binding.update) {

@@ -2645,7 +2645,7 @@ define('ammo_worker_api',[], function() {
       this.OFFSET_GHOST_OBJECT = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7;
 
       //import Scripts('./js/ammo.js');
-      importScripts('http://assets.verold.com/verold_api/lib/ammo.js');
+     importScripts('http://assets.verold.com/verold_api/lib/ammo.js?bust=v3');
 
       this.tmpVec = [
         new Ammo.btVector3(),
@@ -4524,7 +4524,7 @@ define('ammo_ghost_object',[ './ammo_base_object' ], function(AmmoBaseObject) {
   return AmmoGhostObject;
 });
 
-define('ammo_kinematic_character_controller',[], function() {
+define('ammo_kinematic_character_controller',[ './ammo_base_object' ], function(AmmoBaseObject) {
   function AmmoKinematicCharacterController(proxy, controllerId) {
     this.proxy = proxy;
     this.controllerId = controllerId;
@@ -4534,6 +4534,8 @@ define('ammo_kinematic_character_controller',[], function() {
     this.linearVelocity = { x: 0, y: 0, z: 0 };
     this.angularVelocity = { x: 0, y: 0, z: 0 };
   } 
+
+  AmmoKinematicCharacterController.prototype = new AmmoBaseObject();
 
   AmmoKinematicCharacterController.prototype.update = function() {
     if (this.binding && this.binding.update) {
@@ -5103,8 +5105,13 @@ define('ammo_proxy',[ 'when', 'underscore', 'ammo_worker_api', 'ammo_rigid_body'
       var objA = this.getObjectByDescriptor(descriptor.objectA),
           objB = this.getObjectByDescriptor(descriptor.objectB);
 
-      objA.trigger('ghost_enter', objB, objA);
-      objB.trigger('ghost_enter', objA, objB); 
+      if (objA && _.isFunction(objA.trigger)) {
+        objA.trigger('ghost_enter', objB, objA);
+      }
+
+      if (objB && _.isFunction(objB.trigger)) {
+        objB.trigger('ghost_enter', objA, objB); 
+      }
     }, this));
 
     this.worker.on('ghost_exit', _.bind(function(descriptor) {
