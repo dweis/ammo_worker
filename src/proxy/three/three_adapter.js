@@ -1,4 +1,4 @@
-define([ 'underscore', 'three/three_binding' ], function(_, THREEBinding) {
+define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) {
   function THREEAdapter(proxy) {
     this.proxy  = proxy;
   }

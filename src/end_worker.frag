@@ -1,2 +1,2 @@
-  return require('ammo_worker_api');
+  return require('worker/ammo_worker_api');
 }));

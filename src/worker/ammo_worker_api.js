@@ -1,8 +1,43 @@
-/* global importScripts */
-define([ 'vendor/ammo' ], function(ammo) {
+define([ 'underscore' ], function(_) {
   "use strict";
 
+  function makeWorkerConsole(context){
+    function makeConsole(method) {
+      return function() {
+        var len = arguments.length;
+        var out = [];
+        var i = 0;
+        while (i < len) {
+          out.push(arguments[i]);
+          i++;
+        }
+        context.postMessage({ command: 'console', arguments: [method, out] });
+      };
+    }
+    ['log', 'debug', 'error', 'info', 'warn', 'time', 'timeEnd'].forEach(function(v) {
+      console[v] = makeConsole(v);
+    });
+
+  }
+  
+  makeWorkerConsole(self);
+
+  self.addEventListener('message', function(message) {
+    if (!_.isFunction(api[message.data.method])) {
+      return console.error('Unknown method: ' + message.data.method);
+    }
+
+    if (message.data.method === 'swap') {
+      api.swap(message.data.data);
+    } else {
+      api[message.data.method].call(api, message.data.descriptor, function(descriptor) {
+        self.postMessage({ command: 'response', reqId: message.data.reqId, descriptor: descriptor });
+      });
+    }
+  });
+
   function AmmoWorkerAPI(opts) {
+    _.bindAll(this);
     this.maxBodies = 1000;
     this.maxVehicles = 32;
     this.maxWheelsPerVehicle = 8;
@@ -125,7 +160,7 @@ define([ 'vendor/ammo' ], function(ammo) {
 
       this.ghostCollisions = {};
 
-      this.fire('ready');
+      self.postMessage({ command: 'event', arguments: [ 'ready' ] });
     },
 
     getStats: function(undefined, fn) {
@@ -142,7 +177,6 @@ define([ 'vendor/ammo' ], function(ammo) {
 
       that.totalTime = 0;
       that.frames = 0;
-
       this.simulationTimerId = setInterval(function() {
         var vehicle, update, i, j, pos, now = Date.now(),
             delta = (now - last) / 1000;
@@ -159,6 +193,8 @@ define([ 'vendor/ammo' ], function(ammo) {
               that.tmpTrans[0].setIdentity();
               that.bodies[i].getMotionState().getWorldTransform(that.tmpTrans[0]);
               pos = that.OFFSET_RIGID_BODY + (i * 7);
+
+              //console.log('pos: ' + pos +  'y:' + that.tmpTrans[0].getOrigin().y());
 
               update[pos + 0] = that.tmpTrans[0].getOrigin().x();
               update[pos + 1] = that.tmpTrans[0].getOrigin().y();
@@ -231,20 +267,20 @@ define([ 'vendor/ammo' ], function(ammo) {
                   newCollisions[body.id] = true;
 
                   if (!that.ghostCollisions[id][body.id]) {
-                    that.fire('ghost_enter', { 
+                    self.postMessage({ command: 'event', arguments: [ 'ghost_enter', { 
                       objectA: { type: 'ghost', id: id },
                       objectB: { type: 'rigidBody', id: body.id }
-                    });  
+                    } ]});  
                   }
                 }
               } 
 
               for (idx in that.ghostCollisions[id]) {
                 if (!newCollisions[idx]) {
-                  that.fire('ghost_exit', { 
+                  self.postMessage({ command: 'event', arguments: [ 'ghost_exit', { 
                     objectA: { type: 'ghost', id: id },
                     objectB: { type: 'rigidBody', id: idx }
-                  });
+                  } ]});
                   that.ghostCollisions[id][idx] = false; 
                 }
               }
@@ -252,7 +288,7 @@ define([ 'vendor/ammo' ], function(ammo) {
             }
           }.bind(this));
 
-          that.fire('update', update.buffer, [update.buffer]);
+          self.postMessage({ command: 'update', data: update.buffer }, [update.buffer]);
           that.frames ++;
 
           last = now;
@@ -274,18 +310,18 @@ define([ 'vendor/ammo' ], function(ammo) {
       }
     },
 
-    setStep: function(step) {
-      this.step = step;
+    setStep: function(descriptor) {
+      this.step = descriptor.step;
     },
 
-    setIterations: function(iterations) {
-      this.iterations = iterations;
+    setIterations: function(descriptor) {
+      this.iterations = descriptor.iterations;
     },
 
-    setGravity: function(gravity) {
-      this.tmpVec[0].setX(gravity.x);
-      this.tmpVec[0].setY(gravity.y);
-      this.tmpVec[0].setZ(gravity.z);
+    setGravity: function(descriptor) {
+      this.tmpVec[0].setX(descriptor.gravity.x);
+      this.tmpVec[0].setY(descriptor.gravity.y);
+      this.tmpVec[0].setZ(descriptor.gravity.z);
       this.dynamicsWorld.setGravity(this.tmpVec[0]);
     },
 
@@ -345,16 +381,16 @@ define([ 'vendor/ammo' ], function(ammo) {
       }
 
       switch (type) {
-        case 'bvh':
-          className = 'btBvhTriangleMeshShape';
-          break;
+      case 'bvh':
+        className = 'btBvhTriangleMeshShape';
+        break;
 
-        case 'convex':
-          className = 'btConvexTriangleMeshShape';
-          break;
+      case 'convex':
+        className = 'btConvexTriangleMeshShape';
+        break;
 
-        default:
-          throw new Error('You must supply a valid mesh type!');
+      default:
+        throw new Error('You must supply a valid mesh type!');
       }
 
       mesh = new Ammo.btTriangleMesh(true, true);
@@ -1364,5 +1400,6 @@ define([ 'vendor/ammo' ], function(ammo) {
     }
   };
 
-  return AmmoWorkerAPI;
+  var api = new AmmoWorkerAPI();
+  api.init();
 });

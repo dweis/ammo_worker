@@ -1,17 +1,25 @@
-define([ 'when', 'underscore', 'text!gen/ammo_worker_api.js', 'ammo_rigid_body', 'ammo_vehicle', 
-         'ammo_point2point_constraint', 'ammo_hinge_constraint', 'ammo_slider_constraint',
-         'ammo_ghost_object', 'ammo_kinematic_character_controller', 'three/three_adapter' ], 
-      function(when, _, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
+define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_api.js', 'proxy/ammo_rigid_body', 'proxy/ammo_vehicle', 
+         'proxy/ammo_point2point_constraint', 'proxy/ammo_hinge_constraint', 'proxy/ammo_slider_constraint',
+         'proxy/ammo_ghost_object', 'proxy/ammo_kinematic_character_controller', 'proxy/three/three_adapter' ], 
+      function(when, _, Events, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
         AmmoHingeConstraint, AmmoSliderConstraint, AmmoGhostObject, 
         AmmoKinematicCharacterController, THREEAdapter) {
   function AmmoProxy(opts) {
+    /*
     var context = this, i, apiMethods = [
       'on', 'fire', 'setStep', 'setIterations', 'setGravity', 'startSimulation',
       'stopSimulation', 'getStats'
     ];
+    */
+
+    this.reqId = 0;
+    this.promises = {};
 
     this.createWorker();
-    return;
+
+    _.bindAll(this);
+
+    this.worker.addEventListener('message', this.onCommand, false);
 
     opts = this.opts = opts || {};
     opts.gravity = opts.gravity || { x: 0, y: -9.82, z: 0};
@@ -31,35 +39,37 @@ define([ 'when', 'underscore', 'text!gen/ammo_worker_api.js', 'ammo_rigid_body',
 
     this.adapter = new THREEAdapter(this);
 
-    this.worker = cw(new AmmoWorkerAPI(opts));
+    //this.worker = cw(new AmmoWorkerAPI(opts));
 
+    /*
     this.worker.on('update', _.bind(this.update, this));
 
     this.worker.on('error', function(err) {
       console.error(err.message);
     });
+    */
 
-    this.worker.on('GhostObject_destroy', function(id) {
+    this.on('GhostObject_destroy', function(id) {
       ghosts[id] = undefined;
     });
 
-    this.worker.on('RigidBody_destroy', function(id) {
+    this.on('RigidBody_destroy', function(id) {
       bodies[id] = undefined;
     });
 
-    this.worker.on('Vehicle_destroy', function(id) {
+    this.on('Vehicle_destroy', function(id) {
       vehicles[id] = undefined;
     });
 
-    this.worker.on('Constraint_destroy', function(id) {
+    this.on('Constraint_destroy', function(id) {
       constraints[id] = undefined;
     });
 
-    this.worker.on('KinematicCharacterController_destroy', function(id) {
+    this.on('KinematicCharacterController_destroy', function(id) {
       kinematicCharacterControllers[id] = undefined;
     });
 
-    this.worker.on('ghost_enter', _.bind(function(descriptor) {
+    this.on('ghost_enter', _.bind(function(descriptor) {
       var objA = this.getObjectByDescriptor(descriptor.objectA),
           objB = this.getObjectByDescriptor(descriptor.objectB);
 
@@ -67,7 +77,7 @@ define([ 'when', 'underscore', 'text!gen/ammo_worker_api.js', 'ammo_rigid_body',
       objB.trigger('ghost_enter', objA, objB); 
     }, this));
 
-    this.worker.on('ghost_exit', _.bind(function(descriptor) {
+    this.on('ghost_exit', _.bind(function(descriptor) {
       var objA = this.getObjectByDescriptor(descriptor.objectA),
           objB = this.getObjectByDescriptor(descriptor.objectB);
 
@@ -81,48 +91,113 @@ define([ 'when', 'underscore', 'text!gen/ammo_worker_api.js', 'ammo_rigid_body',
       };
     }
 
-    for (i in apiMethods) {
-      if (apiMethods.hasOwnProperty(i)) {
-        proxyMethod(apiMethods[i]);
-      }
-    }
-
     this.setStep(opts.step);
     this.setIterations(opts.iterations);
     this.setGravity(opts.gravity);
   }
+
+  AmmoProxy.prototype.onCommand = function(command) {
+    if (command.data.command === 'console') {
+      var method = console[command.data.arguments[0]] ? command.data.arguments[0] : 'log';
+      if (typeof console[method].apply === 'undefined') {
+        console[method](command.data.arguments[1].join(' '));
+      }
+      else {
+        console[method].apply(console, command.data.arguments[1]);
+      }
+    } else if (command.data.command === 'event') {
+      console.log(this);
+      this.trigger.apply(this, command.data.arguments);
+    } else if (command.data.command === 'response') {
+      this.promises[command.data.reqId].resolve(command.data.descriptor);
+      delete this.promises[command.data.reqId];
+    } else if (command.data.command === 'update') {
+      this.update(command.data.data);
+    } else {
+      console.log('unhandled command: ', command.data.command);
+    }
+  };
+
+  AmmoProxy.prototype.setStep = function(step) {
+    return this.execute('setStep', { step: step });
+  };
+
+  AmmoProxy.prototype.getStats = function() {
+    return this.execute('getStats', {});
+  };
+
+  AmmoProxy.prototype.setGravity = function(gravity) {
+    return this.execute('setGravity', { gravity: gravity });
+  };
+
+  AmmoProxy.prototype.setIterations = function(iterations) {
+    return this.execute('setIterations', { iterations: iterations });
+  };
+
+  AmmoProxy.prototype.startSimulation = function() {
+    return this.execute('startSimulation', {});
+  };
+
+  AmmoProxy.prototype.stopSimulation = function() {
+    return this.execute('stopSimulation', {});
+  };
 
   AmmoProxy.prototype.createWorker = function() {
     window.URL = window.URL || window.webkitURL;
 
     var blob;
     try {
-        blob = new Blob([AmmoWorkerAPI], { type: 'application/javascript' });
+      blob = new Blob([AmmoWorkerAPI], { type: 'application/javascript' });
     } catch (e) { // Backwards-compatibility
-        window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
-        blob = new BlobBuilder();
-        blob.append(response);
-        blob = blob.getBlob();
+      var BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder;
+      blob = new BlobBuilder();
+      blob.append(AmmoWorkerAPI);
+      blob = blob.getBlob();
     }
-    var url = URL.createObjectURL(blob);
+    var url = window.URL.createObjectURL(blob);
     this.worker = new Worker(url);
   };
 
   AmmoProxy.prototype.getObjectByDescriptor = function(descriptor) {
     switch (descriptor.type) {
-      case 'rigidBody':
-        return this.bodies[descriptor.id];
+    case 'rigidBody':
+      return this.bodies[descriptor.id];
 
-      case 'ghost':
-        return this.ghosts[descriptor.id];
+    case 'ghost':
+      return this.ghosts[descriptor.id];
 
-      default:
-        return console.error('unknown type: ', descriptor.type);
+    default:
+      return console.error('unknown type: ', descriptor.type);
     }
   };
 
   AmmoProxy.prototype.execute = function(method, descriptor) {
-    return this.worker[method](descriptor);
+    //return this.worker.postMessage({[method](descriptor);
+      /*
+
+    this.worker.Vehicle_create(descriptor).then(_.bind(function(vehicleId) {
+      var proxy = this;
+      setTimeout(function() {
+        var vehicle = new AmmoVehicle(proxy, vehicleId, rigidBody);
+        proxy.vehicles[vehicleId] = vehicle;
+        deferred.resolve(vehicle);
+      }, 0);
+    }, this));
+
+  */
+
+    var reqId = this.reqId++,
+        deferred = when.defer();
+
+    this.worker.postMessage({
+      reqId: reqId,
+      method: method,
+      descriptor: descriptor
+    });
+
+    this.promises[reqId] = deferred;
+
+    return deferred.promise;
   };
 
   AmmoProxy.prototype.aabbTest = function(min, max) {
@@ -225,7 +300,7 @@ define([ 'when', 'underscore', 'text!gen/ammo_worker_api.js', 'ammo_rigid_body',
       },
       deferred = when.defer();
 
-    this.worker.RigidBody_create(descriptor).then(_.bind(function(bodyId) {
+    this.execute('RigidBody_create', descriptor).then(_.bind(function(bodyId) {
       var proxy = this;
       setTimeout(function() {
         var body = new AmmoRigidBody(proxy, bodyId); 
@@ -329,7 +404,12 @@ define([ 'when', 'underscore', 'text!gen/ammo_worker_api.js', 'ammo_rigid_body',
 
   AmmoProxy.prototype.update = function(data) {
     if (this.next) {
-      this.worker.swap(this.data && this.data.buffer);
+      //this.worker.swap(this.data && this.data.buffer);
+      if (this.data) {
+        this.worker.postMessage({ method: 'swap', data: this.data.buffer }, [ this.data.buffer ]);
+      } else {
+        this.worker.postMessage({ method: 'swap', data: undefined });
+      }
       this.data = this.next;
     }
     this.next = new Float64Array(data);
@@ -395,6 +475,8 @@ define([ 'when', 'underscore', 'text!gen/ammo_worker_api.js', 'ammo_rigid_body',
 
     console.warn('Asked for non-existent ghost object with ID: ' + ghostObjectId);
   };
+
+  _.extend(AmmoProxy.prototype, Events);
 
   return AmmoProxy;
 });
