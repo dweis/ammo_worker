@@ -217,18 +217,15 @@ define([], function() {
               update[pos + 5] = trans.getRotation().z();
               update[pos + 6] = trans.getRotation().w();
 
-              var newCollisions;
-
               that.ghostCollisions[id] = that.ghostCollisions[id] || {};
 
               var i, 
                   idx,
                   num = ghost.getNumOverlappingObjects(),
+                  newCollisions = {},
                   body;
 
               if (num > 0) {
-                newCollisions = {};
-
                 for (i = 0; i < num; i++) {
                   body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btRigidBody);
                   newCollisions[body.id] = true;
@@ -240,19 +237,18 @@ define([], function() {
                     });  
                   }
                 }
+              } 
 
-                for (idx in that.ghostCollisions[id]) {
-                  if (!newCollisions[idx]) {
-                    that.fire('ghost_exit', { 
-                      objectA: { type: 'ghost', id: id },
-                      objectB: { type: 'rigidBody', id: body.id }
-                    });
-                    that.ghostCollisions[id][idx] = false; 
-                  }
+              for (idx in that.ghostCollisions[id]) {
+                if (!newCollisions[idx]) {
+                  that.fire('ghost_exit', { 
+                    objectA: { type: 'ghost', id: id },
+                    objectB: { type: 'rigidBody', id: idx }
+                  });
+                  that.ghostCollisions[id][idx] = false; 
                 }
-
-                that.ghostCollisions[id] = newCollisions;
               }
+              that.ghostCollisions[id] = newCollisions;
             }
           }.bind(this));
 
