@@ -9,7 +9,6 @@
 <body>
   <div id="container">
   </div>
-  <script src="js/catiline.js"></script>
   <script src="js/three.js"></script>
   <script src="js/stats.min.js"></script>
   <script src="js/OrbitControls.js"></script>
@@ -22,33 +21,34 @@
     SimpleDemo.prototype = new DemoScene();
 
     SimpleDemo.prototype.initDemo = function() {
-      var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
+      var material = new THREE.MeshPhongMaterial({ color: 0x33CC00 });
 
       this.bodies = [];
-      for (var i = 0; i < 500; i++) {
-        var o = this._createBox(material);
-        this.scene.add(o);
+      for (var z  = 0; z < 10; z++) {
+        for (var y  = 1; y < 10; y++) {
+          for (var x  = 0; x < 10; x++) {
+            var o = this._createBox(x * 2.5, y * 6, z * 2.5, material);
+            this.scene.add(o);
+          }
+        }
       }
     };
 
-    SimpleDemo.prototype._createBox = function(material) {
+    SimpleDemo.prototype._createBox = function(x, y, z, material) {
       var o = new THREE.Object3D();
 
-      o.add(new THREE.Mesh(new THREE.CubeGeometry(2, 2, 2), material));
+      o.add(new THREE.Mesh(new THREE.SphereGeometry(1, 12, 12), material));
 
-      o.position.x = (Math.random() * 30) - 15;
-      o.position.y = 10 + (Math.random() * 20) - 10;
-      o.position.z = (Math.random() * 30) - 15;
+      o.position.x = x + (Math.random() * 0.5) - 0.25;//(Math.random() * 30) - 15;
+      o.position.y = y;//10 + (Math.random() * 20) - 10;
+      o.position.z = z + (Math.random() * 0.5) - 0.25;//(Math.random() * 30) - 15;
 
-      this.proxy.createRigidBodyFromObject(o, 0.1, {
-        shape: 'box',
-        halfExtents: {
-          x: 1,
-          y: 1,
-          z: 1
-        }
+      this.proxy.createRigidBodyFromObject(o, 2, {
+        shape: 'sphere',
+        radius: 1
       }).then(function(rigidBody) {
         rigidBody.addToWorld();
+        rigidBody.setRestitution(0.98);
         this.bodies.push(rigidBody);
       }.bind(this));
 

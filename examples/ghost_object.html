@@ -9,7 +9,6 @@
 <body>
   <div id="container">
   </div>
-  <script src="js/catiline.js"></script>
   <script src="js/three.js"></script>
   <script src="js/stats.min.js"></script>
   <script src="js/OrbitControls.js"></script>
@@ -22,19 +21,37 @@
     SimpleDemo.prototype = new DemoScene();
 
     SimpleDemo.prototype.initDemo = function() {
-      var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
+      var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 }),
+          material2 = new THREE.MeshLambertMaterial({ color: 0xFF0000 });
 
-      this.proxy.createGhostObject({ shape: 'sphere', radius: 10 },
-          { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0, w: 1 }).then(function(ghost) {
+      var o  = new THREE.Mesh(new THREE.CubeGeometry(6, 2, 6), material2);
+      this.scene.add(o);
+      o.position.x = 0;
+      o.position.y = 10;
+      o.position.z = 0;
+
+      this.proxy.createGhostObjectFromObject(o, { shape: 'box', halfExtents: { x: 4, y: 1, z: 4 } }).then(function(ghost) {
             ghost.addToWorld();
-        console.log('ghost', arguments);
+        ghost.on('ghost_enter', function() {
+          console.log('ghost_in');
+        });
+        ghost.on('ghost_exit', function() {
+          console.log('ghost_out');
+        });
+        ghost.on('ghost_exit', function() {
+          console.log('bye bye!');
+        });
+        this.ghost = ghost;
+      }.bind(this))
+      .otherwise(function(err) {
+        console.error('An error occured while adding the ghost object', err.message);   
       });
 
       this.bodies = [];
-      for (var i = 0; i < 100; i++) {
-        var o = this._createBox(material);
+      //for (var i = 0; i < 10; i++) {
+        o = this._createBox(material);
         this.scene.add(o);
-      }
+      //}
     };
 
     SimpleDemo.prototype._createBox = function(material) {
@@ -42,9 +59,13 @@
 
       o.add(new THREE.Mesh(new THREE.CubeGeometry(2, 2, 2), material));
 
+      /*
       o.position.x = (Math.random() * 30) - 15;
       o.position.y = 10 + (Math.random() * 20) - 10;
       o.position.z = (Math.random() * 30) - 15;
+      */
+
+      o.position.x = 0; o.position.z = 0; o.position.y = 15;
 
       this.proxy.createRigidBodyFromObject(o, 0.1, {
         shape: 'box',
@@ -56,6 +77,15 @@
       }).then(function(rigidBody) {
         rigidBody.addToWorld();
         this.bodies.push(rigidBody);
+        rigidBody.on('ghost_enter', function() {
+          console.log('body_in');
+        });
+        rigidBody.on('ghost_exit', function() {
+          console.log('body_out');
+        });
+        rigidBody.on('ghost_exit', function() {
+          console.log('leaving ghost!');
+        });
       }.bind(this));
 
       o.traverse(function(o) {
@@ -68,6 +98,9 @@
     SimpleDemo.prototype.updateBodies = function() {
       for (var i in this.bodies) {
         this.bodies[i].update();
+      }
+      if (this.ghost) {
+        this.ghost.update();
       }
     };
 

@@ -9,7 +9,6 @@
 <body>
   <div id="container">
   </div>
-  <script src="js/catiline.js"></script>
   <script src="js/three.js"></script>
   <script src="js/stats.min.js"></script>
   <script src="js/OrbitControls.js"></script>
@@ -25,7 +24,7 @@
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
       this.bodies = [];
-      for (var i = 0; i < 100; i++) {
+      for (var i = 0; i < 200; i++) {
         var o = this._createTriangleMesh(material);
       }
     };

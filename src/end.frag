@@ -1,2 +1,2 @@
-  return require('ammo_proxy');
+  return require('proxy/ammo_proxy');
 }));
