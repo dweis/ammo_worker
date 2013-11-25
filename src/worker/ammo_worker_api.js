@@ -1,6 +1,8 @@
 define([ 'underscore' ], function(_) {
   "use strict";
 
+  self.console = self.console || {};
+
   function makeWorkerConsole(context){
     function makeConsole(method) {
       return function() {
