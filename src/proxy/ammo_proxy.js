@@ -153,6 +153,12 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     case 'btGhostObject':
       return this.ghosts[descriptor.id];
 
+    case 'btKinematicCharacterController':
+      return this.kinematicCharacterControllers[descriptor.id];
+
+    case 'btRaycastVehicle':
+      return this.vehicles[descriptor.id];
+
     default:
       return console.error('unknown type: ', descriptor.type);
     }

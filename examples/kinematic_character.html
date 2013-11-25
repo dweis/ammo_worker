@@ -68,6 +68,47 @@
 
     SimpleDemo.prototype = new DemoScene();
 
+
+    SimpleDemo.prototype._createGhost = function(material) {
+      var o = new THREE.Object3D();
+
+      o.add(new THREE.Mesh(new THREE.CubeGeometry(2, 2, 2), material));
+
+      /*
+      o.position.x = (Math.random() * 30) - 15;
+      o.position.y = 10 + (Math.random() * 20) - 10;
+      o.position.z = (Math.random() * 30) - 15;
+      */
+
+      o.position.x = 2; o.position.z = 2; o.position.y = 1;
+
+      this.proxy.createGhostObjectFromObject(o, { shape: 'box', halfExtents: { x: 4, y: 1, z: 4 } }).then(function(ghost) {
+            ghost.addToWorld();
+        ghost.on('ghost_enter', function() {
+          console.log('ghost_in');
+        });
+        ghost.on('ghost_exit', function() {
+          console.log('ghost_out');
+        });
+        ghost.on('ghost_exit', function() {
+          console.log('bye bye!');
+        });
+        this.ghost = ghost;
+      }.bind(this))
+      .otherwise(function(err) {
+        console.error('An error occured while adding the ghost object', err.message);   
+      });
+
+      o.traverse(function(o) {
+        o.castShadow = true;
+      });
+
+      this.scene.add(o);
+
+      return o;
+    };
+
+
     SimpleDemo.prototype._createStep = function(i, material) {
       var cube = new THREE.Object3D();
       cube.add(new THREE.Mesh(new THREE.CubeGeometry(2, 1, 8), material));
@@ -144,6 +185,8 @@
         this._createStep(i, material);
       }
 
+      this._createGhost(material);
+
       this.proxy.createKinematicCharacterControllerFromObject(cube, { shape: 'sphere', radius: 1  }, 0.2)
         .then(function(kinematicCharacter) {
           this.character = kinematicCharacter; 
@@ -153,6 +196,9 @@
           kinematicCharacter.setGravity(50);
           kinematicCharacter.setUpAxis(1);
           kinematicCharacter.setMaxSlope(0.01);
+
+          kinematicCharacter.once('ghost_enter', function() { console.log('ghost_enter', arguments); });
+          kinematicCharacter.once('ghost_exit', function() { console.log('ghost_exit', arguments); });
         }.bind(this))
         .otherwise(function(err) {
           console.error(err.message);
@@ -200,29 +246,13 @@
         this.character.jump();
       }
 
-      //tmpQuaternion.inverse();
       this.cameraRig.quaternion.copy(tmpQuaternion);
 
       if (this.keys.enter) {
         this.character.setVelocityForTimeInterval({ x: 1, y: 0, z: 1 }, 1);  
       }
 
-      //this.camera.position.x = 0;
-      //this.camera.position.y = 0;
-      //this.camera.position.z = 0;
-
       tmpVec.applyQuaternion(tmpQuaternion);
-
-
-      //tmpVec.multiplyScalar(10);
-      //this.camera.lookAt(tmpVec);
-
-      //this.camera.position.sub(tmpVec);
-      //this.camera.position.multiplyScalar(10);
-
-      //this.camera.lookAt({ x: 0, y: 0, z: 0});
-
-      //this.controls.target = this.character.binding.object.position;
     };
 
     var demo = new SimpleDemo();

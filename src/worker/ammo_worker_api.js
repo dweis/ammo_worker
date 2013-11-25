@@ -263,7 +263,8 @@ define([ 'underscore' ], function(_) {
               that.ghostCollisions[id] = that.ghostCollisions[id] || {};
 
               var i, 
-                  idx,
+                  key,
+                  type,
                   num = ghost.getNumOverlappingObjects(),
                   newCollisions = {},
                   body;
@@ -271,24 +272,29 @@ define([ 'underscore' ], function(_) {
               if (num > 0) {
                 for (i = 0; i < num; i++) {
                   body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btCollisionObject);
-                  newCollisions[body.userData.id] = true;
+                  if (body.userData) {
+                    key = body.userData.id;
 
-                  if (!that.ghostCollisions[id][body.userData.id]) {
-                    self.postMessage({ command: 'event', arguments: [ 'ghost_enter', { 
-                      objectA: { type: 'btGhostObject', id: id },
-                      objectB: { type: 'btRigidBody', id: body.userData.id }
-                    } ]});  
+                    newCollisions[key] = body.userData.type;
+
+                    if (!that.ghostCollisions[id][key]) {
+                      self.postMessage({ command: 'event', arguments: [ 'ghost_enter', { 
+                        objectA: { type: 'btGhostObject', id: id },
+                        objectB: { type: body.userData.type, id: body.userData.id }
+                      } ]});  
+                    }
                   }
                 }
               } 
 
-              for (idx in that.ghostCollisions[id]) {
-                if (!newCollisions[idx]) {
+              for (key in that.ghostCollisions[id]) {
+                if (!newCollisions[key]) {
+                  type = that.ghostCollisions[id][key];
                   self.postMessage({ command: 'event', arguments: [ 'ghost_exit', { 
                     objectA: { type: 'btGhostObject', id: id },
-                    objectB: { type: 'btRigidBody', id: idx }
+                    objectB: { type: type, id: key }
                   } ]});
-                  that.ghostCollisions[id][idx] = false; 
+                  delete that.ghostCollisions[id][key];
                 }
               }
               that.ghostCollisions[id] = newCollisions;

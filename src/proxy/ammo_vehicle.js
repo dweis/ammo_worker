@@ -1,10 +1,12 @@
-define([ 'underscore' ],function(_) {
+define([ 'underscore', './ammo_base_object' ], function(_, AmmoBaseObject) {
   function AmmoVehicle(proxy, vehicleId, rigidBody) {
     this.proxy = proxy;
     this.vehicleId = vehicleId;
     this.wheelBindings = [];
     this.rigidBody = rigidBody;
   } 
+
+  AmmoVehicle.prototype = new AmmoBaseObject();
 
   AmmoVehicle.prototype.addWheel = function(connectionPoint, wheelDirection, wheelAxle, 
       suspensionRestLength, wheelRadius, isFrontWheel, tuning) {
