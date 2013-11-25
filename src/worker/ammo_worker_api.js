@@ -1,8 +1,6 @@
 define([ 'underscore' ], function(_) {
   "use strict";
 
-  //throw new Error('Test Error');
-
   function makeWorkerConsole(context){
     function makeConsole(method) {
       return function() {
@@ -262,13 +260,13 @@ define([ 'underscore' ], function(_) {
 
               if (num > 0) {
                 for (i = 0; i < num; i++) {
-                  body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btRigidBody);
-                  newCollisions[body.id] = true;
+                  body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btCollisionObject);
+                  newCollisions[body.userData.id] = true;
 
-                  if (!that.ghostCollisions[id][body.id]) {
+                  if (!that.ghostCollisions[id][body.userData.id]) {
                     self.postMessage({ command: 'event', arguments: [ 'ghost_enter', { 
-                      objectA: { type: 'ghost', id: id },
-                      objectB: { type: 'rigidBody', id: body.id }
+                      objectA: { type: 'btGhostObject', id: id },
+                      objectB: { type: 'btRigidBody', id: body.userData.id }
                     } ]});  
                   }
                 }
@@ -277,8 +275,8 @@ define([ 'underscore' ], function(_) {
               for (idx in that.ghostCollisions[id]) {
                 if (!newCollisions[idx]) {
                   self.postMessage({ command: 'event', arguments: [ 'ghost_exit', { 
-                    objectA: { type: 'ghost', id: id },
-                    objectB: { type: 'rigidBody', id: idx }
+                    objectA: { type: 'btGhostObject', id: id },
+                    objectB: { type: 'btRigidBody', id: idx }
                   } ]});
                   that.ghostCollisions[id][idx] = false; 
                 }
@@ -476,8 +474,8 @@ define([ 'underscore' ], function(_) {
               var clientObject = Ammo.wrapPointer(proxy.get_m_clientObject(), Ammo.btRigidBody);
               var _this = Ammo.wrapPointer(thisPtr, Ammo.ConcreteBroadphaseAabbCallback);
 
-              if (clientObject.id) {
-                _this.bodies.push(clientObject.id);
+              if (clientObject.userData.id) {
+                _this.bodies.push(clientObject.userData.id);
               }
 
               return true;
@@ -545,8 +543,13 @@ define([ 'underscore' ], function(_) {
       vehicle.setCoordinateSystem(0, 1, 2);
 
       this.dynamicsWorld.addVehicle(vehicle);
+
       var idx = this.vehicles.push(vehicle) - 1;
-      vehicle.id = idx;
+
+      vehicle.userData = {
+        type: 'btRaycastVehicle',
+        id: idx
+      };
 
       if (typeof fn === 'function') {
         fn(idx);
@@ -862,13 +865,13 @@ define([ 'underscore' ], function(_) {
       this.dynamicsWorld.rayTest(this.tmpVec[0], this.tmpVec[1], callback);
 
       if (callback.hasHit()) {
-        var body = Ammo.castObject(callback.get_m_collisionObject(), Ammo.btRigidBody);
+        var body = Ammo.castObject(callback.get_m_collisionObject(), Ammo.btCollisionObject);
 
-        if (body.id) {
+        if (body.userData.id) {
           if (typeof fn === 'function') {
             fn({
               type: 'btRigidBody', 
-              bodyId: body.id,
+              bodyId: body.userData.id,
               hitPointWorld: {
                 x: callback.get_m_hitPointWorld().x(),
                 y: callback.get_m_hitPointWorld().y(),
@@ -938,7 +941,13 @@ define([ 'underscore' ], function(_) {
       ghostObject.setCollisionFlags(this.collisionFlags.CF_NO_CONTACT_RESPONSE); // no collision response 
 
       var idx = this.ghosts.push(ghostObject) - 1;
-      ghostObject.id = idx;
+
+      var o = Ammo.castObject(ghostObject, Ammo.btCollisionObject);
+
+      ghostObject.userData = o.userData = {
+        type: 'btGhostObject',
+        id: idx 
+      };
 
       if (typeof fn === 'function') {
         fn(idx);
@@ -987,8 +996,12 @@ define([ 'underscore' ], function(_) {
       this.dynamicsWorld.addAction(controller);
 
       var idx = this.characterControllers.push(controller) - 1;
-      this.ghost = ghost;
-      controller.id = idx;
+      var o = Ammo.castObject(ghost, Ammo.btCollisionObject);
+
+      controller.userData = o.userData = {
+        type: 'btKinematicCharacterController',
+        id: idx
+      };
 
       if (typeof fn === 'function') {
         fn(idx);
@@ -1136,7 +1149,13 @@ define([ 'underscore' ], function(_) {
       body = new Ammo.btRigidBody(rbInfo);
 
       var idx = this.bodies.push(body) - 1;
-      body.id = idx;
+
+      var o = Ammo.castObject(body, Ammo.btCollisionObject);
+
+      body.userData = o.userData = {
+        type: 'btRigidBody', 
+        id: idx
+      };
 
       if (typeof fn === 'function') {
         fn(idx);

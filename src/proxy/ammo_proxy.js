@@ -75,12 +75,6 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       objB.trigger('ghost_exit', objA, objB); 
     }, this));
 
-    function proxyMethod(method) {
-      context[method] = function() {
-        return context.worker[method].apply(context.worker, arguments);
-      };
-    }
-
     this.setStep(opts.step);
     this.setIterations(opts.iterations);
     this.setGravity(opts.gravity);
@@ -153,10 +147,10 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
 
   AmmoProxy.prototype.getObjectByDescriptor = function(descriptor) {
     switch (descriptor.type) {
-    case 'rigidBody':
+    case 'btRigidBody':
       return this.bodies[descriptor.id];
 
-    case 'ghost':
+    case 'btGhostObject':
       return this.ghosts[descriptor.id];
 
     default:
@@ -171,7 +165,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     message = { 
       method: method,
       descriptor: descriptor
-    }
+    };
 
     if (promise) {
       message.reqId = this.reqId++;
@@ -301,12 +295,17 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
   AmmoProxy.prototype.createPoint2PointConstraint = function(bodyA, bodyB, pivotA, pivotB) {
     var descriptor = {
         rigidBodyIdA: bodyA.bodyId,
-        rigidBodyIdB: bodyB.bodyId,
-
-        pivotA: { x: pivotA.x, y: pivotA.y, z: pivotA.z },
-        pivotB: { x: pivotB.x, y: pivotB.y, z: pivotB.z }
+        pivotA: { x: pivotA.x, y: pivotA.y, z: pivotA.z }
       },
       deferred = when.defer();
+
+    if (bodyB) {
+      descriptor.rigidBodyIdB = bodyB.bodyId;
+    }
+
+    if (pivotB) {
+      descriptor.pivotB = { x: pivotB.x, y: pivotB.y, z: pivotB.z };
+    }
 
     this.execute('Point2PointConstraint_create', descriptor, true).then(_.bind(function(constraintId) {
       var proxy = this;
