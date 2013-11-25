@@ -38,11 +38,19 @@ define([ 'underscore' ], function(_) {
 
   function AmmoWorkerAPI(opts) {
     _.bindAll(this);
+
     this.maxBodies = 1000;
     this.maxVehicles = 32;
     this.maxWheelsPerVehicle = 8;
     this.maxKinematicCharacterControllers = 16;
     this.maxGhostObjects = 500;
+    this.maxConstraints = 1000;
+
+    this.bodyIds = _.range(this.maxBodies);
+    this.vehicleIds = _.range(this.maxVehicles);
+    this.kinematicCharacterControllerIds = _.range(this.maxKinematicCharacterControllers);
+    this.ghostObjectIds = _.range(this.maxGhostObjects);
+    this.constraintIds = _.range(this.maxConstraints);
 
     for (var i in opts) {
       if (opts.hasOwnProperty(i)) {
@@ -118,11 +126,11 @@ define([ 'underscore' ], function(_) {
         new Ammo.btTransform()
       ];
 
-      this.bodies = [];
-      this.vehicles = [];
-      this.constraints = [];
-      this.ghosts = [];
-      this.characterControllers = [];
+      this.bodies = new Array(this.maxBodies);//[];
+      this.vehicles = new Array(this.maxVehicles);//[];
+      this.constraints = new Array(this.maxConstraints);//[];
+      this.ghosts = new Array(this.maxGhosts);//[];
+      this.characterControllers = new Array(this.maxCharacterControllers);//[];
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
@@ -502,6 +510,10 @@ define([ 'underscore' ], function(_) {
     },
 
     Vehicle_create: function(descriptor, fn) {
+      if (!this.vehicleIds.length) {
+        return console.error('No unused vehicle slots!');
+      }
+
       var vehicleTuning = new Ammo.btVehicleTuning(),
           body = this.bodies[descriptor.bodyId],
           vehicle;
@@ -544,15 +556,17 @@ define([ 'underscore' ], function(_) {
 
       this.dynamicsWorld.addVehicle(vehicle);
 
-      var idx = this.vehicles.push(vehicle) - 1;
+      var id = this.vehicleIds.pop();
 
       vehicle.userData = {
         type: 'btRaycastVehicle',
-        id: idx
+        id: id
       };
 
+      this.vehicles[id] = vehicle;
+
       if (typeof fn === 'function') {
-        fn(idx);
+        fn(id);
       }
     },
 
@@ -659,6 +673,10 @@ define([ 'underscore' ], function(_) {
     },
 
     Point2PointConstraint_create: function(descriptor, fn) {
+      if (!this.constraintIds.length) {
+        return console.error('No unused constraint ids!');
+      }
+
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
           rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
             this.bodies[descriptor.rigidBodyIdB],
@@ -680,7 +698,9 @@ define([ 'underscore' ], function(_) {
           constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB);
         }
 
-        id = this.constraints.push(constraint) - 1;
+        id = this.constraintIds.pop();
+
+        this.constraints[id] = constraint;
 
         this.dynamicsWorld.addConstraint(constraint);
         constraint.enableFeedback();
@@ -692,6 +712,10 @@ define([ 'underscore' ], function(_) {
     },
 
     SliderConstraint_create: function(descriptor, fn) {
+      if (!this.constraintIds.length) {
+        return console.error('No unused constraint ids!');
+      }
+
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
           rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
             this.bodies[descriptor.rigidBodyIdB],
@@ -734,7 +758,8 @@ define([ 'underscore' ], function(_) {
 
         }
 
-        id = this.constraints.push(constraint) - 1;
+        id = this.constraintIds.pop();
+        this.constraints[id] = id;
 
         this.dynamicsWorld.addConstraint(constraint);
         constraint.enableFeedback();
@@ -778,6 +803,10 @@ define([ 'underscore' ], function(_) {
     },
 
     HingeConstraint_create: function(descriptor, fn) {
+      if (!this.constraintIds.length) {
+        return console.error('No unused constraint ids!');
+      }
+
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
           rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
             this.bodies[descriptor.rigidBodyIdB],
@@ -807,7 +836,8 @@ define([ 'underscore' ], function(_) {
               this.tmpVec[0], this.tmpVec[1]);
         }
 
-        id = this.constraints.push(constraint) - 1;
+        id = this.constraintIds.pop();
+        this.constraints[id] = constraint;
 
         this.dynamicsWorld.addConstraint(constraint);
         constraint.enableFeedback();
@@ -911,6 +941,9 @@ define([ 'underscore' ], function(_) {
     },
 
     GhostObject_create: function(descriptor, fn) {
+      if (!this.ghostObjectIds.length) {
+        return console.error('No unused ghost object ids'); 
+      }
       var colShape = this._createShape(descriptor.shape),
           origin = this.tmpVec[0],
           rotation = this.tmpQuaternion[0],
@@ -940,21 +973,27 @@ define([ 'underscore' ], function(_) {
       ghostObject.setCollisionShape(colShape);
       ghostObject.setCollisionFlags(this.collisionFlags.CF_NO_CONTACT_RESPONSE); // no collision response 
 
-      var idx = this.ghosts.push(ghostObject) - 1;
+      var id = this.ghostObjectIds.pop();
+
+      this.ghosts[id] = ghostObject;
 
       var o = Ammo.castObject(ghostObject, Ammo.btCollisionObject);
 
       ghostObject.userData = o.userData = {
         type: 'btGhostObject',
-        id: idx 
+        id: id
       };
 
       if (typeof fn === 'function') {
-        fn(idx);
+        fn(id);
       }
     },
 
     KinematicCharacterController_create: function(descriptor, fn) {
+      if (!this.kinematicCharacterControllerIds.length) {
+        return console.error('No unused kinematic character controller ids!');
+      }
+
       var colShape,
           startTransform = this.tmpTrans[0],
           origin = this.tmpVec[1],
@@ -995,16 +1034,18 @@ define([ 'underscore' ], function(_) {
 
       this.dynamicsWorld.addAction(controller);
 
-      var idx = this.characterControllers.push(controller) - 1;
+      var id = this.kinematicCharacterControllerIds.pop();
+      this.characterControllers[id] = controller;
+
       var o = Ammo.castObject(ghost, Ammo.btCollisionObject);
 
       controller.userData = o.userData = {
         type: 'btKinematicCharacterController',
-        id: idx
+        id: id
       };
 
       if (typeof fn === 'function') {
-        fn(idx);
+        fn(id);
       }
     },
 
@@ -1109,6 +1150,10 @@ define([ 'underscore' ], function(_) {
     },
 
     RigidBody_create: function(descriptor, fn) {
+      if (!this.bodyIds.length) {
+        return console.error('No unused body ids!');
+      }
+
       var colShape,
           startTransform = this.tmpTrans[0],
           isDynamic = (descriptor.mass !== 0),
@@ -1148,17 +1193,19 @@ define([ 'underscore' ], function(_) {
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
 
-      var idx = this.bodies.push(body) - 1;
+      var id = this.bodyIds.pop();
+
+      this.bodies[id] = body;
 
       var o = Ammo.castObject(body, Ammo.btCollisionObject);
 
       body.userData = o.userData = {
         type: 'btRigidBody', 
-        id: idx
+        id: id
       };
 
       if (typeof fn === 'function') {
-        fn(idx);
+        fn(id);
       }
     },
 
@@ -1374,6 +1421,7 @@ define([ 'underscore' ], function(_) {
         Ammo.destroy(constraint);
         this.constraints[id] = undefined;
         this.trigger('Constraint_destroy', id);
+        this.constraintIds.push(id);
       }
     },
 
@@ -1385,6 +1433,7 @@ define([ 'underscore' ], function(_) {
         Ammo.destroy(body);
         this.bodies[id] = undefined;
         this.trigger('RigidBody_destroy', id);
+        this.bodyIds.push(id);
       }
     },
 
@@ -1396,6 +1445,7 @@ define([ 'underscore' ], function(_) {
         Ammo.destroy(vehicle);
         this.vehicles[id] = undefined;
         this.trigger('Vehicle_destroy', id);
+        this.vehicleIds.push(id);
       }
     },
 
@@ -1407,6 +1457,7 @@ define([ 'underscore' ], function(_) {
         Ammo.destroy(ghost);
         this.ghosts[id] = undefined;
         this.trigger('GhostObject_destroy', id);
+        this.ghostIds.push(id);
       }
     },
 
