@@ -763,11 +763,11 @@ define([ 'underscore' ], function(_) {
           constraint = new Ammo.btSliderConstraint(rigidBodyA, rigidBodyB, 
             transformA, transformB);
         } else {
-
+          constraint = new Ammo.btSliderConstraint(rigidBodyA, transformA);
         }
 
         id = this.constraintIds.pop();
-        this.constraints[id] = id;
+        this.constraints[id] = constraint;
 
         this.dynamicsWorld.addConstraint(constraint);
         constraint.enableFeedback();
@@ -807,6 +807,131 @@ define([ 'underscore' ], function(_) {
 
       if (constraint) {
         constraint.setUpperAngLimit(descriptor.limit);
+      }
+    },
+
+    ConeTwistConstraint_create: function(descriptor, fn) {
+      if (!this.constraintIds.length) {
+        return console.error('No unused constraint ids!');
+      }
+
+      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+            this.bodies[descriptor.rigidBodyIdB],
+          constraint,
+          id;
+
+      if (rigidBodyA) {
+        var transformA = new Ammo.btTransform();
+
+        this.tmpVec[0].setX(descriptor.rbAFrame.position.x);
+        this.tmpVec[0].setY(descriptor.rbAFrame.position.y);
+        this.tmpVec[0].setZ(descriptor.rbAFrame.position.z);
+
+        this.tmpQuaternion[0].setX(descriptor.rbAFrame.rotation.x);
+        this.tmpQuaternion[0].setY(descriptor.rbAFrame.rotation.y);
+        this.tmpQuaternion[0].setZ(descriptor.rbAFrame.rotation.z);
+        this.tmpQuaternion[0].setW(descriptor.rbAFrame.rotation.w);
+
+        transformA.setOrigin(this.tmpVec[0]);
+        transformA.setRotation(this.tmpQuaternion[0]);
+
+        if (rigidBodyB) {
+          var transformB = new Ammo.btTransform();
+
+          this.tmpVec[1].setX(descriptor.rbBFrame.position.x);
+          this.tmpVec[1].setY(descriptor.rbBFrame.position.y);
+          this.tmpVec[1].setZ(descriptor.rbBFrame.position.z);
+
+          this.tmpQuaternion[1].setX(descriptor.rbBFrame.rotation.x);
+          this.tmpQuaternion[1].setY(descriptor.rbBFrame.rotation.y);
+          this.tmpQuaternion[1].setZ(descriptor.rbBFrame.rotation.z);
+          this.tmpQuaternion[1].setW(descriptor.rbBFrame.rotation.w);
+
+          transformB.setOrigin(this.tmpVec[1]);
+          transformB.setRotation(this.tmpQuaternion[1]);
+
+          constraint = new Ammo.btConeTwistConstraint(rigidBodyA, rigidBodyB, transformA, transformB);
+        } else {
+          constraint = new Ammo.btConeTwistConstraint(rigidBodyA, transformA);
+        }
+
+        id = this.constraintIds.pop();
+        this.constraints[id] = constraint;
+
+        this.dynamicsWorld.addConstraint(constraint);
+        //constraint.enableFeedback();
+
+        if (typeof fn === 'function') {
+          fn(id);
+        }
+      }
+    },
+
+    ConeTwistConstraint_setAngularOnly: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setAngularOnly(descriptor.angularOnly);
+      }
+    },
+
+    ConeTwistConstraint_setDamping: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setDamping(descriptor.damping);
+      }
+    },
+
+    ConeTwistConstraint_enableMotor: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.enableMotor(descriptor.isEnabled);
+      }
+    },
+
+    ConeTwistConstraint_setMaxMotorImpulse: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setMaxMotorImpulse(descriptor.maxMotorImpulse);
+      }
+    },
+    
+    ConeTwistConstraint_setMaxMotorImpulseNormalized: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setMaxMotorImpulseNormalized(descriptor.maxMotorImpulse);
+      }
+    },
+    
+    ConeTwistConstraint_setMotorTarget: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setMotorTarget(descriptor.motorTarget);
+      }
+    },
+    
+    ConeTwistConstraint_setMotorTargetInConstraintSpace: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setMotorTargetInConstraintSpace(descriptor.motorTarget);
+      }
+    },
+    
+
+    ConeTwistConstraint_setLimit: function(descriptor) {
+      var constraint = this.constraints[descriptor.constraintId];
+
+      if (constraint) {
+        constraint.setLimit(descriptor.swingSpan1, descriptor.swingSpan2, 
+            descriptor.twistSpan, descriptor.softness, descriptor.biasFactor,
+            descriptor.relaxationFactor);
       }
     },
 
