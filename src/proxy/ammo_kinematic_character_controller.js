@@ -20,7 +20,11 @@ define([ './ammo_base_object' ], function(AmmoBaseObject) {
   AmmoKinematicCharacterController.prototype.setWalkDirection = function(direction) {
     return this.proxy.execute('KinematicCharacterController_setWalkDirection', {
       controllerId: this.controllerId,
-      direction: direction
+      direction: {
+        x: direction.x,
+        y: direction.y,
+        z: direction.z
+      }
     });
   };
 

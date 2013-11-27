@@ -75,6 +75,7 @@ DemoScene.prototype._initScene = function() {
   renderer.shadowMapEnabled = true;
   renderer.shadowMapSoft = true;
   renderer.shadowMapType = THREE.PCFSoftShadowMap;
+  
   renderer.physicallyBasedShading = true;
   var camera = this.camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
   var scene = this.scene = new THREE.Scene();
@@ -114,9 +115,14 @@ DemoScene.prototype._initScene = function() {
   scene.add(camera);
 
   var light = new THREE.DirectionalLight( 0xCCCCCC );
-  light.position.set( 20, 80, 0 );
+  light.position.set( 100, 200, 0 );
   light.target.position.copy( scene.position );
   light.castShadow = true;
+  light.shadowCameraNear = 10;
+  light.shadowCameraFar = 500;
+  light.shadowMapHeight = 2048;
+  light.shadowMapWidth = 2048;
+  light.shadowBias = 0.1;
   scene.add(light);
 
   if (typeof this.initDemo === 'function') {
