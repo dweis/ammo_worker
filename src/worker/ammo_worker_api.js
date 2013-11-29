@@ -810,6 +810,65 @@ define([ 'underscore' ], function(_) {
       }
     },
 
+    Generic6DofConstraint_create: function(descriptor, fn) {
+      if (!this.constraintIds.length) {
+        return console.error('No unused constraint ids!');
+      }
+
+      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+            this.bodies[descriptor.rigidBodyIdB],
+          constraint,
+          id;
+
+      if (rigidBodyA) {
+        var transformA = new Ammo.btTransform();
+
+        this.tmpVec[0].setX(descriptor.rbAFrame.position.x);
+        this.tmpVec[0].setY(descriptor.rbAFrame.position.y);
+        this.tmpVec[0].setZ(descriptor.rbAFrame.position.z);
+
+        this.tmpQuaternion[0].setX(descriptor.rbAFrame.rotation.x);
+        this.tmpQuaternion[0].setY(descriptor.rbAFrame.rotation.y);
+        this.tmpQuaternion[0].setZ(descriptor.rbAFrame.rotation.z);
+        this.tmpQuaternion[0].setW(descriptor.rbAFrame.rotation.w);
+
+        transformA.setOrigin(this.tmpVec[0]);
+        transformA.setRotation(this.tmpQuaternion[0]);
+
+        if (rigidBodyB) {
+          var transformB = new Ammo.btTransform();
+
+          this.tmpVec[1].setX(descriptor.rbBFrame.position.x);
+          this.tmpVec[1].setY(descriptor.rbBFrame.position.y);
+          this.tmpVec[1].setZ(descriptor.rbBFrame.position.z);
+
+          this.tmpQuaternion[1].setX(descriptor.rbBFrame.rotation.x);
+          this.tmpQuaternion[1].setY(descriptor.rbBFrame.rotation.y);
+          this.tmpQuaternion[1].setZ(descriptor.rbBFrame.rotation.z);
+          this.tmpQuaternion[1].setW(descriptor.rbBFrame.rotation.w);
+
+          transformB.setOrigin(this.tmpVec[1]);
+          transformB.setRotation(this.tmpQuaternion[1]);
+
+          constraint = new Ammo.btGeneric6DofConstraint(rigidBodyA, rigidBodyB, transformA, transformB, !!descriptor.useLinearReference);
+        } else {
+          constraint = new Ammo.btGeneric6DofConstraint(rigidBodyA, transformA, !!descriptor.useLinearReference);
+        }
+
+        id = this.constraintIds.pop();
+        this.constraints[id] = constraint;
+
+        this.dynamicsWorld.addConstraint(constraint);
+        //constraint.enableFeedback();
+
+        if (typeof fn === 'function') {
+          fn(id);
+        }
+      }
+    },
+
+
     ConeTwistConstraint_create: function(descriptor, fn) {
       if (!this.constraintIds.length) {
         return console.error('No unused constraint ids!');
@@ -924,7 +983,6 @@ define([ 'underscore' ], function(_) {
       }
     },
     
-
     ConeTwistConstraint_setLimit: function(descriptor) {
       var constraint = this.constraints[descriptor.constraintId];
 
@@ -1339,6 +1397,14 @@ define([ 'underscore' ], function(_) {
 
       if (typeof fn === 'function') {
         fn(id);
+      }
+    },
+
+    CollisionObject_setActivationState: function(descriptor) {
+      var body = this.bodies[descriptor.bodyId];
+
+      if (body) {
+        body.setActivationState(descriptor.activationState);  
       }
     },
 

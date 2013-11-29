@@ -1,10 +1,10 @@
 define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_api.js', 'proxy/ammo_rigid_body', 'proxy/ammo_vehicle', 
          'proxy/ammo_point2point_constraint', 'proxy/ammo_hinge_constraint', 'proxy/ammo_slider_constraint',
-         'proxy/ammo_conetwist_constraint', 'proxy/ammo_ghost_object', 
+         'proxy/ammo_conetwist_constraint', 'proxy/ammo_generic_6dof_constraint', 'proxy/ammo_ghost_object', 
          'proxy/ammo_kinematic_character_controller', 'proxy/three/three_adapter' ], 
       function(when, _, Events, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
-        AmmoHingeConstraint, AmmoSliderConstraint, AmmoConeTwistConstraint, AmmoGhostObject, 
-        AmmoKinematicCharacterController, THREEAdapter) {
+        AmmoHingeConstraint, AmmoSliderConstraint, AmmoConeTwistConstraint, AmmoGeneric6DofConstraint, 
+        AmmoGhostObject, AmmoKinematicCharacterController, THREEAdapter) {
   function AmmoProxy(opts) {
     this.reqId = 0;
 
@@ -371,6 +371,51 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     return deferred.promise;
   };
 
+  AmmoProxy.prototype.createGeneric6DofConstraint = function(bodyA, bodyB, rbAFrame, rbBFrame, useLinearReference) {
+    var descriptor = {
+        rigidBodyIdA: bodyA.bodyId,
+        rigidBodyIdB: bodyB.bodyId,
+        rbAFrame: {
+          position: {
+            x: rbAFrame.position.x,
+            y: rbAFrame.position.y,
+            z: rbAFrame.position.z
+          },
+          rotation: {
+            x: rbAFrame.rotation.x,
+            y: rbAFrame.rotation.y,
+            z: rbAFrame.rotation.z,
+            w: rbAFrame.rotation.w
+          }
+        },
+        rbBFrame: {
+          position: {
+            x: rbBFrame.position.x,
+            y: rbBFrame.position.y,
+            z: rbBFrame.position.z
+          },
+          rotation: {
+            x: rbBFrame.rotation.x,
+            y: rbBFrame.rotation.y,
+            z: rbBFrame.rotation.z,
+            w: rbBFrame.rotation.w
+          }
+        },
+        useLinearReference: useLinearReference
+      },
+      deferred = when.defer();
+
+    this.execute('Generic6DofConstraint_create', descriptor, true).then(_.bind(function(constraintId) {
+      var proxy = this;
+      setTimeout(function() {
+        var constraint = new AmmoConeTwistConstraint(proxy, constraintId); 
+        proxy.constraints[constraintId] = constraint;
+        deferred.resolve(constraint);
+      }, 0);
+    },this));
+
+    return deferred.promise;
+  };
 
   AmmoProxy.prototype.createConeTwistConstraint = function(bodyA, bodyB, rbAFrame, rbBFrame) {
     var descriptor = {

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Point2Point Constraint Test</title>
+  <title>Generic6Dof Constraint Test</title>
   <style>
   html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
   </style>
@@ -21,55 +21,70 @@
     SimpleDemo.prototype = new DemoScene();
 
     SimpleDemo.prototype.initDemo = function() {
-      var material = new THREE.MeshPhongMaterial({ opacity: 0.5, color: 0x33CC00, shading: THREE.SmoothShading });
+      var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
 
       this.camera.position.x = this.camera.position.z = 200;
       this.camera.position.y = 100;
 
       this.bodies = [];
-      for (var i = 0; i < 250; i++) {
+      for (var i = 0; i < 10; i++) {
         var o = this._createLink(i, material);
         this.scene.add(o);
       }
 
       setTimeout(function() {
         var last;
+        var quat = new THREE.Quaternion();
 
-        this.bodies.forEach(function(body) {
+        quat.setFromAxisAngle({x: 0, y: 1, z: 0}, Math.PI);
+
+        this.bodies.forEach(function(body,i) {
           if (last) {
-            this.proxy.createPoint2PointConstraint(body, last, { x: 0, y: -2, z: 0 }, { x: 0, y: 2, z: 0 });
+            this.proxy.createGeneric6DofConstraint(last, body, 
+              {
+                position: { x: -2.1, y: -2.1, z: -2.1 },
+                rotation: quat
+              }, 
+              { 
+                position: { x: 2.1, y: 2.1, z: 2.1 },
+                rotation: quat
+              }).then(function(constraint) {
+                /*
+                coneTwistConstraint.setAngularOnly(true);
+                coneTwistConstraint.setLimit(Math.PI/8, Math.PI/8, Math.PI/8);
+                coneTwistConstraint.enableMotor(true);
+                coneTwistConstraint.setMotorTarget(quat);
+                coneTwistConstraint.setMaxMotorImpulse(100000000);
+                */
+              }.bind(this));
           }
-
           last = body;
         }.bind(this));
-
-        this.proxy.createPoint2PointConstraint(this.bodies[0], 
-            this.bodies[this.bodies.length - 1],
-            { x: 0, y: -2, z: 0 },
-            { x: 0, y: 2, z: 0 });
-      }.bind(this), 1000);
+      }.bind(this), 500);
     };
 
-    var y = 0;
+    var y = 40;
     SimpleDemo.prototype._createLink = function(i, material, last) {
-      y += 2;
+      y -= 5;
       var o = new THREE.Object3D();
 
-      o.add(new THREE.Mesh(new THREE.SphereGeometry(2.1, 24, 24), material));
+      o.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material));
 
-      o.position.x = Math.sin(i*0.025) * 80;
-      o.position.y = 20 + Math.sin(i*0.5) * 15;// + y;
-      o.position.z = Math.cos(i*0.025) * 80;
+      o.position.x = 0;
+      o.position.y = 40 + y;
+      o.position.z = 0;
 
 
-      this.proxy.createRigidBodyFromObject(o, 0.5, {
-        shape: 'sphere',
-        radius: 2
+      this.proxy.createRigidBodyFromObject(o, i == 0 ? 0 : 0.1, {
+        shape: 'box',
+        halfExtents: {
+          x: 2,
+          y: 2,
+          z: 2
+        }
       }).then(function(rigidBody) {
         rigidBody.addToWorld();
-        //rigidBody.setAngularFactor({ x: 1, y: 1, z: 1 });
         this.bodies.push(rigidBody);
-        rigidBody.setActivationState(4);
       }.bind(this));
 
       o.traverse(function(o) {

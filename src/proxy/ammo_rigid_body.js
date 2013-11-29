@@ -181,5 +181,12 @@ define([ './ammo_base_object' ], function(AmmoBaseObject) {
     });
   };
 
+  AmmoRigidBody.prototype.setActivationState = function(activationState) {
+    return this.proxy.execute('CollisionObject_setActivationState', {
+      bodyId: this.bodyId,
+      activationState: activationState
+    });
+  };
+
   return AmmoRigidBody;
 });
