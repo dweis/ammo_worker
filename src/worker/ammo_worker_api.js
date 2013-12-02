@@ -47,12 +47,14 @@ define([ 'underscore' ], function(_) {
     this.maxKinematicCharacterControllers = 16;
     this.maxGhostObjects = 500;
     this.maxConstraints = 1000;
+    this.maxCollisionObjects = 1000;
 
     this.bodyIds = _.range(this.maxBodies);
     this.vehicleIds = _.range(this.maxVehicles);
     this.kinematicCharacterControllerIds = _.range(this.maxKinematicCharacterControllers);
     this.ghostObjectIds = _.range(this.maxGhostObjects);
     this.constraintIds = _.range(this.maxConstraints);
+    this.collisionObjectIds = _.range(this.maxCollisionObjects);
 
     for (var i in opts) {
       if (opts.hasOwnProperty(i)) {
@@ -128,11 +130,12 @@ define([ 'underscore' ], function(_) {
         new Ammo.btTransform()
       ];
 
-      this.bodies = new Array(this.maxBodies);//[];
-      this.vehicles = new Array(this.maxVehicles);//[];
-      this.constraints = new Array(this.maxConstraints);//[];
-      this.ghosts = new Array(this.maxGhosts);//[];
-      this.characterControllers = new Array(this.maxCharacterControllers);//[];
+      this.bodies = new Array(this.maxBodies);
+      this.collisionObjects = new Array(this.maxCollisionObjects);
+      this.vehicles = new Array(this.maxVehicles);
+      this.constraints = new Array(this.maxConstraints);
+      this.ghosts = new Array(this.maxGhosts);
+      this.characterControllers = new Array(this.maxCharacterControllers);
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
@@ -200,8 +203,6 @@ define([ 'underscore' ], function(_) {
               that.tmpTrans[0].setIdentity();
               that.bodies[i].getMotionState().getWorldTransform(that.tmpTrans[0]);
               pos = that.OFFSET_RIGID_BODY + (i * 7);
-
-              //console.log('pos: ' + pos +  'y:' + that.tmpTrans[0].getOrigin().y());
 
               update[pos + 0] = that.tmpTrans[0].getOrigin().x();
               update[pos + 1] = that.tmpTrans[0].getOrigin().y();
@@ -1131,6 +1132,17 @@ define([ 'underscore' ], function(_) {
       }
     },
 
+    DynamicsWorld_addCollisionObject: function(descriptor) {
+      console.log('adding collisionObject: ' + JSON.stringify(descriptor));
+      var collisionObject = this.collisionObjects[descriptor.collisionObjectId];
+
+      if (collisionObject) {
+        console.log('before');
+        this.dynamicsWorld.addCollisionObject(collisionObject, descriptor.group, descriptor.mask);  
+        console.log('after');
+      }
+    },
+
     GhostObject_create: function(descriptor, fn) {
       if (!this.ghostObjectIds.length) {
         return console.error('No unused ghost object ids'); 
@@ -1392,6 +1404,55 @@ define([ 'underscore' ], function(_) {
 
       body.userData = o.userData = {
         type: 'btRigidBody', 
+        id: id
+      };
+
+      if (typeof fn === 'function') {
+        fn(id);
+      }
+    },
+
+    CollisionObject_create: function(descriptor, fn) {
+      if (!this.bodyIds.length) {
+        return console.error('No unused body ids!');
+      }
+
+      var colShape,
+          startTransform = this.tmpTrans[0],
+          origin = this.tmpVec[1],
+          rotation = this.tmpQuaternion[0],
+          body;
+
+      startTransform.setIdentity();
+
+      colShape = this._createShape(descriptor.shape);
+
+      if (!colShape) {
+        throw('Invalid collision shape!');
+      }
+
+      origin.setX(descriptor.position.x);
+      origin.setY(descriptor.position.y);
+      origin.setZ(descriptor.position.z);
+
+      rotation.setX(descriptor.quaternion.x);
+      rotation.setY(descriptor.quaternion.y);
+      rotation.setZ(descriptor.quaternion.z);
+      rotation.setW(descriptor.quaternion.w);
+
+      startTransform.setOrigin(origin);
+      startTransform.setRotation(rotation);
+
+      body = new Ammo.btCollisionObject();
+
+      body.setCollisionShape(colShape);
+
+      var id = this.collisionObjectIds.pop();
+
+      this.collisionObjects[id] = body;
+
+      body.userData = {
+        type: 'btCollisionObject', 
         id: id
       };
 

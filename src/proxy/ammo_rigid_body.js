@@ -1,4 +1,4 @@
-define([ './ammo_base_object' ], function(AmmoBaseObject) {
+define([ './ammo_collision_object' ], function(AmmoCollisionObject) {
   function AmmoRigidBody(proxy, bodyId) {
     this.proxy = proxy;
     this.bodyId = bodyId;
@@ -9,7 +9,7 @@ define([ './ammo_base_object' ], function(AmmoBaseObject) {
     this.angularVelocity = { x: 0, y: 0, z: 0 };
   } 
 
-  AmmoRigidBody.prototype = new AmmoBaseObject();
+  AmmoRigidBody.prototype = new AmmoCollisionObject();
 
   AmmoRigidBody.prototype.update = function() {
     if (this.binding && this.binding.update) {

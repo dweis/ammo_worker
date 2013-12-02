@@ -1,8 +1,9 @@
-define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_api.js', 'proxy/ammo_rigid_body', 'proxy/ammo_vehicle', 
+define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_api.js', 
+         'proxy/ammo_collision_object', 'proxy/ammo_rigid_body', 'proxy/ammo_vehicle', 
          'proxy/ammo_point2point_constraint', 'proxy/ammo_hinge_constraint', 'proxy/ammo_slider_constraint',
          'proxy/ammo_conetwist_constraint', 'proxy/ammo_generic_6dof_constraint', 'proxy/ammo_ghost_object', 
          'proxy/ammo_kinematic_character_controller', 'proxy/three/three_adapter' ], 
-      function(when, _, Events, AmmoWorkerAPI, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
+      function(when, _, Events, AmmoWorkerAPI, AmmoCollisionObject, AmmoRigidBody, AmmoVehicle, AmmoPoint2PointConstraint,
         AmmoHingeConstraint, AmmoSliderConstraint, AmmoConeTwistConstraint, AmmoGeneric6DofConstraint, 
         AmmoGhostObject, AmmoKinematicCharacterController, THREEAdapter) {
   function AmmoProxy(opts) {
@@ -32,6 +33,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     var vehicles = this.vehicles = [];
     var ghosts = this.ghosts = [];
     var kinematicCharacterControllers = this.kinematicCharacterControllers = [];
+    var collisionObjects = this.collisionObjects = [];
 
     this.adapter = new THREEAdapter(this);
 
@@ -53,6 +55,10 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
 
     this.on('KinematicCharacterController_destroy', function(id) {
       kinematicCharacterControllers[id] = undefined;
+    });
+
+    this.on('CollisionObject_destroy', function(id) {
+      collisionObjects[id] = undefined;
     });
 
     this.on('ghost_enter', _.bind(function(descriptor) {
@@ -255,6 +261,26 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     }, this));
 
     return deferred.promise;
+  };
+
+  AmmoProxy.prototype.createCollisionObject = function(shape, position, quaternion) {
+    var descriptor = {
+        shape: shape,
+        position: position,
+        quaternion: quaternion
+      },
+      deferred = when.defer();
+
+    this.execute('CollisionObject_create', descriptor, true).then(_.bind(function(collisionObjectId) {
+      var proxy = this;
+      setTimeout(function() {
+        var collisionObject = new AmmoCollisionObject(proxy, collisionObjectId); 
+        proxy.collisionObjects[collisionObjectId] = collisionObject;
+        deferred.resolve(collisionObject);
+      }, 0);
+    }, this));
+
+    return deferred.promise;    
   };
 
   AmmoProxy.prototype.createKinematicCharacterController = function(shape, position, quaternion, stepHeight) {
@@ -496,6 +522,10 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       this.data = this.next;
     }
     this.next = new Float64Array(data);
+  };
+
+  AmmoProxy.prototype.createCollisionObjectFromObject = function(object, shape) {
+    return this.adapter.createCollisionObjectFromObject(object, shape);
   };
 
   AmmoProxy.prototype.createGhostObjectFromObject = function(object, shape) {

@@ -105,12 +105,13 @@ DemoScene.prototype._initScene = function() {
   scene.add(ground);
   scene.updateMatrixWorld();
 
-  this.proxy.adapter.createRigidBodyFromObject(ground, 500000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'}).then(_.bind(function(rigidBody) {
-    rigidBody.setType('static');
-    rigidBody.setFriction(0.5);
-    rigidBody.addToWorld(1,255);
-    this.groundBody = rigidBody;
-  }, this));
+  this.proxy.createCollisionObjectFromObject(ground, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'})
+    .then(_.bind(function(collisionObject) {
+      console.log(collisionObject);
+      collisionObject.setFriction(0.5);
+      collisionObject.addToWorld(1,255);
+      this.groundBody = collisionObject;
+    }, this));
 
   scene.add(camera);
 
