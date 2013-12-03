@@ -119,14 +119,10 @@
         maxSuspensionForce: config.maxSuspensionForce,
         frictionSlip: config.frictionSlip
       };
-      console.log('creating vehicle!');
 
       this.proxy.createRigidBodyFromObject(o, 1000).then(function(rigidBody) {
-        console.log('got body!');
         rigidBody.addToWorld();
-        console.log('creating real vehicle');
         that.proxy.createVehicle(rigidBody, tuning).then(function(vehicle) {
-          console.log('VEHICLE', vehicle);
           var wheel, cylinder, euler = new THREE.Euler(),
               wheelDirection = { x: 0, y: -1, z: 0 },
               wheelAxle = { x: -1, y: 0, z: 0 };
