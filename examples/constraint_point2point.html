@@ -21,7 +21,7 @@
     SimpleDemo.prototype = new DemoScene();
 
     SimpleDemo.prototype.initDemo = function() {
-      var material = new THREE.MeshPhongMaterial({ opacity: 0.5, color: 0x33CC00, shading: THREE.SmoothShading });
+      var material = new THREE.MeshLambertMaterial({ opacity: 0.5, color: 0x33CC00, shading: THREE.SmoothShading });
 
       this.camera.position.x = this.camera.position.z = 200;
       this.camera.position.y = 100;

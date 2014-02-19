@@ -10,7 +10,7 @@ define([], function() {
     object.matrixAutoUpdate = false;
     object.updateMatrixWorld();
     this.originalScale = new THREE.Vector3();
-    this.originalScale.getScaleFromMatrix(object.matrixWorld);
+    this.originalScale.setFromMatrixScale(object.matrixWorld);
   }
 
   THREEBinding.prototype.update = function() {
