@@ -198,7 +198,7 @@ define([ 'underscore' ], function(_) {
         }
 
         if (update && update.buffer instanceof ArrayBuffer) {
-          for (i in that.bodies) {
+          for (i = 0; i < that.bodies.length; i++) {
             if (that.bodies[i]) {
               that.tmpTrans[0].setIdentity();
               that.bodies[i].getMotionState().getWorldTransform(that.tmpTrans[0]);
@@ -214,7 +214,7 @@ define([ 'underscore' ], function(_) {
             }
           }
 
-          for (i in that.vehicles) {
+          for (i = 0; i < that.vehicles.length; i++) {
             if (that.vehicles[i]) {
               vehicle = that.vehicles[i];
 
@@ -233,7 +233,7 @@ define([ 'underscore' ], function(_) {
             }
           }
 
-          for (i in that.characterControllers) {
+          for (i = 0; i < that.characterControllers.length; i++) {
             if (that.characterControllers[i]) {
               var trans = that.characterControllers[i].getGhostObject().getWorldTransform();
               pos = that.OFFSET_KINEMATIC_CHARACTER + (i * 7);

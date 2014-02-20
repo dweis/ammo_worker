@@ -178,12 +178,12 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
         rotation = new THREE.Quaternion(),
         scale = new THREE.Vector3();
 
-        scale.getScaleFromMatrix(o.matrixWorld);
+        scale.setFromMatrixScale(o.matrixWorld);
 
         tmpMatrix.copy(inverseParent);
         tmpMatrix.multiply(o.matrixWorld);
 
-        position.getPositionFromMatrix(tmpMatrix);
+        position.setFromMatrixPosition(tmpMatrix);
         tmpMatrix.extractRotation(tmpMatrix);
         rotation.setFromRotationMatrix(tmpMatrix);
 
@@ -250,7 +250,7 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
       tmpMatrix.multiply(child.matrixWorld);
 
       if (child instanceof THREE.Mesh && !child.isBB) {
-        scale.getScaleFromMatrix(child.matrixWorld);
+        scale.setFromMatrixScale(child.matrixWorld);
 
         if (geometry instanceof THREE.BufferGeometry) {
           if (!geometry.attributes.position.array) {
