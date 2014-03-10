@@ -105,7 +105,12 @@ define([ 'underscore' ], function(_) {
                 (this.maxKinematicCharacterControllers * 7) + 
                 (this.maxGhostObjects * 7)
               )
+            );/*+
+            // INT16 types
+            (2 *
+              (1000  * 2) // collisions
             );
+            */
 
 
       this.OFFSET_RIGID_BODY = 0;
@@ -169,6 +174,7 @@ define([ 'underscore' ], function(_) {
       ];
 
       this.ghostCollisions = {};
+      this.collisions = {};
 
       self.postMessage({ command: 'event', arguments: [ 'ready' ] });
     },
@@ -247,6 +253,58 @@ define([ 'underscore' ], function(_) {
               update[pos + 6] = trans.getRotation().w();
             }  
           }
+
+          (function() {
+            var dispatcher = that.dynamicsWorld.getDispatcher(),
+                nManifolds = dispatcher.getNumManifolds(),
+                manifold,
+                nContacts,
+                point,
+                key1,
+                type1,
+                key2,
+                type2,
+                body1,
+                body2;
+
+
+            for (var i = 0; i < nManifolds; i++) {
+              manifold = dispatcher.getManifoldByIndexInternal(i);
+              
+              nContacts = manifold.getNumContacts();
+
+              if (nContacts > 0) {
+                for (var j = 0; j < nContacts; j++) {
+                  point = manifold.getContactPoint(j);
+                  body1 = Ammo.wrapPointer(manifold.getBody0(), Ammo.btCollisionObject);
+                  body2 = Ammo.wrapPointer(manifold.getBody1(), Ammo.btCollisionObject);
+
+                  if (body1.userData && body2.userData) {
+                    key1 = body1.userData.key;
+                    key2 = body2.userData.key;
+                    type1 = body1.userData.type;
+                    type2 = body2.userData.type;
+
+                    self.postMessage({ command: 'event', arguments: [ 
+                        'begin_contact', { 
+                          objectA: { type: type1, id: key1 },
+                          objectB: { type: type2, id: key2 }
+                        }
+                      ]
+                    });
+                  }
+
+                  /*
+                  self.postMessage({ command: 'event', arguments: [ 'begin_contact', { 
+                    objectA: { type: 'btGhostObject', id: id },
+                    objectB: { type: body.userData.type, id: body.userData.id }
+                  } ]});  
+                  */
+                }
+              }  
+            }
+
+          })();
 
           that.ghosts.forEach(function(ghost, id) {
             if (ghost) {

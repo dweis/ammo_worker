@@ -82,6 +82,32 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       objB.trigger('ghost_exit', objA, objB); 
     }, this));
 
+    this.on('begin_contact', _.bind(function(descriptor) {
+      var objA = this.getObjectByDescriptor(descriptor.objectA),
+          objB = this.getObjectByDescriptor(descriptor.objectB);
+
+      if (objA) {
+        objA.trigger('begin_contact', objB, objA);
+      }
+
+      if (objB) {
+        objB.trigger('begin_contact', objA, objB); 
+      }
+    }, this));
+
+    this.on('end_contact', _.bind(function(descriptor) {
+      var objA = this.getObjectByDescriptor(descriptor.objectA),
+          objB = this.getObjectByDescriptor(descriptor.objectB);
+
+      if (objA) {
+        objA.trigger('end_contact', objB, objA);
+      }
+
+      if (objB) {
+        objB.trigger('end_contact', objA, objB); 
+      }
+    }, this));
+
     this.setStep(opts.step);
     this.setIterations(opts.iterations);
     this.setGravity(opts.gravity);
