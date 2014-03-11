@@ -21,7 +21,7 @@ define([ 'underscore' ], function(_) {
     });
 
   }
-  
+
   makeWorkerConsole(self);
 
   self.addEventListener('message', function(message) {
@@ -65,13 +65,13 @@ define([ 'underscore' ], function(_) {
 
   AmmoWorkerAPI.prototype = {
     collisionFlags: {
-      CF_STATIC_OBJECT: 1, 
-      CF_KINEMATIC_OBJECT: 2, 
-      CF_NO_CONTACT_RESPONSE: 4, 
-      CF_CUSTOM_MATERIAL_CALLBACK: 8, 
-      CF_CHARACTER_OBJECT: 16, 
-      CF_DISABLE_VISUALIZE_OBJECT: 32, 
-      CF_DISABLE_SPU_COLLISION_PROCESSING: 64 
+      CF_STATIC_OBJECT: 1,
+      CF_KINEMATIC_OBJECT: 2,
+      CF_NO_CONTACT_RESPONSE: 4,
+      CF_CUSTOM_MATERIAL_CALLBACK: 8,
+      CF_CHARACTER_OBJECT: 16,
+      CF_DISABLE_VISUALIZE_OBJECT: 32,
+      CF_DISABLE_SPU_COLLISION_PROCESSING: 64
     },
 
     activationStates: {
@@ -80,7 +80,7 @@ define([ 'underscore' ], function(_) {
       WANTS_DEACTIVATION: 3,
       DISABLE_DEACTIVATION: 4,
       DISABLE_SIMULATION: 5
-    }, 
+    },
 
     collisionFilterGroups:  {
       DefaultFilter: 1,
@@ -93,16 +93,16 @@ define([ 'underscore' ], function(_) {
     },
 
     init: function() {
-      var bufferSize = 
+      var bufferSize =
             // FLOAT64 Types
-            (8 * 
+            (8 *
               (
                 // Rigid Bodies
-                (this.maxBodies * 7 ) + 
+                (this.maxBodies * 7 ) +
                 // Vehicles
                 (this.maxVehicles * this.maxWheelsPerVehicle * 7) +
                 // Character Controllers
-                (this.maxKinematicCharacterControllers * 7) + 
+                (this.maxKinematicCharacterControllers * 7) +
                 (this.maxGhostObjects * 7)
               )
             );/*+
@@ -156,7 +156,7 @@ define([ 'underscore' ], function(_) {
       this.tmpVec[1].setZ(1000);
       this.overlappingPairCache = new Ammo.btAxisSweep3(this.tmpVec[0], this.tmpVec[1]);
       */
-      
+
       this.solver = new Ammo.btSequentialImpulseConstraintSolver();
       this.dynamicsWorld = new Ammo.btDiscreteDynamicsWorld(this.dispatcher,
           this.overlappingPairCache, this.solver, this.collisionConfiguration);
@@ -251,7 +251,7 @@ define([ 'underscore' ], function(_) {
               update[pos + 4] = trans.getRotation().y();
               update[pos + 5] = trans.getRotation().z();
               update[pos + 6] = trans.getRotation().w();
-            }  
+            }
           }
 
           (function() {
@@ -265,12 +265,20 @@ define([ 'underscore' ], function(_) {
                 key2,
                 type2,
                 body1,
-                body2;
+                body2,
+                l,
+                h;
 
+            /*
+            var previous = that.collisions[0],
+                current = that.collisions[1];
+                */
+            var previous = that.collisions,
+                current = {};
 
             for (var i = 0; i < nManifolds; i++) {
               manifold = dispatcher.getManifoldByIndexInternal(i);
-              
+
               nContacts = manifold.getNumContacts();
 
               if (nContacts > 0) {
@@ -280,30 +288,47 @@ define([ 'underscore' ], function(_) {
                   body2 = Ammo.wrapPointer(manifold.getBody1(), Ammo.btCollisionObject);
 
                   if (body1.userData && body2.userData) {
-                    key1 = body1.userData.key;
-                    key2 = body2.userData.key;
+                    key1 = body1.userData.id;
+                    key2 = body2.userData.id;
                     type1 = body1.userData.type;
                     type2 = body2.userData.type;
+                    l = Math.min(key1, key2);
+                    h = Math.max(key1, key2);
 
-                    self.postMessage({ command: 'event', arguments: [ 
-                        'begin_contact', { 
-                          objectA: { type: type1, id: key1 },
-                          objectB: { type: type2, id: key2 }
-                        }
-                      ]
-                    });
+                    current[l] = current[l] || {};
+                    current[l][h] = true;
+                    current[h] = current[h] || {};
+                    current[h][l] = true;
+
+                    if (current[l][h] && !previous[l] || !previous[l][h]) {
+                      self.postMessage({ command: 'event', arguments: [
+                          'begin_contact', {
+                            objectA: { type: type1, id: key1 },
+                            objectB: { type: type2, id: key2 }
+                          }
+                        ]
+                      });
+                    }
                   }
-
-                  /*
-                  self.postMessage({ command: 'event', arguments: [ 'begin_contact', { 
-                    objectA: { type: 'btGhostObject', id: id },
-                    objectB: { type: body.userData.type, id: body.userData.id }
-                  } ]});  
-                  */
                 }
-              }  
+              }
             }
 
+            _.each(previous, function(source, sourceId) {
+              _.each(source, function(other, otherId) {
+                if (!current[sourceId] || !current[sourceId][otherId]) {
+                  self.postMessage({ command: 'event', arguments: [
+                      'end_contact', {
+                        objectA: { type: 'btRigidBody', id: sourceId },
+                        objectB: { type: 'btRigidBody', id: otherId }
+                      }
+                    ]
+                  });
+                }
+              });
+            });
+
+            that.collisions = current;
           })();
 
           that.ghosts.forEach(function(ghost, id) {
@@ -321,7 +346,7 @@ define([ 'underscore' ], function(_) {
 
               that.ghostCollisions[id] = that.ghostCollisions[id] || {};
 
-              var i, 
+              var i,
                   key,
                   type,
                   num = ghost.getNumOverlappingObjects(),
@@ -337,19 +362,19 @@ define([ 'underscore' ], function(_) {
                     newCollisions[key] = body.userData.type;
 
                     if (!that.ghostCollisions[id][key]) {
-                      self.postMessage({ command: 'event', arguments: [ 'ghost_enter', { 
+                      self.postMessage({ command: 'event', arguments: [ 'ghost_enter', {
                         objectA: { type: 'btGhostObject', id: id },
                         objectB: { type: body.userData.type, id: body.userData.id }
-                      } ]});  
+                      } ]});
                     }
                   }
                 }
-              } 
+              }
 
               for (key in that.ghostCollisions[id]) {
                 if (!newCollisions[key]) {
                   type = that.ghostCollisions[id][key];
-                  self.postMessage({ command: 'event', arguments: [ 'ghost_exit', { 
+                  self.postMessage({ command: 'event', arguments: [ 'ghost_exit', {
                     objectA: { type: 'btGhostObject', id: id },
                     objectB: { type: type, id: key }
                   } ]});
@@ -439,7 +464,7 @@ define([ 'underscore' ], function(_) {
         this.tmpVec[0].setX(shape.vertices[i*3+0]);
         this.tmpVec[0].setY(shape.vertices[i*3+1]);
         this.tmpVec[0].setZ(shape.vertices[i*3+2]);
-        colShape.addPoint(this.tmpVec[0]); 
+        colShape.addPoint(this.tmpVec[0]);
       }
 
       return colShape;
@@ -673,7 +698,7 @@ define([ 'underscore' ], function(_) {
           if (descriptor.tuning.frictionSlip) {
             tuning.set_m_frictionSlip(descriptor.tuning.frictionSlip);
           }
-        } 
+        }
 
         connectionPoint.setX(descriptor.connectionPoint.x);
         connectionPoint.setY(descriptor.connectionPoint.y);
@@ -717,7 +742,7 @@ define([ 'underscore' ], function(_) {
       }
     },
 
-    Vehicle_setWheelInfo: function(descriptor) {  
+    Vehicle_setWheelInfo: function(descriptor) {
       var vehicle = this.vehicles[descriptor.vehicleId],
           info;
       if (vehicle) {
@@ -726,7 +751,7 @@ define([ 'underscore' ], function(_) {
 
         for (var i in descriptor.properties) {
           if (descriptor.properties.hasOwnProperty(i)) {
-            info['set_m_' + i](descriptor.properties[i]); 
+            info['set_m_' + i](descriptor.properties[i]);
           }
         }
       }
@@ -745,7 +770,7 @@ define([ 'underscore' ], function(_) {
       }
 
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' &&
             this.bodies[descriptor.rigidBodyIdB],
           constraint,
           id;
@@ -753,13 +778,13 @@ define([ 'underscore' ], function(_) {
       if (rigidBodyA) {
         this.tmpVec[0].setX(descriptor.pivotA.x);
         this.tmpVec[0].setY(descriptor.pivotA.y);
-        this.tmpVec[0].setZ(descriptor.pivotA.z); 
+        this.tmpVec[0].setZ(descriptor.pivotA.z);
 
         if (rigidBodyB) {
           rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
           this.tmpVec[1].setX(descriptor.pivotB.x);
           this.tmpVec[1].setY(descriptor.pivotB.y);
-          this.tmpVec[1].setZ(descriptor.pivotB.z); 
+          this.tmpVec[1].setZ(descriptor.pivotB.z);
           constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB, this.tmpVec[0], this.tmpVec[1]);
         } else {
           constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB);
@@ -784,7 +809,7 @@ define([ 'underscore' ], function(_) {
       }
 
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' &&
             this.bodies[descriptor.rigidBodyIdB],
           constraint,
           id;
@@ -819,7 +844,7 @@ define([ 'underscore' ], function(_) {
           transformB.setOrigin(this.tmpVec[1]);
           transformB.setRotation(this.tmpQuaternion[1]);
 
-          constraint = new Ammo.btSliderConstraint(rigidBodyA, rigidBodyB, 
+          constraint = new Ammo.btSliderConstraint(rigidBodyA, rigidBodyB,
             transformA, transformB);
         } else {
           constraint = new Ammo.btSliderConstraint(rigidBodyA, transformA);
@@ -875,7 +900,7 @@ define([ 'underscore' ], function(_) {
       }
 
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' &&
             this.bodies[descriptor.rigidBodyIdB],
           constraint,
           id;
@@ -934,7 +959,7 @@ define([ 'underscore' ], function(_) {
       }
 
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' &&
             this.bodies[descriptor.rigidBodyIdB],
           constraint,
           id;
@@ -1017,7 +1042,7 @@ define([ 'underscore' ], function(_) {
         constraint.setMaxMotorImpulse(descriptor.maxMotorImpulse);
       }
     },
-    
+
     ConeTwistConstraint_setMaxMotorImpulseNormalized: function(descriptor) {
       var constraint = this.constraints[descriptor.constraintId];
 
@@ -1025,7 +1050,7 @@ define([ 'underscore' ], function(_) {
         constraint.setMaxMotorImpulseNormalized(descriptor.maxMotorImpulse);
       }
     },
-    
+
     ConeTwistConstraint_setMotorTarget: function(descriptor) {
       var constraint = this.constraints[descriptor.constraintId];
 
@@ -1033,7 +1058,7 @@ define([ 'underscore' ], function(_) {
         constraint.setMotorTarget(descriptor.motorTarget);
       }
     },
-    
+
     ConeTwistConstraint_setMotorTargetInConstraintSpace: function(descriptor) {
       var constraint = this.constraints[descriptor.constraintId];
 
@@ -1041,12 +1066,12 @@ define([ 'underscore' ], function(_) {
         constraint.setMotorTargetInConstraintSpace(descriptor.motorTarget);
       }
     },
-    
+
     ConeTwistConstraint_setLimit: function(descriptor) {
       var constraint = this.constraints[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setLimit(descriptor.swingSpan1, descriptor.swingSpan2, 
+        constraint.setLimit(descriptor.swingSpan1, descriptor.swingSpan2,
             descriptor.twistSpan, descriptor.softness, descriptor.biasFactor,
             descriptor.relaxationFactor);
       }
@@ -1058,7 +1083,7 @@ define([ 'underscore' ], function(_) {
       }
 
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' && 
+          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' &&
             this.bodies[descriptor.rigidBodyIdB],
           constraint,
           id;
@@ -1066,7 +1091,7 @@ define([ 'underscore' ], function(_) {
       if (rigidBodyA) {
         this.tmpVec[0].setX(descriptor.pivotA.x);
         this.tmpVec[0].setY(descriptor.pivotA.y);
-        this.tmpVec[0].setZ(descriptor.pivotA.z); 
+        this.tmpVec[0].setZ(descriptor.pivotA.z);
         this.tmpVec[1].setX(descriptor.axisA.x);
         this.tmpVec[1].setX(descriptor.axisA.y);
         this.tmpVec[1].setX(descriptor.axisA.z);
@@ -1075,10 +1100,10 @@ define([ 'underscore' ], function(_) {
           rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
           this.tmpVec[2].setX(descriptor.pivotB.x);
           this.tmpVec[2].setY(descriptor.pivotB.y);
-          this.tmpVec[2].setZ(descriptor.pivotB.z); 
+          this.tmpVec[2].setZ(descriptor.pivotB.z);
           this.tmpVec[3].setX(descriptor.axisB.x);
           this.tmpVec[3].setY(descriptor.axisB.y);
-          this.tmpVec[3].setZ(descriptor.axisB.z); 
+          this.tmpVec[3].setZ(descriptor.axisB.z);
           constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
               this.tmpVec[0], this.tmpVec[2], this.tmpVec[1], this.tmpVec[3]);
         } else {
@@ -1150,7 +1175,7 @@ define([ 'underscore' ], function(_) {
         if (body.userData.id) {
           if (typeof fn === 'function') {
             fn({
-              type: 'btRigidBody', 
+              type: 'btRigidBody',
               bodyId: body.userData.id,
               hitPointWorld: {
                 x: callback.get_m_hitPointWorld().x(),
@@ -1186,7 +1211,7 @@ define([ 'underscore' ], function(_) {
       var ghost = this.ghosts[descriptor.ghostId];
 
       if (ghost) {
-        this.dynamicsWorld.addCollisionObject(ghost, descriptor.group, descriptor.mask);  
+        this.dynamicsWorld.addCollisionObject(ghost, descriptor.group, descriptor.mask);
       }
     },
 
@@ -1196,14 +1221,14 @@ define([ 'underscore' ], function(_) {
 
       if (collisionObject) {
         console.log('before');
-        this.dynamicsWorld.addCollisionObject(collisionObject, descriptor.group, descriptor.mask);  
+        this.dynamicsWorld.addCollisionObject(collisionObject, descriptor.group, descriptor.mask);
         console.log('after');
       }
     },
 
     GhostObject_create: function(descriptor, fn) {
       if (!this.ghostObjectIds.length) {
-        return console.error('No unused ghost object ids'); 
+        return console.error('No unused ghost object ids');
       }
       var colShape = this._createShape(descriptor.shape),
           origin = this.tmpVec[0],
@@ -1232,7 +1257,7 @@ define([ 'underscore' ], function(_) {
       ghostObject.setWorldTransform(this.tmpTrans[0]);
 
       ghostObject.setCollisionShape(colShape);
-      ghostObject.setCollisionFlags(this.collisionFlags.CF_NO_CONTACT_RESPONSE); // no collision response 
+      ghostObject.setCollisionFlags(this.collisionFlags.CF_NO_CONTACT_RESPONSE); // no collision response
 
       var id = this.ghostObjectIds.pop();
 
@@ -1461,7 +1486,7 @@ define([ 'underscore' ], function(_) {
       var o = Ammo.castObject(body, Ammo.btCollisionObject);
 
       body.userData = o.userData = {
-        type: 'btRigidBody', 
+        type: 'btRigidBody',
         id: id
       };
 
@@ -1510,7 +1535,7 @@ define([ 'underscore' ], function(_) {
       this.collisionObjects[id] = body;
 
       body.userData = {
-        type: 'btCollisionObject', 
+        type: 'btCollisionObject',
         id: id
       };
 
@@ -1523,7 +1548,7 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        body.setActivationState(descriptor.activationState);  
+        body.setActivationState(descriptor.activationState);
       }
     },
 
@@ -1555,7 +1580,7 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId],
           position,
           rotation;
-      
+
       if (body) {
         this.tmpTrans[0].setIdentity();
         body.getMotionState().getWorldTransform(this.tmpTrans[0]);
@@ -1585,7 +1610,7 @@ define([ 'underscore' ], function(_) {
 
     RigidBody_clearForces: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
-      
+
       if (body) {
         body.clearForces();
         body.activate();
@@ -1594,7 +1619,7 @@ define([ 'underscore' ], function(_) {
 
     RigidBody_applyForce: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
-      
+
       if (body) {
         this.tmpVec[0].setX(descriptor.force.x);
         this.tmpVec[0].setY(descriptor.force.y);
@@ -1605,12 +1630,12 @@ define([ 'underscore' ], function(_) {
 
         body.applyForce(this.tmpVec[0], this.tmpVec[1]);
         body.activate();
-      } 
+      }
     },
 
     RigidBody_applyCentralForce: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
-      
+
       if (body) {
         this.tmpVec[0].setX(descriptor.force.x);
         this.tmpVec[0].setY(descriptor.force.y);
@@ -1618,12 +1643,12 @@ define([ 'underscore' ], function(_) {
 
         body.applyCentralForce(this.tmpVec[0]);
         body.activate();
-      } 
+      }
     },
 
     RigidBody_applyImpulse: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
-      
+
       if (body) {
         this.tmpVec[0].setX(descriptor.impulse.x);
         this.tmpVec[0].setY(descriptor.impulse.y);
@@ -1634,12 +1659,12 @@ define([ 'underscore' ], function(_) {
 
         body.applyImpulse(this.tmpVec[0], this.tmpVec[1]);
         body.activate();
-      } 
+      }
     },
 
     RigidBody_applyCentralImpulse: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
-      
+
       if (body) {
         this.tmpVec[0].setX(descriptor.force.x);
         this.tmpVec[0].setY(descriptor.force.y);
@@ -1647,17 +1672,17 @@ define([ 'underscore' ], function(_) {
 
         body.applyCentralImpulse(this.tmpVec[0]);
         body.activate();
-      } 
+      }
     },
 
     RigidBody_applyTorque: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
-      
+
       if (body) {
         this.tmpVec[0].setX(descriptor.torque.x);
         this.tmpVec[0].setY(descriptor.torque.y);
         this.tmpVec[0].setZ(descriptor.torque.z);
-        
+
         body.applyTorque(this.tmpVec[0]);
         body.activate();
       }
@@ -1691,9 +1716,9 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.linearFactor.x); 
-        this.tmpVec[0].setY(descriptor.linearFactor.y); 
-        this.tmpVec[0].setZ(descriptor.linearFactor.z); 
+        this.tmpVec[0].setX(descriptor.linearFactor.x);
+        this.tmpVec[0].setY(descriptor.linearFactor.y);
+        this.tmpVec[0].setZ(descriptor.linearFactor.z);
         body.setLinearFactor(this.tmpVec[0]);
       }
     },
@@ -1702,9 +1727,9 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.angularFactor.x); 
-        this.tmpVec[0].setY(descriptor.angularFactor.y); 
-        this.tmpVec[0].setZ(descriptor.angularFactor.z); 
+        this.tmpVec[0].setX(descriptor.angularFactor.x);
+        this.tmpVec[0].setY(descriptor.angularFactor.y);
+        this.tmpVec[0].setZ(descriptor.angularFactor.z);
         body.setAngularFactor(this.tmpVec[0]);
       }
     },
@@ -1713,9 +1738,9 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.linearVelocity.x); 
-        this.tmpVec[0].setY(descriptor.linearVelocity.y); 
-        this.tmpVec[0].setZ(descriptor.linearVelocity.z); 
+        this.tmpVec[0].setX(descriptor.linearVelocity.x);
+        this.tmpVec[0].setY(descriptor.linearVelocity.y);
+        this.tmpVec[0].setZ(descriptor.linearVelocity.z);
         body.setLinearVelocity(this.tmpVec[0]);
       }
     },
@@ -1724,9 +1749,9 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.angularVelocity.x); 
-        this.tmpVec[0].setY(descriptor.angularVelocity.y); 
-        this.tmpVec[0].setZ(descriptor.angularVelocity.z); 
+        this.tmpVec[0].setX(descriptor.angularVelocity.x);
+        this.tmpVec[0].setY(descriptor.angularVelocity.y);
+        this.tmpVec[0].setZ(descriptor.angularVelocity.z);
         body.setAngularVelocity(this.tmpVec[0]);
       }
     },
