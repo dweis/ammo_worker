@@ -1756,8 +1756,13 @@ define([ 'underscore' ], function(_) {
       }
     },
 
-    Constraint_destroy: function(id) {
-      var constraint = this.constraints[id];
+    trigger: function() {
+      self.postMessage({ command: 'event', arguments: Array.prototype.slice.call(arguments, 0) });
+    },
+
+    Constraint_destroy: function(descriptor) {
+      var id = descriptor && descriptor.constraintId,
+          constraint = this.constraints[id];
 
       if (constraint) {
         this.dynamicsWorld.removeConstraint(constraint);
@@ -1768,8 +1773,9 @@ define([ 'underscore' ], function(_) {
       }
     },
 
-    RigidBody_destroy: function(id) {
-      var body = this.bodies[id];
+    RigidBody_destroy: function(descriptor) {
+      var id = descriptor && descriptor.bodyId,
+          body = this.bodies[id];
 
       if (body) {
         this.dynamicsWorld.removeRigidBody(body);
@@ -1780,8 +1786,9 @@ define([ 'underscore' ], function(_) {
       }
     },
 
-    Vehicle_destroy: function(id) {
-      var vehicle = this.vehicles[id];
+    Vehicle_destroy: function(descriptor) {
+      var id = descriptor.vehicleId,
+          vehicle = this.vehicles[id];
 
       if (vehicle) {
         this.dynamicsWorld.removeVehicle(vehicle);
@@ -1792,8 +1799,9 @@ define([ 'underscore' ], function(_) {
       }
     },
 
-    GhostObject_destroy: function(id) {
-      var ghost = this.ghosts[id];
+    GhostObject_destroy: function(descriptor) {
+      var id = descriptor.ghostId,
+          ghost = this.ghosts[id];
 
       if (ghost) {
         this.dynamicsWorld.removeCollisionObject(ghost);

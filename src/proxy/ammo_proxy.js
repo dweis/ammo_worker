@@ -38,27 +38,45 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     this.adapter = new THREEAdapter(this);
 
     this.on('GhostObject_destroy', function(id) {
-      ghosts[id] = undefined;
+      if (ghosts[id]) {
+        ghosts[id].trigger('destroy');
+        ghosts[id] = undefined;
+      }
     });
 
     this.on('RigidBody_destroy', function(id) {
-      bodies[id] = undefined;
+      if (bodies[id]) {
+        bodies[id].trigger('destroy');
+        bodies[id] = undefined;
+      }
     });
 
     this.on('Vehicle_destroy', function(id) {
-      vehicles[id] = undefined;
+      if (vehicles[id]) {
+        vehicles[id].trigger('destroy');
+        vehicles[id] = undefined;
+      }
     });
 
     this.on('Constraint_destroy', function(id) {
-      constraints[id] = undefined;
+      if (constraints[id]) {
+        constraints[id].trigger('destroy');
+        constraints[id] = undefined;
+      }
     });
 
     this.on('KinematicCharacterController_destroy', function(id) {
-      kinematicCharacterControllers[id] = undefined;
+      if (kinematicCharacterControllers[id]) {
+        kinematicCharacterControllers[id].destroy();
+        kinematicCharacterControllers[id] = undefined;
+      }
     });
 
     this.on('CollisionObject_destroy', function(id) {
-      collisionObjects[id] = undefined;
+      if (collisionObjects[id]) {
+        collisionObjects[id].destroy();
+        collisionObjects[id] = undefined;
+      }
     });
 
     this.on('ghost_enter', _.bind(function(descriptor) {
