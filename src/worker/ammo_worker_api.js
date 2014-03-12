@@ -13,33 +13,51 @@ define([ 'underscore' ], function(_) {
       OFFSET_KINEMATIC_CHARACTER = this.OFFSET_VEHICLE + (this.maxVehicles * this.maxWheelsPerVehicle * 7),
       OFFSET_GHOST_OBJECT = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7,
 
-    var collisionFlags = {
-      CF_STATIC_OBJECT: 1,
-      CF_KINEMATIC_OBJECT: 2,
-      CF_NO_CONTACT_RESPONSE: 4,
-      CF_CUSTOM_MATERIAL_CALLBACK: 8,
-      CF_CHARACTER_OBJECT: 16,
-      CF_DISABLE_VISUALIZE_OBJECT: 32,
-      CF_DISABLE_SPU_COLLISION_PROCESSING: 64
-    };
+  var collisionFlags = {
+    CF_STATIC_OBJECT: 1,
+    CF_KINEMATIC_OBJECT: 2,
+    CF_NO_CONTACT_RESPONSE: 4,
+    CF_CUSTOM_MATERIAL_CALLBACK: 8,
+    CF_CHARACTER_OBJECT: 16,
+    CF_DISABLE_VISUALIZE_OBJECT: 32,
+    CF_DISABLE_SPU_COLLISION_PROCESSING: 64
+  };
 
-    var activationStates = {
-      ACTIVE_TAG: 1,
-      ISLAND_SLEEPING: 2,
-      WANTS_DEACTIVATION: 3,
-      DISABLE_DEACTIVATION: 4,
-      DISABLE_SIMULATION: 5
-    };
+  var activationStates = {
+    ACTIVE_TAG: 1,
+    ISLAND_SLEEPING: 2,
+    WANTS_DEACTIVATION: 3,
+    DISABLE_DEACTIVATION: 4,
+    DISABLE_SIMULATION: 5
+  };
 
-    var collisionFilterGroups = {
-      DefaultFilter: 1,
-      StaticFilter: 2,
-      KinematicFilter: 4,
-      DebrisFilter: 8,
-      SensorTrigger: 16,
-      CharacterFilter: 32,
-      AllFilter: -1 //all bits sets: DefaultFilter | StaticFilter | KinematicFilter | DebrisFilter | SensorTrigger
-    };
+  var collisionFilterGroups = {
+    DefaultFilter: 1,
+    StaticFilter: 2,
+    KinematicFilter: 4,
+    DebrisFilter: 8,
+    SensorTrigger: 16,
+    CharacterFilter: 32,
+    AllFilter: -1 //all bits sets: DefaultFilter | StaticFilter | KinematicFilter | DebrisFilter | SensorTrigger
+  };
+
+  var tmpVec = [
+    new Ammo.btVector3(),
+    new Ammo.btVector3(),
+    new Ammo.btVector3(),
+    new Ammo.btVector3()
+  ];
+
+  var tmpQuaternion = [
+    new Ammo.btQuaternion(),
+    new Ammo.btQuaternion()
+  ];
+
+  var tmpTrans = [
+    new Ammo.btTransform(),
+    new Ammo.btTransform()
+  ];
+
 
   function AmmoObject(id, ammoData) {
     this.type = "unknown";
@@ -50,15 +68,34 @@ define([ 'underscore' ], function(_) {
   AmmoObject.prototype = {};
 
   AmmoObject.prototype.process = function(buffer) {
-  }
+  };
 
   function Vehicle(id, ammoData) {
     this.type = 'btRaycastVehicle';
     this.id = id;
     this.ammoData = ammoData;
+    this.offset = this.id * 7;
   }
 
   Vehicle.prototype = new AmmoObject();
+
+  function Wheel(id, ammoData) {
+
+  }
+
+  Wheel.prototype = new AmmoObject();
+
+  Wheel.prototype.update = function(data) {
+    tmpTrans[0] = this.ammoData.get_m_worldTransform();
+
+    data[this.offset + 0] = tmpTrans[0].getOrigin().x();
+    data[this.offset + 1] = tmpTrans[0].getOrigin().y();
+    data[this.offset + 2] = tmpTrans[0].getOrigin().z();
+    data[this.offset + 3] = tmpTrans[0].getRotation().x();
+    data[this.offset + 4] = tmpTrans[0].getRotation().y();
+    data[this.offset + 5] = tmpTrans[0].getRotation().z();
+    data[this.offset + 6] = tmpTrans[0].getRotation().w();
+  };
 
   function Wheel(id, ammoData) {
     this.type = 'btRaycastVehicleWheel';
@@ -80,9 +117,24 @@ define([ 'underscore' ], function(_) {
     this.type = 'btRigidBody';
     this.id = id;
     this.ammoData = ammoData;
+    this.offset = this.id * 7;
   }
 
   RigidBody.prototype = new CollisionObject();
+
+  RigidBody.prototype.process = function(data) {
+    tmpTrans[0].setIdentity();
+
+    this.ammoData.getMotionState().getWorldTransform(tmpTrans[0]);
+
+    data[this.offset + 0] = tmpTrans[0].getOrigin().x();
+    data[this.offset + 1] = tmpTrans[0].getOrigin().y();
+    data[this.offset + 2] = tmpTrans[0].getOrigin().z();
+    data[this.offset + 3] = tmpTrans[0].getRotation().x();
+    data[this.offset + 4] = tmpTrans[0].getRotation().y();
+    data[this.offset + 5] = tmpTrans[0].getRotation().z();
+    data[this.offset + 6] = tmpTrans[0].getRotation().w();
+  };
 
   function KinematicCharacterController(id, ammoData) {
     this.type = 'btKinematicCharacterController';
@@ -167,23 +219,7 @@ define([ 'underscore' ], function(_) {
               (1000  * 2) // collisions
             );
             */
-      this.tmpVec = [
-        new Ammo.btVector3(),
-        new Ammo.btVector3(),
-        new Ammo.btVector3(),
-        new Ammo.btVector3()
-      ];
-
-      this.tmpQuaternion = [
-        new Ammo.btQuaternion(),
-        new Ammo.btQuaternion()
-      ];
-
-      this.tmpTrans = [
-        new Ammo.btTransform(),
-        new Ammo.btTransform()
-      ];
-
+ 
       this.bodies = new Array(this.maxBodies);
       this.collisionObjects = new Array(this.maxCollisionObjects);
       this.vehicles = new Array(this.maxVehicles);
@@ -253,6 +289,7 @@ define([ 'underscore' ], function(_) {
         }
 
         if (update && update.buffer instanceof ArrayBuffer) {
+          /*
           for (i = 0; i < that.bodies.length; i++) {
             if (that.bodies[i]) {
               that.tmpTrans[0].setIdentity();
@@ -268,7 +305,9 @@ define([ 'underscore' ], function(_) {
               update[pos + 6] = that.tmpTrans[0].getRotation().w();
             }
           }
+          */
 
+          /*
           for (i = 0; i < that.vehicles.length; i++) {
             if (that.vehicles[i]) {
               vehicle = that.vehicles[i];
@@ -287,6 +326,7 @@ define([ 'underscore' ], function(_) {
               }
             }
           }
+          */
 
           for (i = 0; i < that.characterControllers.length; i++) {
             if (that.characterControllers[i]) {
