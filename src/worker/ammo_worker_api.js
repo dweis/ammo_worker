@@ -1,6 +1,98 @@
 define([ 'underscore' ], function(_) {
   "use strict";
 
+  var MAX_BODIES = 1000,
+      MAX_VEHICLES = 32,
+      MAX_WHEELS_PER_VEHICLE = 8,
+      MAX_KINEMATIC_CHARACTER_CONTROLLERS = 16,
+      MAX_GHOST_OBJECTS = 500,
+      MAX_CONSTRAINTS = 1000,
+      MAX_COLLISION_OBJECTS = 1000,
+      OFFSET_RIGID_BODY = 0,
+      OFFSET_VEHICLE = this.maxBodies * 7,
+      OFFSET_KINEMATIC_CHARACTER = this.OFFSET_VEHICLE + (this.maxVehicles * this.maxWheelsPerVehicle * 7),
+      OFFSET_GHOST_OBJECT = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7,
+
+    var collisionFlags = {
+      CF_STATIC_OBJECT: 1,
+      CF_KINEMATIC_OBJECT: 2,
+      CF_NO_CONTACT_RESPONSE: 4,
+      CF_CUSTOM_MATERIAL_CALLBACK: 8,
+      CF_CHARACTER_OBJECT: 16,
+      CF_DISABLE_VISUALIZE_OBJECT: 32,
+      CF_DISABLE_SPU_COLLISION_PROCESSING: 64
+    };
+
+    var activationStates = {
+      ACTIVE_TAG: 1,
+      ISLAND_SLEEPING: 2,
+      WANTS_DEACTIVATION: 3,
+      DISABLE_DEACTIVATION: 4,
+      DISABLE_SIMULATION: 5
+    };
+
+    var collisionFilterGroups = {
+      DefaultFilter: 1,
+      StaticFilter: 2,
+      KinematicFilter: 4,
+      DebrisFilter: 8,
+      SensorTrigger: 16,
+      CharacterFilter: 32,
+      AllFilter: -1 //all bits sets: DefaultFilter | StaticFilter | KinematicFilter | DebrisFilter | SensorTrigger
+    };
+
+  function AmmoObject(id, ammoData) {
+    this.type = "unknown";
+    this.id = id;
+    this.ammoData = ammoData;
+  }
+
+  AmmoObject.prototype = {};
+
+  AmmoObject.prototype.process = function(buffer) {
+  }
+
+  function Vehicle(id, ammoData) {
+    this.type = 'btRaycastVehicle';
+    this.id = id;
+    this.ammoData = ammoData;
+  }
+
+  Vehicle.prototype = new AmmoObject();
+
+  function Wheel(id, ammoData) {
+    this.type = 'btRaycastVehicleWheel';
+    this.id = id;
+    this.ammoData = ammoData;
+  }
+
+  Wheel.prototype = new AmmoObject();
+
+  function CollisionObject(id, ammoData) {
+    this.type = 'btCollisionObject';
+    this.id = id;
+    this.ammoData = ammoData;
+  }
+
+  CollisionObject.prototype = new AmmoObject();
+
+  function RigidBody(id, ammoData) {
+    this.type = 'btRigidBody';
+    this.id = id;
+    this.ammoData = ammoData;
+  }
+
+  RigidBody.prototype = new CollisionObject();
+
+  function KinematicCharacterController(id, ammoData) {
+    this.type = 'btKinematicCharacterController';
+    this.id = id;
+    this.ammoData = ammoData;
+  }
+
+  KinematicCharacterController.prototype = new AmmoObject();
+
+
   self.console = self.console || {};
 
   function makeWorkerConsole(context){
@@ -41,14 +133,6 @@ define([ 'underscore' ], function(_) {
   function AmmoWorkerAPI(opts) {
     _.bindAll(this);
 
-    this.maxBodies = 1000;
-    this.maxVehicles = 32;
-    this.maxWheelsPerVehicle = 8;
-    this.maxKinematicCharacterControllers = 16;
-    this.maxGhostObjects = 500;
-    this.maxConstraints = 1000;
-    this.maxCollisionObjects = 1000;
-
     this.bodyIds = _.range(this.maxBodies);
     this.vehicleIds = _.range(this.maxVehicles);
     this.kinematicCharacterControllerIds = _.range(this.maxKinematicCharacterControllers);
@@ -64,34 +148,6 @@ define([ 'underscore' ], function(_) {
   }
 
   AmmoWorkerAPI.prototype = {
-    collisionFlags: {
-      CF_STATIC_OBJECT: 1,
-      CF_KINEMATIC_OBJECT: 2,
-      CF_NO_CONTACT_RESPONSE: 4,
-      CF_CUSTOM_MATERIAL_CALLBACK: 8,
-      CF_CHARACTER_OBJECT: 16,
-      CF_DISABLE_VISUALIZE_OBJECT: 32,
-      CF_DISABLE_SPU_COLLISION_PROCESSING: 64
-    },
-
-    activationStates: {
-      ACTIVE_TAG: 1,
-      ISLAND_SLEEPING: 2,
-      WANTS_DEACTIVATION: 3,
-      DISABLE_DEACTIVATION: 4,
-      DISABLE_SIMULATION: 5
-    },
-
-    collisionFilterGroups:  {
-      DefaultFilter: 1,
-      StaticFilter: 2,
-      KinematicFilter: 4,
-      DebrisFilter: 8,
-      SensorTrigger: 16,
-      CharacterFilter: 32,
-      AllFilter: -1 //all bits sets: DefaultFilter | StaticFilter | KinematicFilter | DebrisFilter | SensorTrigger
-    },
-
     init: function() {
       var bufferSize =
             // FLOAT64 Types
@@ -111,13 +167,6 @@ define([ 'underscore' ], function(_) {
               (1000  * 2) // collisions
             );
             */
-
-
-      this.OFFSET_RIGID_BODY = 0;
-      this.OFFSET_VEHICLE = this.maxBodies * 7;
-      this.OFFSET_KINEMATIC_CHARACTER = this.OFFSET_VEHICLE + (this.maxVehicles * this.maxWheelsPerVehicle * 7);
-      this.OFFSET_GHOST_OBJECT = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7;
-
       this.tmpVec = [
         new Ammo.btVector3(),
         new Ammo.btVector3(),
