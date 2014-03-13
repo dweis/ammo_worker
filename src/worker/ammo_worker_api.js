@@ -1,19 +1,9 @@
 define([ 'underscore' ], function(_) {
   "use strict";
 
-  var MAX_BODIES = 1000,
-      MAX_VEHICLES = 32,
-      MAX_WHEELS_PER_VEHICLE = 8,
-      MAX_KINEMATIC_CHARACTER_CONTROLLERS = 16,
-      MAX_GHOST_OBJECTS = 500,
-      MAX_CONSTRAINTS = 1000,
-      MAX_COLLISION_OBJECTS = 1000,
-      OFFSET_RIGID_BODY = 0,
-      OFFSET_VEHICLE = this.maxBodies * 7,
-      OFFSET_KINEMATIC_CHARACTER = this.OFFSET_VEHICLE + (this.maxVehicles * this.maxWheelsPerVehicle * 7),
-      OFFSET_GHOST_OBJECT = this.OFFSET_KINEMATIC_CHARACTER + this.maxKinematicCharacterControllers * 7,
+  var MAX_TRANSFORMS = 2000;
 
-  var collisionFlags = {
+  var CollisionFlags = {
     CF_STATIC_OBJECT: 1,
     CF_KINEMATIC_OBJECT: 2,
     CF_NO_CONTACT_RESPONSE: 4,
@@ -23,7 +13,7 @@ define([ 'underscore' ], function(_) {
     CF_DISABLE_SPU_COLLISION_PROCESSING: 64
   };
 
-  var activationStates = {
+  var ActivationStates = {
     ACTIVE_TAG: 1,
     ISLAND_SLEEPING: 2,
     WANTS_DEACTIVATION: 3,
@@ -31,7 +21,7 @@ define([ 'underscore' ], function(_) {
     DISABLE_SIMULATION: 5
   };
 
-  var collisionFilterGroups = {
+  var CollisionFilterGroups = {
     DefaultFilter: 1,
     StaticFilter: 2,
     KinematicFilter: 4,
@@ -63,12 +53,15 @@ define([ 'underscore' ], function(_) {
     this.type = "unknown";
     this.id = id;
     this.ammoData = ammoData;
+    this.offset = this.id * 7;
   }
 
   AmmoObject.prototype = {};
 
-  AmmoObject.prototype.process = function(buffer) {
+  /*
+  AmmoObject.prototype.update = function(buffer) {
   };
+  */
 
   function Vehicle(id, ammoData) {
     this.type = 'btRaycastVehicle';
@@ -80,7 +73,10 @@ define([ 'underscore' ], function(_) {
   Vehicle.prototype = new AmmoObject();
 
   function Wheel(id, ammoData) {
-
+    this.type = 'btWheelInfo';
+    this.id = id;
+    this.ammoData = ammoData;
+    this.offset = this.id * 7;
   }
 
   Wheel.prototype = new AmmoObject();
@@ -96,14 +92,6 @@ define([ 'underscore' ], function(_) {
     data[this.offset + 5] = tmpTrans[0].getRotation().z();
     data[this.offset + 6] = tmpTrans[0].getRotation().w();
   };
-
-  function Wheel(id, ammoData) {
-    this.type = 'btRaycastVehicleWheel';
-    this.id = id;
-    this.ammoData = ammoData;
-  }
-
-  Wheel.prototype = new AmmoObject();
 
   function CollisionObject(id, ammoData) {
     this.type = 'btCollisionObject';
@@ -122,7 +110,7 @@ define([ 'underscore' ], function(_) {
 
   RigidBody.prototype = new CollisionObject();
 
-  RigidBody.prototype.process = function(data) {
+  RigidBody.prototype.update = function(data) {
     tmpTrans[0].setIdentity();
 
     this.ammoData.getMotionState().getWorldTransform(tmpTrans[0]);
@@ -143,6 +131,17 @@ define([ 'underscore' ], function(_) {
   }
 
   KinematicCharacterController.prototype = new AmmoObject();
+
+  KinematicCharacterController.prototype.update = function(data) {
+    var trans = this.ammoData.getGhostObject().getWorldTransform();
+    data[this.offset + 0] = trans.getOrigin().x();
+    data[this.offset + 1] = trans.getOrigin().y();
+    data[this.offset + 2] = trans.getOrigin().z();
+    data[this.offset + 3] = trans.getRotation().x();
+    data[this.offset + 4] = trans.getRotation().y();
+    data[this.offset + 5] = trans.getRotation().z();
+    data[this.offset + 6] = trans.getRotation().w();
+  };
 
 
   self.console = self.console || {};
@@ -185,13 +184,6 @@ define([ 'underscore' ], function(_) {
   function AmmoWorkerAPI(opts) {
     _.bindAll(this);
 
-    this.bodyIds = _.range(this.maxBodies);
-    this.vehicleIds = _.range(this.maxVehicles);
-    this.kinematicCharacterControllerIds = _.range(this.maxKinematicCharacterControllers);
-    this.ghostObjectIds = _.range(this.maxGhostObjects);
-    this.constraintIds = _.range(this.maxConstraints);
-    this.collisionObjectIds = _.range(this.maxCollisionObjects);
-
     for (var i in opts) {
       if (opts.hasOwnProperty(i)) {
         this[i] = opts[i];
@@ -201,31 +193,22 @@ define([ 'underscore' ], function(_) {
 
   AmmoWorkerAPI.prototype = {
     init: function() {
-      var bufferSize =
-            // FLOAT64 Types
-            (8 *
-              (
-                // Rigid Bodies
-                (this.maxBodies * 7 ) +
-                // Vehicles
-                (this.maxVehicles * this.maxWheelsPerVehicle * 7) +
-                // Character Controllers
-                (this.maxKinematicCharacterControllers * 7) +
-                (this.maxGhostObjects * 7)
-              )
-            );/*+
-            // INT16 types
-            (2 *
-              (1000  * 2) // collisions
-            );
-            */
- 
-      this.bodies = new Array(this.maxBodies);
-      this.collisionObjects = new Array(this.maxCollisionObjects);
-      this.vehicles = new Array(this.maxVehicles);
-      this.constraints = new Array(this.maxConstraints);
-      this.ghosts = new Array(this.maxGhosts);
-      this.characterControllers = new Array(this.maxCharacterControllers);
+      var bufferSize = (7 * MAX_TRANSFORMS * 8);
+
+      this.buffers = [
+        new ArrayBuffer(bufferSize),
+        new ArrayBuffer(bufferSize),
+        new ArrayBuffer(bufferSize),
+        new ArrayBuffer(bufferSize)
+      ];
+
+      this.ids = _.range(1, MAX_TRANSFORMS + 1);
+
+      this.objects = new Array(MAX_TRANSFORMS);
+      this.objectsByRef = {};
+
+      this.ghostCollisions = {};
+      this.collisions = {};
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
@@ -233,13 +216,13 @@ define([ 'underscore' ], function(_) {
       this.overlappingPairCache = new Ammo.btDbvtBroadphase();
 
       /*
-      this.tmpVec[0].setX(-1000);
-      this.tmpVec[0].setY(-1000);
-      this.tmpVec[0].setZ(-1000);
-      this.tmpVec[1].setX(1000);
-      this.tmpVec[1].setY(1000);
-      this.tmpVec[1].setZ(1000);
-      this.overlappingPairCache = new Ammo.btAxisSweep3(this.tmpVec[0], this.tmpVec[1]);
+      tmpVec[0].setX(-1000);
+      tmpVec[0].setY(-1000);
+      tmpVec[0].setZ(-1000);
+      tmpVec[1].setX(1000);
+      tmpVec[1].setY(1000);
+      tmpVec[1].setZ(1000);
+      this.overlappingPairCache = new Ammo.btAxisSweep3(tmpVec[0], tmpVec[1]);
       */
 
       this.solver = new Ammo.btSequentialImpulseConstraintSolver();
@@ -250,16 +233,6 @@ define([ 'underscore' ], function(_) {
       this.dynamicsWorld.getPairCache().setInternalGhostPairCallback(this.ghostPairCallback);
 
       this.dynamicsWorld.getDispatchInfo().set_m_allowedCcdPenetration(0.0001);
-
-      this.buffers = [
-        new ArrayBuffer(bufferSize),
-        new ArrayBuffer(bufferSize),
-        new ArrayBuffer(bufferSize),
-        new ArrayBuffer(bufferSize)
-      ];
-
-      this.ghostCollisions = {};
-      this.collisions = {};
 
       self.postMessage({ command: 'event', arguments: [ 'ready' ] });
     },
@@ -279,7 +252,7 @@ define([ 'underscore' ], function(_) {
       that.totalTime = 0;
       that.frames = 0;
       this.simulationTimerId = setInterval(function() {
-        var vehicle, update, i, j, pos, now = Date.now(),
+        var /*vehicle, */update, i, /*j, pos,*/ now = Date.now(),
             delta = (now - last) / 1000;
 
         that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);
@@ -289,20 +262,25 @@ define([ 'underscore' ], function(_) {
         }
 
         if (update && update.buffer instanceof ArrayBuffer) {
+          for (i = 0; i < MAX_TRANSFORMS; i++) {
+            if (that.objects[i]) {
+              that.objects[i].update(update);
+            }
+          }
           /*
           for (i = 0; i < that.bodies.length; i++) {
             if (that.bodies[i]) {
-              that.tmpTrans[0].setIdentity();
-              that.bodies[i].getMotionState().getWorldTransform(that.tmpTrans[0]);
+              tmpTrans[0].setIdentity();
+              that.bodies[i].getMotionState().getWorldTransform(tmpTrans[0]);
               pos = that.OFFSET_RIGID_BODY + (i * 7);
 
-              update[pos + 0] = that.tmpTrans[0].getOrigin().x();
-              update[pos + 1] = that.tmpTrans[0].getOrigin().y();
-              update[pos + 2] = that.tmpTrans[0].getOrigin().z();
-              update[pos + 3] = that.tmpTrans[0].getRotation().x();
-              update[pos + 4] = that.tmpTrans[0].getRotation().y();
-              update[pos + 5] = that.tmpTrans[0].getRotation().z();
-              update[pos + 6] = that.tmpTrans[0].getRotation().w();
+              update[pos + 0] = tmpTrans[0].getOrigin().x();
+              update[pos + 1] = tmpTrans[0].getOrigin().y();
+              update[pos + 2] = tmpTrans[0].getOrigin().z();
+              update[pos + 3] = tmpTrans[0].getRotation().x();
+              update[pos + 4] = tmpTrans[0].getRotation().y();
+              update[pos + 5] = tmpTrans[0].getRotation().z();
+              update[pos + 6] = tmpTrans[0].getRotation().w();
             }
           }
           */
@@ -313,21 +291,22 @@ define([ 'underscore' ], function(_) {
               vehicle = that.vehicles[i];
 
               for ( j = 0; j < vehicle.getNumWheels() + 1; j++ ) {
-                that.tmpTrans[0] = vehicle.getWheelInfo(j).get_m_worldTransform();
+                tmpTrans[0] = vehicle.getWheelInfo(j).get_m_worldTransform();
                 pos = that.OFFSET_VEHICLE + (i * that.maxWheelsPerVehicle * 7) + (j * 7);
 
-                update[pos + 0] = that.tmpTrans[0].getOrigin().x();
-                update[pos + 1] = that.tmpTrans[0].getOrigin().y();
-                update[pos + 2] = that.tmpTrans[0].getOrigin().z();
-                update[pos + 3] = that.tmpTrans[0].getRotation().x();
-                update[pos + 4] = that.tmpTrans[0].getRotation().y();
-                update[pos + 5] = that.tmpTrans[0].getRotation().z();
-                update[pos + 6] = that.tmpTrans[0].getRotation().w();
+                update[pos + 0] = tmpTrans[0].getOrigin().x();
+                update[pos + 1] = tmpTrans[0].getOrigin().y();
+                update[pos + 2] = tmpTrans[0].getOrigin().z();
+                update[pos + 3] = tmpTrans[0].getRotation().x();
+                update[pos + 4] = tmpTrans[0].getRotation().y();
+                update[pos + 5] = tmpTrans[0].getRotation().z();
+                update[pos + 6] = tmpTrans[0].getRotation().w();
               }
             }
           }
           */
 
+          /*
           for (i = 0; i < that.characterControllers.length; i++) {
             if (that.characterControllers[i]) {
               var trans = that.characterControllers[i].getGhostObject().getWorldTransform();
@@ -342,7 +321,9 @@ define([ 'underscore' ], function(_) {
               update[pos + 6] = trans.getRotation().w();
             }
           }
+          */
 
+          /*
           (function() {
             var dispatcher = that.dynamicsWorld.getDispatcher(),
                 nManifolds = dispatcher.getNumManifolds(),
@@ -358,10 +339,6 @@ define([ 'underscore' ], function(_) {
                 l,
                 h;
 
-            /*
-            var previous = that.collisions[0],
-                current = that.collisions[1];
-                */
             var previous = that.collisions,
                 current = {};
 
@@ -419,7 +396,9 @@ define([ 'underscore' ], function(_) {
 
             that.collisions = current;
           })();
+          */
 
+          /*
           that.ghosts.forEach(function(ghost, id) {
             if (ghost) {
               var trans = ghost.getWorldTransform();
@@ -473,6 +452,7 @@ define([ 'underscore' ], function(_) {
               that.ghostCollisions[id] = newCollisions;
             }
           }.bind(this));
+          */
 
           self.postMessage({ command: 'update', data: update.buffer }, [update.buffer]);
           that.frames ++;
@@ -505,15 +485,15 @@ define([ 'underscore' ], function(_) {
     },
 
     setGravity: function(descriptor) {
-      this.tmpVec[0].setX(descriptor.gravity.x);
-      this.tmpVec[0].setY(descriptor.gravity.y);
-      this.tmpVec[0].setZ(descriptor.gravity.z);
-      this.dynamicsWorld.setGravity(this.tmpVec[0]);
+      tmpVec[0].setX(descriptor.gravity.x);
+      tmpVec[0].setY(descriptor.gravity.y);
+      tmpVec[0].setZ(descriptor.gravity.z);
+      this.dynamicsWorld.setGravity(tmpVec[0]);
     },
 
     _createCompoundShape: function(shape) {
       var compound = new Ammo.btCompoundShape(),
-          localTransform = this.tmpTrans[0],
+          localTransform = tmpTrans[0],
           child,
           childShape;
 
@@ -523,15 +503,15 @@ define([ 'underscore' ], function(_) {
             child = shape.children[idx];
             childShape = this._createShape(child);
             localTransform.setIdentity();
-            this.tmpVec[0].setX(child.localTransform.position.x);
-            this.tmpVec[0].setY(child.localTransform.position.y);
-            this.tmpVec[0].setZ(child.localTransform.position.z);
-            localTransform.setOrigin(this.tmpVec[0]);
-            this.tmpQuaternion[0].setX(child.localTransform.rotation.x);
-            this.tmpQuaternion[0].setY(child.localTransform.rotation.y);
-            this.tmpQuaternion[0].setZ(child.localTransform.rotation.z);
-            this.tmpQuaternion[0].setW(child.localTransform.rotation.w);
-            localTransform.setRotation(this.tmpQuaternion[0]);
+            tmpVec[0].setX(child.localTransform.position.x);
+            tmpVec[0].setY(child.localTransform.position.y);
+            tmpVec[0].setZ(child.localTransform.position.z);
+            localTransform.setOrigin(tmpVec[0]);
+            tmpQuaternion[0].setX(child.localTransform.rotation.x);
+            tmpQuaternion[0].setY(child.localTransform.rotation.y);
+            tmpQuaternion[0].setZ(child.localTransform.rotation.z);
+            tmpQuaternion[0].setW(child.localTransform.rotation.w);
+            localTransform.setRotation(tmpQuaternion[0]);
             compound.addChildShape(localTransform, childShape);
           }
         }
@@ -550,10 +530,10 @@ define([ 'underscore' ], function(_) {
       colShape = new Ammo.btConvexHullShape();
 
       for (var i = 0; i < shape.vertices.length/3; i+=3) {
-        this.tmpVec[0].setX(shape.vertices[i*3+0]);
-        this.tmpVec[0].setY(shape.vertices[i*3+1]);
-        this.tmpVec[0].setZ(shape.vertices[i*3+2]);
-        colShape.addPoint(this.tmpVec[0]);
+        tmpVec[0].setX(shape.vertices[i*3+0]);
+        tmpVec[0].setY(shape.vertices[i*3+1]);
+        tmpVec[0].setZ(shape.vertices[i*3+2]);
+        colShape.addPoint(tmpVec[0]);
       }
 
       return colShape;
@@ -582,19 +562,19 @@ define([ 'underscore' ], function(_) {
       mesh = new Ammo.btTriangleMesh(true, true);
 
       for (i = 0; i < shape.triangles.length/9; i ++) {
-        this.tmpVec[0].setX(shape.triangles[i * 9 + 0]);
-        this.tmpVec[0].setY(shape.triangles[i * 9 + 1]);
-        this.tmpVec[0].setZ(shape.triangles[i * 9 + 2]);
+        tmpVec[0].setX(shape.triangles[i * 9 + 0]);
+        tmpVec[0].setY(shape.triangles[i * 9 + 1]);
+        tmpVec[0].setZ(shape.triangles[i * 9 + 2]);
 
-        this.tmpVec[1].setX(shape.triangles[i * 9 + 3]);
-        this.tmpVec[1].setY(shape.triangles[i * 9 + 4]);
-        this.tmpVec[1].setZ(shape.triangles[i * 9 + 5]);
+        tmpVec[1].setX(shape.triangles[i * 9 + 3]);
+        tmpVec[1].setY(shape.triangles[i * 9 + 4]);
+        tmpVec[1].setZ(shape.triangles[i * 9 + 5]);
 
-        this.tmpVec[2].setX(shape.triangles[i * 9 + 6]);
-        this.tmpVec[2].setY(shape.triangles[i * 9 + 7]);
-        this.tmpVec[2].setZ(shape.triangles[i * 9 + 8]);
+        tmpVec[2].setX(shape.triangles[i * 9 + 6]);
+        tmpVec[2].setY(shape.triangles[i * 9 + 7]);
+        tmpVec[2].setZ(shape.triangles[i * 9 + 8]);
 
-        mesh.addTriangle(this.tmpVec[0], this.tmpVec[1], this.tmpVec[2], false);
+        mesh.addTriangle(tmpVec[0], tmpVec[1], tmpVec[2], false);
       }
 
       return new Ammo[className](mesh, true, true);
@@ -604,25 +584,25 @@ define([ 'underscore' ], function(_) {
       var colShape;
       switch(shape.shape) {
       case 'box':
-        this.tmpVec[0].setX(shape.halfExtents.x);
-        this.tmpVec[0].setY(shape.halfExtents.y);
-        this.tmpVec[0].setZ(shape.halfExtents.z);
-        colShape = new Ammo.btBoxShape(this.tmpVec[0]);
+        tmpVec[0].setX(shape.halfExtents.x);
+        tmpVec[0].setY(shape.halfExtents.y);
+        tmpVec[0].setZ(shape.halfExtents.z);
+        colShape = new Ammo.btBoxShape(tmpVec[0]);
         break;
       case 'sphere':
         colShape = new Ammo.btSphereShape(shape.radius);
         break;
       case 'staticplane':
-        this.tmpVec[0].setX(shape.normal.x);
-        this.tmpVec[0].setY(shape.normal.y);
-        this.tmpVec[0].setZ(shape.normal.z);
-        colShape = new Ammo.btStaticPlaneShape(this.tmpVec[0], shape.distance);
+        tmpVec[0].setX(shape.normal.x);
+        tmpVec[0].setY(shape.normal.y);
+        tmpVec[0].setZ(shape.normal.z);
+        colShape = new Ammo.btStaticPlaneShape(tmpVec[0], shape.distance);
         break;
       case 'cylinder':
-        this.tmpVec[0].setX(shape.width);
-        this.tmpVec[0].setY(shape.height);
-        this.tmpVec[0].setZ(shape.depth);
-        colShape = new Ammo.btCylinderShape(this.tmpVec[0]);
+        tmpVec[0].setX(shape.width);
+        tmpVec[0].setY(shape.height);
+        tmpVec[0].setZ(shape.depth);
+        colShape = new Ammo.btCylinderShape(tmpVec[0]);
         break;
       case 'capsule':
         colShape = new Ammo.btCapsuleShape(shape.radius, shape.height);
@@ -673,26 +653,26 @@ define([ 'underscore' ], function(_) {
         })();
       }
 
-      this.tmpVec[0].setX(descriptor.min.x);
-      this.tmpVec[0].setY(descriptor.min.y);
-      this.tmpVec[0].setZ(descriptor.min.z);
+      tmpVec[0].setX(descriptor.min.x);
+      tmpVec[0].setY(descriptor.min.y);
+      tmpVec[0].setZ(descriptor.min.z);
 
-      this.tmpVec[1].setX(descriptor.max.x);
-      this.tmpVec[1].setY(descriptor.max.y);
-      this.tmpVec[1].setZ(descriptor.max.z);
+      tmpVec[1].setX(descriptor.max.x);
+      tmpVec[1].setY(descriptor.max.y);
+      tmpVec[1].setZ(descriptor.max.z);
 
       this.aabbCallback.bodies = [];
       this.dynamicsWorld
         .getBroadphase()
-        .aabbTest(this.tmpVec[0], this.tmpVec[1],
+        .aabbTest(tmpVec[0], tmpVec[1],
           this.aabbCallback);
 
       fn(this.aabbCallback.bodies);
     },
 
     Vehicle_create: function(descriptor, fn) {
-      if (!this.vehicleIds.length) {
-        return console.error('No unused vehicle slots!');
+      if (!this.ids.length) {
+        return console.error('No unused transforms left!');
       }
 
       var vehicleTuning = new Ammo.btVehicleTuning(),
@@ -732,12 +712,12 @@ define([ 'underscore' ], function(_) {
       vehicle = new Ammo.btRaycastVehicle(vehicleTuning, body, new Ammo.btDefaultVehicleRaycaster(this.dynamicsWorld));
       vehicle.tuning = vehicleTuning;
 
-      body.setActivationState(this.activationStates.DISABLE_DEACTIVATION);
+      body.setActivationState(ActivationStates.DISABLE_DEACTIVATION);
       vehicle.setCoordinateSystem(0, 1, 2);
 
       this.dynamicsWorld.addVehicle(vehicle);
 
-      var id = this.vehicleIds.pop();
+      var id = this.ids.pop();
 
       vehicle.userData = {
         type: 'btRaycastVehicle',
@@ -756,9 +736,9 @@ define([ 'underscore' ], function(_) {
 
       if (vehicle !== undefined) {
         var tuning = vehicle.tuning,
-            connectionPoint = this.tmpVec[0],
-            wheelDirection = this.tmpVec[1],
-            wheelAxle = this.tmpVec[2];
+            connectionPoint = tmpVec[0],
+            wheelDirection = tmpVec[1],
+            wheelAxle = tmpVec[2];
 
 
         if (typeof descriptor.tuning === 'object') {
@@ -854,8 +834,8 @@ define([ 'underscore' ], function(_) {
     },
 
     Point2PointConstraint_create: function(descriptor, fn) {
-      if (!this.constraintIds.length) {
-        return console.error('No unused constraint ids!');
+      if (!this.ids.length) {
+        return console.error('No unused ids!');
       }
 
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
@@ -865,21 +845,21 @@ define([ 'underscore' ], function(_) {
           id;
 
       if (rigidBodyA) {
-        this.tmpVec[0].setX(descriptor.pivotA.x);
-        this.tmpVec[0].setY(descriptor.pivotA.y);
-        this.tmpVec[0].setZ(descriptor.pivotA.z);
+        tmpVec[0].setX(descriptor.pivotA.x);
+        tmpVec[0].setY(descriptor.pivotA.y);
+        tmpVec[0].setZ(descriptor.pivotA.z);
 
         if (rigidBodyB) {
           rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
-          this.tmpVec[1].setX(descriptor.pivotB.x);
-          this.tmpVec[1].setY(descriptor.pivotB.y);
-          this.tmpVec[1].setZ(descriptor.pivotB.z);
-          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB, this.tmpVec[0], this.tmpVec[1]);
+          tmpVec[1].setX(descriptor.pivotB.x);
+          tmpVec[1].setY(descriptor.pivotB.y);
+          tmpVec[1].setZ(descriptor.pivotB.z);
+          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB, tmpVec[0], tmpVec[1]);
         } else {
           constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB);
         }
 
-        id = this.constraintIds.pop();
+        id = this.ids.pop();
 
         this.constraints[id] = constraint;
 
@@ -893,8 +873,8 @@ define([ 'underscore' ], function(_) {
     },
 
     SliderConstraint_create: function(descriptor, fn) {
-      if (!this.constraintIds.length) {
-        return console.error('No unused constraint ids!');
+      if (!this.ids.length) {
+        return console.error('No unused ids!');
       }
 
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
@@ -906,32 +886,32 @@ define([ 'underscore' ], function(_) {
       if (rigidBodyA) {
         var transformA = new Ammo.btTransform();
 
-        this.tmpVec[0].setX(descriptor.frameInA.position.x);
-        this.tmpVec[0].setY(descriptor.frameInA.position.y);
-        this.tmpVec[0].setZ(descriptor.frameInA.position.z);
+        tmpVec[0].setX(descriptor.frameInA.position.x);
+        tmpVec[0].setY(descriptor.frameInA.position.y);
+        tmpVec[0].setZ(descriptor.frameInA.position.z);
 
-        this.tmpQuaternion[0].setX(descriptor.frameInA.rotation.x);
-        this.tmpQuaternion[0].setY(descriptor.frameInA.rotation.y);
-        this.tmpQuaternion[0].setZ(descriptor.frameInA.rotation.z);
-        this.tmpQuaternion[0].setW(descriptor.frameInA.rotation.w);
+        tmpQuaternion[0].setX(descriptor.frameInA.rotation.x);
+        tmpQuaternion[0].setY(descriptor.frameInA.rotation.y);
+        tmpQuaternion[0].setZ(descriptor.frameInA.rotation.z);
+        tmpQuaternion[0].setW(descriptor.frameInA.rotation.w);
 
-        transformA.setOrigin(this.tmpVec[0]);
-        transformA.setRotation(this.tmpQuaternion[0]);
+        transformA.setOrigin(tmpVec[0]);
+        transformA.setRotation(tmpQuaternion[0]);
 
         if (rigidBodyB) {
           var transformB = new Ammo.btTransform();
 
-          this.tmpVec[1].setX(descriptor.frameInB.position.x);
-          this.tmpVec[1].setY(descriptor.frameInB.position.y);
-          this.tmpVec[1].setZ(descriptor.frameInB.position.z);
+          tmpVec[1].setX(descriptor.frameInB.position.x);
+          tmpVec[1].setY(descriptor.frameInB.position.y);
+          tmpVec[1].setZ(descriptor.frameInB.position.z);
 
-          this.tmpQuaternion[1].setX(descriptor.frameInB.rotation.x);
-          this.tmpQuaternion[1].setY(descriptor.frameInB.rotation.y);
-          this.tmpQuaternion[1].setZ(descriptor.frameInB.rotation.z);
-          this.tmpQuaternion[1].setW(descriptor.frameInB.rotation.w);
+          tmpQuaternion[1].setX(descriptor.frameInB.rotation.x);
+          tmpQuaternion[1].setY(descriptor.frameInB.rotation.y);
+          tmpQuaternion[1].setZ(descriptor.frameInB.rotation.z);
+          tmpQuaternion[1].setW(descriptor.frameInB.rotation.w);
 
-          transformB.setOrigin(this.tmpVec[1]);
-          transformB.setRotation(this.tmpQuaternion[1]);
+          transformB.setOrigin(tmpVec[1]);
+          transformB.setRotation(tmpQuaternion[1]);
 
           constraint = new Ammo.btSliderConstraint(rigidBodyA, rigidBodyB,
             transformA, transformB);
@@ -939,7 +919,7 @@ define([ 'underscore' ], function(_) {
           constraint = new Ammo.btSliderConstraint(rigidBodyA, transformA);
         }
 
-        id = this.constraintIds.pop();
+        id = this.ids.pop();
         this.constraints[id] = constraint;
 
         this.dynamicsWorld.addConstraint(constraint);
@@ -984,8 +964,8 @@ define([ 'underscore' ], function(_) {
     },
 
     Generic6DofConstraint_create: function(descriptor, fn) {
-      if (!this.constraintIds.length) {
-        return console.error('No unused constraint ids!');
+      if (!this.ids.length) {
+        return console.error('No unused ids!');
       }
 
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
@@ -997,39 +977,39 @@ define([ 'underscore' ], function(_) {
       if (rigidBodyA) {
         var transformA = new Ammo.btTransform();
 
-        this.tmpVec[0].setX(descriptor.rbAFrame.position.x);
-        this.tmpVec[0].setY(descriptor.rbAFrame.position.y);
-        this.tmpVec[0].setZ(descriptor.rbAFrame.position.z);
+        tmpVec[0].setX(descriptor.rbAFrame.position.x);
+        tmpVec[0].setY(descriptor.rbAFrame.position.y);
+        tmpVec[0].setZ(descriptor.rbAFrame.position.z);
 
-        this.tmpQuaternion[0].setX(descriptor.rbAFrame.rotation.x);
-        this.tmpQuaternion[0].setY(descriptor.rbAFrame.rotation.y);
-        this.tmpQuaternion[0].setZ(descriptor.rbAFrame.rotation.z);
-        this.tmpQuaternion[0].setW(descriptor.rbAFrame.rotation.w);
+        tmpQuaternion[0].setX(descriptor.rbAFrame.rotation.x);
+        tmpQuaternion[0].setY(descriptor.rbAFrame.rotation.y);
+        tmpQuaternion[0].setZ(descriptor.rbAFrame.rotation.z);
+        tmpQuaternion[0].setW(descriptor.rbAFrame.rotation.w);
 
-        transformA.setOrigin(this.tmpVec[0]);
-        transformA.setRotation(this.tmpQuaternion[0]);
+        transformA.setOrigin(tmpVec[0]);
+        transformA.setRotation(tmpQuaternion[0]);
 
         if (rigidBodyB) {
           var transformB = new Ammo.btTransform();
 
-          this.tmpVec[1].setX(descriptor.rbBFrame.position.x);
-          this.tmpVec[1].setY(descriptor.rbBFrame.position.y);
-          this.tmpVec[1].setZ(descriptor.rbBFrame.position.z);
+          tmpVec[1].setX(descriptor.rbBFrame.position.x);
+          tmpVec[1].setY(descriptor.rbBFrame.position.y);
+          tmpVec[1].setZ(descriptor.rbBFrame.position.z);
 
-          this.tmpQuaternion[1].setX(descriptor.rbBFrame.rotation.x);
-          this.tmpQuaternion[1].setY(descriptor.rbBFrame.rotation.y);
-          this.tmpQuaternion[1].setZ(descriptor.rbBFrame.rotation.z);
-          this.tmpQuaternion[1].setW(descriptor.rbBFrame.rotation.w);
+          tmpQuaternion[1].setX(descriptor.rbBFrame.rotation.x);
+          tmpQuaternion[1].setY(descriptor.rbBFrame.rotation.y);
+          tmpQuaternion[1].setZ(descriptor.rbBFrame.rotation.z);
+          tmpQuaternion[1].setW(descriptor.rbBFrame.rotation.w);
 
-          transformB.setOrigin(this.tmpVec[1]);
-          transformB.setRotation(this.tmpQuaternion[1]);
+          transformB.setOrigin(tmpVec[1]);
+          transformB.setRotation(tmpQuaternion[1]);
 
           constraint = new Ammo.btGeneric6DofConstraint(rigidBodyA, rigidBodyB, transformA, transformB, !!descriptor.useLinearReference);
         } else {
           constraint = new Ammo.btGeneric6DofConstraint(rigidBodyA, transformA, !!descriptor.useLinearReference);
         }
 
-        id = this.constraintIds.pop();
+        id = this.ids.pop();
         this.constraints[id] = constraint;
 
         this.dynamicsWorld.addConstraint(constraint);
@@ -1043,8 +1023,8 @@ define([ 'underscore' ], function(_) {
 
 
     ConeTwistConstraint_create: function(descriptor, fn) {
-      if (!this.constraintIds.length) {
-        return console.error('No unused constraint ids!');
+      if (!this.ids.length) {
+        return console.error('No unused ids!');
       }
 
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
@@ -1056,39 +1036,39 @@ define([ 'underscore' ], function(_) {
       if (rigidBodyA) {
         var transformA = new Ammo.btTransform();
 
-        this.tmpVec[0].setX(descriptor.rbAFrame.position.x);
-        this.tmpVec[0].setY(descriptor.rbAFrame.position.y);
-        this.tmpVec[0].setZ(descriptor.rbAFrame.position.z);
+        tmpVec[0].setX(descriptor.rbAFrame.position.x);
+        tmpVec[0].setY(descriptor.rbAFrame.position.y);
+        tmpVec[0].setZ(descriptor.rbAFrame.position.z);
 
-        this.tmpQuaternion[0].setX(descriptor.rbAFrame.rotation.x);
-        this.tmpQuaternion[0].setY(descriptor.rbAFrame.rotation.y);
-        this.tmpQuaternion[0].setZ(descriptor.rbAFrame.rotation.z);
-        this.tmpQuaternion[0].setW(descriptor.rbAFrame.rotation.w);
+        tmpQuaternion[0].setX(descriptor.rbAFrame.rotation.x);
+        tmpQuaternion[0].setY(descriptor.rbAFrame.rotation.y);
+        tmpQuaternion[0].setZ(descriptor.rbAFrame.rotation.z);
+        tmpQuaternion[0].setW(descriptor.rbAFrame.rotation.w);
 
-        transformA.setOrigin(this.tmpVec[0]);
-        transformA.setRotation(this.tmpQuaternion[0]);
+        transformA.setOrigin(tmpVec[0]);
+        transformA.setRotation(tmpQuaternion[0]);
 
         if (rigidBodyB) {
           var transformB = new Ammo.btTransform();
 
-          this.tmpVec[1].setX(descriptor.rbBFrame.position.x);
-          this.tmpVec[1].setY(descriptor.rbBFrame.position.y);
-          this.tmpVec[1].setZ(descriptor.rbBFrame.position.z);
+          tmpVec[1].setX(descriptor.rbBFrame.position.x);
+          tmpVec[1].setY(descriptor.rbBFrame.position.y);
+          tmpVec[1].setZ(descriptor.rbBFrame.position.z);
 
-          this.tmpQuaternion[1].setX(descriptor.rbBFrame.rotation.x);
-          this.tmpQuaternion[1].setY(descriptor.rbBFrame.rotation.y);
-          this.tmpQuaternion[1].setZ(descriptor.rbBFrame.rotation.z);
-          this.tmpQuaternion[1].setW(descriptor.rbBFrame.rotation.w);
+          tmpQuaternion[1].setX(descriptor.rbBFrame.rotation.x);
+          tmpQuaternion[1].setY(descriptor.rbBFrame.rotation.y);
+          tmpQuaternion[1].setZ(descriptor.rbBFrame.rotation.z);
+          tmpQuaternion[1].setW(descriptor.rbBFrame.rotation.w);
 
-          transformB.setOrigin(this.tmpVec[1]);
-          transformB.setRotation(this.tmpQuaternion[1]);
+          transformB.setOrigin(tmpVec[1]);
+          transformB.setRotation(tmpQuaternion[1]);
 
           constraint = new Ammo.btConeTwistConstraint(rigidBodyA, rigidBodyB, transformA, transformB);
         } else {
           constraint = new Ammo.btConeTwistConstraint(rigidBodyA, transformA);
         }
 
-        id = this.constraintIds.pop();
+        id = this.ids.pop();
         this.constraints[id] = constraint;
 
         this.dynamicsWorld.addConstraint(constraint);
@@ -1167,8 +1147,8 @@ define([ 'underscore' ], function(_) {
     },
 
     HingeConstraint_create: function(descriptor, fn) {
-      if (!this.constraintIds.length) {
-        return console.error('No unused constraint ids!');
+      if (!this.ids.length) {
+        return console.error('No unused ids!');
       }
 
       var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
@@ -1178,29 +1158,29 @@ define([ 'underscore' ], function(_) {
           id;
 
       if (rigidBodyA) {
-        this.tmpVec[0].setX(descriptor.pivotA.x);
-        this.tmpVec[0].setY(descriptor.pivotA.y);
-        this.tmpVec[0].setZ(descriptor.pivotA.z);
-        this.tmpVec[1].setX(descriptor.axisA.x);
-        this.tmpVec[1].setX(descriptor.axisA.y);
-        this.tmpVec[1].setX(descriptor.axisA.z);
+        tmpVec[0].setX(descriptor.pivotA.x);
+        tmpVec[0].setY(descriptor.pivotA.y);
+        tmpVec[0].setZ(descriptor.pivotA.z);
+        tmpVec[1].setX(descriptor.axisA.x);
+        tmpVec[1].setX(descriptor.axisA.y);
+        tmpVec[1].setX(descriptor.axisA.z);
 
         if (rigidBodyB) {
           rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
-          this.tmpVec[2].setX(descriptor.pivotB.x);
-          this.tmpVec[2].setY(descriptor.pivotB.y);
-          this.tmpVec[2].setZ(descriptor.pivotB.z);
-          this.tmpVec[3].setX(descriptor.axisB.x);
-          this.tmpVec[3].setY(descriptor.axisB.y);
-          this.tmpVec[3].setZ(descriptor.axisB.z);
+          tmpVec[2].setX(descriptor.pivotB.x);
+          tmpVec[2].setY(descriptor.pivotB.y);
+          tmpVec[2].setZ(descriptor.pivotB.z);
+          tmpVec[3].setX(descriptor.axisB.x);
+          tmpVec[3].setY(descriptor.axisB.y);
+          tmpVec[3].setZ(descriptor.axisB.z);
           constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
-              this.tmpVec[0], this.tmpVec[2], this.tmpVec[1], this.tmpVec[3]);
+              tmpVec[0], tmpVec[2], tmpVec[1], tmpVec[3]);
         } else {
           constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
-              this.tmpVec[0], this.tmpVec[1]);
+              tmpVec[0], tmpVec[1]);
         }
 
-        id = this.constraintIds.pop();
+        id = this.ids.pop();
         this.constraints[id] = constraint;
 
         this.dynamicsWorld.addConstraint(constraint);
@@ -1223,16 +1203,16 @@ define([ 'underscore' ], function(_) {
 
     /*
     DynamicsWorld_rayTestAllHits: function(descriptor, fn) {
-      this.tmpVec[0].setX(descriptor.rayFromWorld.x);
-      this.tmpVec[0].setY(descriptor.rayFromWorld.y);
-      this.tmpVec[0].setZ(descriptor.rayFromWorld.z);
-      this.tmpVec[1].setX(descriptor.rayToWorld.x);
-      this.tmpVec[1].setY(descriptor.rayToWorld.y);
-      this.tmpVec[1].setZ(descriptor.rayToWorld.z);
+      tmpVec[0].setX(descriptor.rayFromWorld.x);
+      tmpVec[0].setY(descriptor.rayFromWorld.y);
+      tmpVec[0].setZ(descriptor.rayFromWorld.z);
+      tmpVec[1].setX(descriptor.rayToWorld.x);
+      tmpVec[1].setY(descriptor.rayToWorld.y);
+      tmpVec[1].setZ(descriptor.rayToWorld.z);
 
-      var callback = new Ammo.AllHitsRayResultCallback(this.tmpVec[0], this.tmpVec[1]);
+      var callback = new Ammo.AllHitsRayResultCallback(tmpVec[0], tmpVec[1]);
 
-      this.dynamicsWorld.rayTest(this.tmpVec[0], this.tmpVec[1], callback);
+      this.dynamicsWorld.rayTest(tmpVec[0], tmpVec[1], callback);
 
       if (callback.hasHit()) {
         console.log('hits', callback.m_hitFractions.size());
@@ -1247,16 +1227,16 @@ define([ 'underscore' ], function(_) {
     */
 
     DynamicsWorld_rayTestClosest: function(descriptor, fn) {
-      this.tmpVec[0].setX(descriptor.rayFromWorld.x);
-      this.tmpVec[0].setY(descriptor.rayFromWorld.y);
-      this.tmpVec[0].setZ(descriptor.rayFromWorld.z);
-      this.tmpVec[1].setX(descriptor.rayToWorld.x);
-      this.tmpVec[1].setY(descriptor.rayToWorld.y);
-      this.tmpVec[1].setZ(descriptor.rayToWorld.z);
+      tmpVec[0].setX(descriptor.rayFromWorld.x);
+      tmpVec[0].setY(descriptor.rayFromWorld.y);
+      tmpVec[0].setZ(descriptor.rayFromWorld.z);
+      tmpVec[1].setX(descriptor.rayToWorld.x);
+      tmpVec[1].setY(descriptor.rayToWorld.y);
+      tmpVec[1].setZ(descriptor.rayToWorld.z);
 
-      var callback = new Ammo.ClosestRayResultCallback(this.tmpVec[0], this.tmpVec[1]);
+      var callback = new Ammo.ClosestRayResultCallback(tmpVec[0], tmpVec[1]);
 
-      this.dynamicsWorld.rayTest(this.tmpVec[0], this.tmpVec[1], callback);
+      this.dynamicsWorld.rayTest(tmpVec[0], tmpVec[1], callback);
 
       if (callback.hasHit()) {
         var body = Ammo.castObject(callback.get_m_collisionObject(), Ammo.btCollisionObject);
@@ -1289,10 +1269,10 @@ define([ 'underscore' ], function(_) {
     },
 
     DynamicsWorld_addRigidBody: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
-        this.dynamicsWorld.addRigidBody(body, descriptor.group, descriptor.mask);
+      if (body && body.ammoData) {
+        this.dynamicsWorld.addRigidBody(body.ammoData, descriptor.group, descriptor.mask);
       }
     },
 
@@ -1316,19 +1296,19 @@ define([ 'underscore' ], function(_) {
     },
 
     GhostObject_create: function(descriptor, fn) {
-      if (!this.ghostObjectIds.length) {
-        return console.error('No unused ghost object ids');
+      if (!this.ids.length) {
+        return console.error('No unused ids');
       }
       var colShape = this._createShape(descriptor.shape),
-          origin = this.tmpVec[0],
-          rotation = this.tmpQuaternion[0],
+          origin = tmpVec[0],
+          rotation = tmpQuaternion[0],
           ghostObject;
 
       if (!colShape) {
         return console.error('Invalid collision shape!');
       }
 
-      this.tmpTrans[0].setIdentity();
+      tmpTrans[0].setIdentity();
 
       origin.setX(descriptor.position.x);
       origin.setY(descriptor.position.y);
@@ -1339,16 +1319,16 @@ define([ 'underscore' ], function(_) {
       rotation.setZ(descriptor.quaternion.z);
       rotation.setW(descriptor.quaternion.w);
 
-      this.tmpTrans[0].setOrigin(origin);
-      this.tmpTrans[0].setRotation(rotation);
+      tmpTrans[0].setOrigin(origin);
+      tmpTrans[0].setRotation(rotation);
 
       ghostObject = new Ammo.btPairCachingGhostObject();
-      ghostObject.setWorldTransform(this.tmpTrans[0]);
+      ghostObject.setWorldTransform(tmpTrans[0]);
 
       ghostObject.setCollisionShape(colShape);
-      ghostObject.setCollisionFlags(this.collisionFlags.CF_NO_CONTACT_RESPONSE); // no collision response
+      ghostObject.setCollisionFlags(CollisionFlags.CF_NO_CONTACT_RESPONSE); // no collision response
 
-      var id = this.ghostObjectIds.pop();
+      var id = this.ids.pop();
 
       this.ghosts[id] = ghostObject;
 
@@ -1365,14 +1345,14 @@ define([ 'underscore' ], function(_) {
     },
 
     KinematicCharacterController_create: function(descriptor, fn) {
-      if (!this.kinematicCharacterControllerIds.length) {
-        return console.error('No unused kinematic character controller ids!');
+      if (!this.ids.length) {
+        return console.error('No unused ids!');
       }
 
       var colShape,
-          startTransform = this.tmpTrans[0],
-          origin = this.tmpVec[1],
-          rotation = this.tmpQuaternion[0],
+          startTransform = tmpTrans[0],
+          origin = tmpVec[1],
+          rotation = tmpQuaternion[0],
           ghost,
           controller;
 
@@ -1400,16 +1380,16 @@ define([ 'underscore' ], function(_) {
       ghost.setWorldTransform(startTransform);
 
       ghost.setCollisionShape(colShape);
-      ghost.setCollisionFlags(this.collisionFlags.CF_CHARACTER_OBJECT);
+      ghost.setCollisionFlags(CollisionFlags.CF_CHARACTER_OBJECT);
 
       controller = new Ammo.btKinematicCharacterController (ghost, colShape, descriptor.stepHeight);
 
-      this.dynamicsWorld.addCollisionObject(ghost, this.collisionFilterGroups.CharacterFilter,
-        this.collisionFilterGroups.StaticFilter | this.collisionFilterGroups.DefaultFilter);
+      this.dynamicsWorld.addCollisionObject(ghost, CollisionFilterGroups.CharacterFilter,
+        CollisionFilterGroups.StaticFilter | CollisionFilterGroups.DefaultFilter);
 
       this.dynamicsWorld.addAction(controller);
 
-      var id = this.kinematicCharacterControllerIds.pop();
+      var id = this.ids.pop();
       this.characterControllers[id] = controller;
 
       var o = Ammo.castObject(ghost, Ammo.btCollisionObject);
@@ -1428,11 +1408,11 @@ define([ 'underscore' ], function(_) {
       var controller = this.characterControllers[descriptor.controllerId];
 
       if (controller) {
-        this.tmpVec[0].setX(descriptor.direction.x);
-        this.tmpVec[0].setY(descriptor.direction.y);
-        this.tmpVec[0].setZ(descriptor.direction.z);
+        tmpVec[0].setX(descriptor.direction.x);
+        tmpVec[0].setY(descriptor.direction.y);
+        tmpVec[0].setZ(descriptor.direction.z);
 
-        controller.setWalkDirection(this.tmpVec[0]);
+        controller.setWalkDirection(tmpVec[0]);
       }
     },
 
@@ -1488,11 +1468,11 @@ define([ 'underscore' ], function(_) {
       var controller = this.characterControllers[descriptor.controllerId];
 
       if (controller) {
-        this.tmpVec[0].setX(descriptor.velocity.x);
-        this.tmpVec[0].setY(descriptor.velocity.y);
-        this.tmpVec[0].setZ(descriptor.velocity.z);
+        tmpVec[0].setX(descriptor.velocity.x);
+        tmpVec[0].setY(descriptor.velocity.y);
+        tmpVec[0].setZ(descriptor.velocity.z);
 
-        controller.setVelocityForTimeInterval(this.tmpVec[0], descriptor.interval);
+        controller.setVelocityForTimeInterval(tmpVec[0], descriptor.interval);
       }
     },
 
@@ -1516,25 +1496,25 @@ define([ 'underscore' ], function(_) {
       var controller = this.characterControllers[descriptor.controllerId];
 
       if (controller) {
-        this.tmpVec[0].setX(descriptor.origin.x);
-        this.tmpVec[0].setY(descriptor.origin.y);
-        this.tmpVec[0].setZ(descriptor.origin.z);
+        tmpVec[0].setX(descriptor.origin.x);
+        tmpVec[0].setY(descriptor.origin.y);
+        tmpVec[0].setZ(descriptor.origin.z);
 
-        controller.warp(this.tmpVec[0]);
+        controller.warp(tmpVec[0]);
       }
     },
 
     RigidBody_create: function(descriptor, fn) {
-      if (!this.bodyIds.length) {
-        return console.error('No unused body ids!');
+      if (!this.ids.length) {
+        return console.error('No unused ids!');
       }
 
       var colShape,
-          startTransform = this.tmpTrans[0],
+          startTransform = tmpTrans[0],
           isDynamic = (descriptor.mass !== 0),
-          localInertia = this.tmpVec[0],
-          origin = this.tmpVec[1],
-          rotation = this.tmpQuaternion[0],
+          localInertia = tmpVec[0],
+          origin = tmpVec[1],
+          rotation = tmpQuaternion[0],
           myMotionState,
           rbInfo,
           body;
@@ -1568,9 +1548,12 @@ define([ 'underscore' ], function(_) {
       rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
       body = new Ammo.btRigidBody(rbInfo);
 
-      var id = this.bodyIds.pop();
+      var id = this.ids.pop();
 
-      this.bodies[id] = body;
+      var obj = new RigidBody(id, body);
+
+      this.objects[id] = obj;
+      this.objectsByRef[body] = obj;
 
       var o = Ammo.castObject(body, Ammo.btCollisionObject);
 
@@ -1585,14 +1568,14 @@ define([ 'underscore' ], function(_) {
     },
 
     CollisionObject_create: function(descriptor, fn) {
-      if (!this.bodyIds.length) {
-        return console.error('No unused body ids!');
+      if (!this.ids.length) {
+        return console.error('No unused ids!');
       }
 
       var colShape,
-          startTransform = this.tmpTrans[0],
-          origin = this.tmpVec[1],
-          rotation = this.tmpQuaternion[0],
+          startTransform = tmpTrans[0],
+          origin = tmpVec[1],
+          rotation = tmpQuaternion[0],
           body;
 
       startTransform.setIdentity();
@@ -1619,7 +1602,7 @@ define([ 'underscore' ], function(_) {
 
       body.setCollisionShape(colShape);
 
-      var id = this.collisionObjectIds.pop();
+      var id = this.ids.pop();
 
       this.collisionObjects[id] = body;
 
@@ -1642,24 +1625,24 @@ define([ 'underscore' ], function(_) {
     },
 
     RigidBody_setType: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
+      if (body && body.ammoData) {
         switch (descriptor.type) {
         case 'static':
-          body.setCollisionFlags(this.collisionFlags.CF_STATIC_OBJECT);
-          body.setActivationState(this.activationStates.DISABLE_SIMULATION);
+          body.ammoData.setCollisionFlags(CollisionFlags.CF_STATIC_OBJECT);
+          body.ammoData.setActivationState(ActivationStates.DISABLE_SIMULATION);
           break;
         case 'kinematic':
-          body.setCollisionFlags(this.collisionFlags.CF_KINEMATIC_OBJECT);
-          body.setActivationState(this.activationStates.DISABLE_DEACTIVATION);
+          body.ammoData.setCollisionFlags(CollisionFlags.CF_KINEMATIC_OBJECT);
+          body.ammoData.setActivationState(ActivationStates.DISABLE_DEACTIVATION);
           break;
         default:
           console.warn('unknown body type: ' + descriptor.type + ', defaulting to dynamic');
-          body.setCollisionFlags(0);
+          body.ammoData.setCollisionFlags(0);
           break;
         case 'dynamic':
-          body.setCollisionFlags(0);
+          body.ammoData.setCollisionFlags(0);
           break;
         }
       }
@@ -1671,10 +1654,10 @@ define([ 'underscore' ], function(_) {
           rotation;
 
       if (body) {
-        this.tmpTrans[0].setIdentity();
-        body.getMotionState().getWorldTransform(this.tmpTrans[0]);
-        position = this.tmpTrans[0].getOrigin();
-        rotation = this.tmpTrans[0].getRotation();
+        tmpTrans[0].setIdentity();
+        body.getMotionState().getWorldTransform(tmpTrans[0]);
+        position = tmpTrans[0].getOrigin();
+        rotation = tmpTrans[0].getRotation();
 
         if (descriptor.position) {
           position.setX(descriptor.position.x);
@@ -1690,9 +1673,9 @@ define([ 'underscore' ], function(_) {
         }
 
         if (body.isKinematicObject()) {
-          body.getMotionState().setWorldTransform(this.tmpTrans[0]);
+          body.getMotionState().setWorldTransform(tmpTrans[0]);
         } else {
-          body.setWorldTransform(this.tmpTrans[0]);
+          body.setWorldTransform(tmpTrans[0]);
         }
       }
     },
@@ -1710,14 +1693,14 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.force.x);
-        this.tmpVec[0].setY(descriptor.force.y);
-        this.tmpVec[0].setZ(descriptor.force.z);
-        this.tmpVec[1].setX(descriptor.relativePosition.x);
-        this.tmpVec[1].setY(descriptor.relativePosition.y);
-        this.tmpVec[1].setZ(descriptor.relativePosition.z);
+        tmpVec[0].setX(descriptor.force.x);
+        tmpVec[0].setY(descriptor.force.y);
+        tmpVec[0].setZ(descriptor.force.z);
+        tmpVec[1].setX(descriptor.relativePosition.x);
+        tmpVec[1].setY(descriptor.relativePosition.y);
+        tmpVec[1].setZ(descriptor.relativePosition.z);
 
-        body.applyForce(this.tmpVec[0], this.tmpVec[1]);
+        body.applyForce(tmpVec[0], tmpVec[1]);
         body.activate();
       }
     },
@@ -1726,11 +1709,11 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.force.x);
-        this.tmpVec[0].setY(descriptor.force.y);
-        this.tmpVec[0].setZ(descriptor.force.z);
+        tmpVec[0].setX(descriptor.force.x);
+        tmpVec[0].setY(descriptor.force.y);
+        tmpVec[0].setZ(descriptor.force.z);
 
-        body.applyCentralForce(this.tmpVec[0]);
+        body.applyCentralForce(tmpVec[0]);
         body.activate();
       }
     },
@@ -1739,14 +1722,14 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.impulse.x);
-        this.tmpVec[0].setY(descriptor.impulse.y);
-        this.tmpVec[0].setZ(descriptor.impulse.z);
-        this.tmpVec[1].setX(descriptor.relativePosition.x);
-        this.tmpVec[1].setY(descriptor.relativePosition.y);
-        this.tmpVec[1].setZ(descriptor.relativePosition.z);
+        tmpVec[0].setX(descriptor.impulse.x);
+        tmpVec[0].setY(descriptor.impulse.y);
+        tmpVec[0].setZ(descriptor.impulse.z);
+        tmpVec[1].setX(descriptor.relativePosition.x);
+        tmpVec[1].setY(descriptor.relativePosition.y);
+        tmpVec[1].setZ(descriptor.relativePosition.z);
 
-        body.applyImpulse(this.tmpVec[0], this.tmpVec[1]);
+        body.applyImpulse(tmpVec[0], tmpVec[1]);
         body.activate();
       }
     },
@@ -1755,11 +1738,11 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.force.x);
-        this.tmpVec[0].setY(descriptor.force.y);
-        this.tmpVec[0].setZ(descriptor.force.z);
+        tmpVec[0].setX(descriptor.force.x);
+        tmpVec[0].setY(descriptor.force.y);
+        tmpVec[0].setZ(descriptor.force.z);
 
-        body.applyCentralImpulse(this.tmpVec[0]);
+        body.applyCentralImpulse(tmpVec[0]);
         body.activate();
       }
     },
@@ -1768,28 +1751,28 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.torque.x);
-        this.tmpVec[0].setY(descriptor.torque.y);
-        this.tmpVec[0].setZ(descriptor.torque.z);
+        tmpVec[0].setX(descriptor.torque.x);
+        tmpVec[0].setY(descriptor.torque.y);
+        tmpVec[0].setZ(descriptor.torque.z);
 
-        body.applyTorque(this.tmpVec[0]);
+        body.applyTorque(tmpVec[0]);
         body.activate();
       }
     },
 
     RigidBody_setRestitution: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
-        body.setRestitution(descriptor.restitution);
+      if (body && body.ammoData) {
+        body.ammoData.setRestitution(descriptor.restitution);
       }
     },
 
     RigidBody_setFriction: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
-        body.setFriction(descriptor.friction);
+      if (body && body.ammoData) {
+        body.ammoData.setFriction(descriptor.friction);
       }
     },
 
@@ -1805,10 +1788,10 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.linearFactor.x);
-        this.tmpVec[0].setY(descriptor.linearFactor.y);
-        this.tmpVec[0].setZ(descriptor.linearFactor.z);
-        body.setLinearFactor(this.tmpVec[0]);
+        tmpVec[0].setX(descriptor.linearFactor.x);
+        tmpVec[0].setY(descriptor.linearFactor.y);
+        tmpVec[0].setZ(descriptor.linearFactor.z);
+        body.setLinearFactor(tmpVec[0]);
       }
     },
 
@@ -1816,10 +1799,10 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.angularFactor.x);
-        this.tmpVec[0].setY(descriptor.angularFactor.y);
-        this.tmpVec[0].setZ(descriptor.angularFactor.z);
-        body.setAngularFactor(this.tmpVec[0]);
+        tmpVec[0].setX(descriptor.angularFactor.x);
+        tmpVec[0].setY(descriptor.angularFactor.y);
+        tmpVec[0].setZ(descriptor.angularFactor.z);
+        body.setAngularFactor(tmpVec[0]);
       }
     },
 
@@ -1827,10 +1810,10 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.linearVelocity.x);
-        this.tmpVec[0].setY(descriptor.linearVelocity.y);
-        this.tmpVec[0].setZ(descriptor.linearVelocity.z);
-        body.setLinearVelocity(this.tmpVec[0]);
+        tmpVec[0].setX(descriptor.linearVelocity.x);
+        tmpVec[0].setY(descriptor.linearVelocity.y);
+        tmpVec[0].setZ(descriptor.linearVelocity.z);
+        body.setLinearVelocity(tmpVec[0]);
       }
     },
 
@@ -1838,10 +1821,10 @@ define([ 'underscore' ], function(_) {
       var body = this.bodies[descriptor.bodyId];
 
       if (body) {
-        this.tmpVec[0].setX(descriptor.angularVelocity.x);
-        this.tmpVec[0].setY(descriptor.angularVelocity.y);
-        this.tmpVec[0].setZ(descriptor.angularVelocity.z);
-        body.setAngularVelocity(this.tmpVec[0]);
+        tmpVec[0].setX(descriptor.angularVelocity.x);
+        tmpVec[0].setY(descriptor.angularVelocity.y);
+        tmpVec[0].setZ(descriptor.angularVelocity.z);
+        body.setAngularVelocity(tmpVec[0]);
       }
     },
 
@@ -1858,7 +1841,7 @@ define([ 'underscore' ], function(_) {
         Ammo.destroy(constraint);
         this.constraints[id] = undefined;
         this.trigger('Constraint_destroy', id);
-        this.constraintIds.push(id);
+        this.ids.push(id);
       }
     },
 
@@ -1871,7 +1854,7 @@ define([ 'underscore' ], function(_) {
         Ammo.destroy(body);
         this.bodies[id] = undefined;
         this.trigger('RigidBody_destroy', id);
-        this.bodyIds.push(id);
+        this.ids.push(id);
       }
     },
 
@@ -1884,7 +1867,7 @@ define([ 'underscore' ], function(_) {
         Ammo.destroy(vehicle);
         this.vehicles[id] = undefined;
         this.trigger('Vehicle_destroy', id);
-        this.vehicleIds.push(id);
+        this.ids.push(id);
       }
     },
 
@@ -1897,7 +1880,7 @@ define([ 'underscore' ], function(_) {
         Ammo.destroy(ghost);
         this.ghosts[id] = undefined;
         this.trigger('GhostObject_destroy', id);
-        this.ghostIds.push(id);
+        this.ids.push(id);
       }
     },
 
