@@ -1617,10 +1617,10 @@ define([ 'underscore' ], function(_) {
     },
 
     CollisionObject_setActivationState: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
-        body.setActivationState(descriptor.activationState);
+      if (body && body.ammoData) {
+        body.ammoData.setActivationState(descriptor.activationState);
       }
     },
 
@@ -1649,13 +1649,13 @@ define([ 'underscore' ], function(_) {
     },
 
     RigidBody_setWorldTransform: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId],
+      var body = this.objects[descriptor.bodyId],
           position,
           rotation;
 
-      if (body) {
+      if (body.ammoData) {
         tmpTrans[0].setIdentity();
-        body.getMotionState().getWorldTransform(tmpTrans[0]);
+        body.ammoData.getMotionState().getWorldTransform(tmpTrans[0]);
         position = tmpTrans[0].getOrigin();
         rotation = tmpTrans[0].getRotation();
 
@@ -1681,18 +1681,18 @@ define([ 'underscore' ], function(_) {
     },
 
     RigidBody_clearForces: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
-        body.clearForces();
-        body.activate();
+      if (body.ammoData) {
+        body.ammoData.clearForces();
+        body.ammoData.activate();
       }
     },
 
     RigidBody_applyForce: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
+      if (body.ammoData) {
         tmpVec[0].setX(descriptor.force.x);
         tmpVec[0].setY(descriptor.force.y);
         tmpVec[0].setZ(descriptor.force.z);
@@ -1700,28 +1700,28 @@ define([ 'underscore' ], function(_) {
         tmpVec[1].setY(descriptor.relativePosition.y);
         tmpVec[1].setZ(descriptor.relativePosition.z);
 
-        body.applyForce(tmpVec[0], tmpVec[1]);
-        body.activate();
+        body.ammoData.applyForce(tmpVec[0], tmpVec[1]);
+        body.ammoData.activate();
       }
     },
 
     RigidBody_applyCentralForce: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
+      if (body.ammoData) {
         tmpVec[0].setX(descriptor.force.x);
         tmpVec[0].setY(descriptor.force.y);
         tmpVec[0].setZ(descriptor.force.z);
 
-        body.applyCentralForce(tmpVec[0]);
-        body.activate();
+        body.ammoData.applyCentralForce(tmpVec[0]);
+        body.ammoData.activate();
       }
     },
 
     RigidBody_applyImpulse: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
+      if (body.ammoData) {
         tmpVec[0].setX(descriptor.impulse.x);
         tmpVec[0].setY(descriptor.impulse.y);
         tmpVec[0].setZ(descriptor.impulse.z);
@@ -1729,34 +1729,34 @@ define([ 'underscore' ], function(_) {
         tmpVec[1].setY(descriptor.relativePosition.y);
         tmpVec[1].setZ(descriptor.relativePosition.z);
 
-        body.applyImpulse(tmpVec[0], tmpVec[1]);
-        body.activate();
+        body.ammoData.applyImpulse(tmpVec[0], tmpVec[1]);
+        body.ammoData.activate();
       }
     },
 
     RigidBody_applyCentralImpulse: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
+      if (body.ammoData) {
         tmpVec[0].setX(descriptor.force.x);
         tmpVec[0].setY(descriptor.force.y);
         tmpVec[0].setZ(descriptor.force.z);
 
-        body.applyCentralImpulse(tmpVec[0]);
-        body.activate();
+        body.ammoData.applyCentralImpulse(tmpVec[0]);
+        body.ammoData.activate();
       }
     },
 
     RigidBody_applyTorque: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
+      if (body.ammoData) {
         tmpVec[0].setX(descriptor.torque.x);
         tmpVec[0].setY(descriptor.torque.y);
         tmpVec[0].setZ(descriptor.torque.z);
 
-        body.applyTorque(tmpVec[0]);
-        body.activate();
+        body.ammoData.applyTorque(tmpVec[0]);
+        body.ammoData.activate();
       }
     },
 
@@ -1777,54 +1777,54 @@ define([ 'underscore' ], function(_) {
     },
 
     RigidBody_setDamping: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
-        body.setDamping(descriptor.linearDamping, descriptor.angularDamping);
+      if (body.ammoData) {
+        body.ammoData.setDamping(descriptor.linearDamping, descriptor.angularDamping);
       }
     },
 
     RigidBody_setLinearFactor: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
+      if (body.ammoData) {
         tmpVec[0].setX(descriptor.linearFactor.x);
         tmpVec[0].setY(descriptor.linearFactor.y);
         tmpVec[0].setZ(descriptor.linearFactor.z);
-        body.setLinearFactor(tmpVec[0]);
+        body.ammoData.setLinearFactor(tmpVec[0]);
       }
     },
 
     RigidBody_setAngularFactor: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
+      if (body.ammoData) {
         tmpVec[0].setX(descriptor.angularFactor.x);
         tmpVec[0].setY(descriptor.angularFactor.y);
         tmpVec[0].setZ(descriptor.angularFactor.z);
-        body.setAngularFactor(tmpVec[0]);
+        body.ammoData.setAngularFactor(tmpVec[0]);
       }
     },
 
     RigidBody_setLinearVelocity: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
-      if (body) {
+      if (body.ammoData) {
         tmpVec[0].setX(descriptor.linearVelocity.x);
         tmpVec[0].setY(descriptor.linearVelocity.y);
         tmpVec[0].setZ(descriptor.linearVelocity.z);
-        body.setLinearVelocity(tmpVec[0]);
+        body.ammoData.setLinearVelocity(tmpVec[0]);
       }
     },
 
     RigidBody_setAngularVelocity: function(descriptor) {
       var body = this.bodies[descriptor.bodyId];
 
-      if (body) {
+      if (body.ammoData) {
         tmpVec[0].setX(descriptor.angularVelocity.x);
         tmpVec[0].setY(descriptor.angularVelocity.y);
         tmpVec[0].setZ(descriptor.angularVelocity.z);
-        body.setAngularVelocity(tmpVec[0]);
+        body.ammoData.setAngularVelocity(tmpVec[0]);
       }
     },
 
@@ -1847,12 +1847,13 @@ define([ 'underscore' ], function(_) {
 
     RigidBody_destroy: function(descriptor) {
       var id = descriptor && descriptor.bodyId,
-          body = this.bodies[id];
+          body = this.objects[id];
 
-      if (body) {
-        this.dynamicsWorld.removeRigidBody(body);
-        Ammo.destroy(body);
-        this.bodies[id] = undefined;
+      if (body.ammoData) {
+        this.objectsByRef[body.ammoData] = undefined;
+        this.objects[id] = undefined;
+        this.dynamicsWorld.removeRigidBody(body.ammoData);
+        Ammo.destroy(body.ammoData);
         this.trigger('RigidBody_destroy', id);
         this.ids.push(id);
       }
