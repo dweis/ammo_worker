@@ -89,6 +89,20 @@ define([ 'underscore' ], function(_) {
     data[this.offset + 6] = tmpTrans[0].getRotation().w();
   };
 
+  function ConeTwistConstraint(id, ammoData) {
+    AmmoObject.apply(this, arguments);
+    this.type = 'bt6DOFConstraint';
+  }
+
+  ConeTwistConstraint.prototype = new AmmoObject();
+
+  function DOF6Constraint(id, ammoData) {
+    AmmoObject.apply(this, arguments);
+    this.type = 'bt6DOFConstraint';
+  }
+
+  DOF6Constraint.prototype = new AmmoObject();
+
   function Point2PointConstraint(id, ammoData) {
     AmmoObject.apply(this, arguments);
     this.type = 'btPoint2PointConstraint';
@@ -1015,7 +1029,7 @@ define([ 'underscore' ], function(_) {
 
         id = this.ids.pop();
 
-        obj = new SliderConstraint(id, constraint);
+        var obj = new SliderConstraint(id, constraint);
 
         this.objects[id] = obj;
         this.objectsByRef[constraint] = obj;
@@ -1066,9 +1080,9 @@ define([ 'underscore' ], function(_) {
         return console.error('No unused ids!');
       }
 
-      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+      var rigidBodyA = this.objects[descriptor.rigidBodyIdA],
           rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' &&
-            this.bodies[descriptor.rigidBodyIdB],
+            this.objects[descriptor.rigidBodyIdB],
           constraint,
           id;
 
@@ -1102,13 +1116,16 @@ define([ 'underscore' ], function(_) {
           transformB.setOrigin(tmpVec[1]);
           transformB.setRotation(tmpQuaternion[1]);
 
-          constraint = new Ammo.btGeneric6DofConstraint(rigidBodyA, rigidBodyB, transformA, transformB, !!descriptor.useLinearReference);
+          constraint = new Ammo.btGeneric6DofConstraint(rigidBodyA.ammoData, rigidBodyB.ammoData, transformA, transformB, !!descriptor.useLinearReference);
         } else {
-          constraint = new Ammo.btGeneric6DofConstraint(rigidBodyA, transformA, !!descriptor.useLinearReference);
+          constraint = new Ammo.btGeneric6DofConstraint(rigidBodyA.ammoData, transformA, !!descriptor.useLinearReference);
         }
 
         id = this.ids.pop();
-        this.constraints[id] = constraint;
+
+        var obj = new DOF6Constraint(id, constraint);
+        this.objects[id] = obj;
+        this.objectsByRef[constraint] = obj;
 
         this.dynamicsWorld.addConstraint(constraint);
         //constraint.enableFeedback();
@@ -1125,9 +1142,9 @@ define([ 'underscore' ], function(_) {
         return console.error('No unused ids!');
       }
 
-      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+      var rigidBodyA = this.objects[descriptor.rigidBodyIdA],
           rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' &&
-            this.bodies[descriptor.rigidBodyIdB],
+            this.objects[descriptor.rigidBodyIdB],
           constraint,
           id;
 
@@ -1161,13 +1178,17 @@ define([ 'underscore' ], function(_) {
           transformB.setOrigin(tmpVec[1]);
           transformB.setRotation(tmpQuaternion[1]);
 
-          constraint = new Ammo.btConeTwistConstraint(rigidBodyA, rigidBodyB, transformA, transformB);
+          constraint = new Ammo.btConeTwistConstraint(rigidBodyA.ammoData, rigidBodyB.ammoData, transformA, transformB);
         } else {
-          constraint = new Ammo.btConeTwistConstraint(rigidBodyA, transformA);
+          constraint = new Ammo.btConeTwistConstraint(rigidBodyA.ammoData, transformA);
         }
 
         id = this.ids.pop();
-        this.constraints[id] = constraint;
+
+        var obj = new ConeTwistConstraint(id, constraint);
+
+        this.objects[id] = obj;
+        this.objectsByRef[constraint] = obj;
 
         this.dynamicsWorld.addConstraint(constraint);
         //constraint.enableFeedback();
@@ -1179,66 +1200,66 @@ define([ 'underscore' ], function(_) {
     },
 
     ConeTwistConstraint_setAngularOnly: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setAngularOnly(descriptor.angularOnly);
+        constraint.ammoData.setAngularOnly(descriptor.angularOnly);
       }
     },
 
     ConeTwistConstraint_setDamping: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setDamping(descriptor.damping);
+        constraint.ammoData.setDamping(descriptor.damping);
       }
     },
 
     ConeTwistConstraint_enableMotor: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.enableMotor(descriptor.isEnabled);
+        constraint.ammoData.enableMotor(descriptor.isEnabled);
       }
     },
 
     ConeTwistConstraint_setMaxMotorImpulse: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setMaxMotorImpulse(descriptor.maxMotorImpulse);
+        constraint.ammoData.setMaxMotorImpulse(descriptor.maxMotorImpulse);
       }
     },
 
     ConeTwistConstraint_setMaxMotorImpulseNormalized: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setMaxMotorImpulseNormalized(descriptor.maxMotorImpulse);
+        constraint.ammoData.setMaxMotorImpulseNormalized(descriptor.maxMotorImpulse);
       }
     },
 
     ConeTwistConstraint_setMotorTarget: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setMotorTarget(descriptor.motorTarget);
+        constraint.ammoData.setMotorTarget(descriptor.motorTarget);
       }
     },
 
     ConeTwistConstraint_setMotorTargetInConstraintSpace: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setMotorTargetInConstraintSpace(descriptor.motorTarget);
+        constraint.ammoData.setMotorTargetInConstraintSpace(descriptor.motorTarget);
       }
     },
 
     ConeTwistConstraint_setLimit: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setLimit(descriptor.swingSpan1, descriptor.swingSpan2,
+        constraint.ammoData.setLimit(descriptor.swingSpan1, descriptor.swingSpan2,
             descriptor.twistSpan, descriptor.softness, descriptor.biasFactor,
             descriptor.relaxationFactor);
       }
