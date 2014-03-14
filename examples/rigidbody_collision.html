@@ -25,9 +25,9 @@
       var material = new THREE.MeshPhongMaterial({ color: 0x33CC00 });
 
       this.bodies = [];
-      for (var z  = 0; z < 3; z++) {
-        for (var y  = 1; y < 3; y++) {
-          for (var x  = 0; x < 2; x++) {
+      for (var z  = 0; z < 4; z++) {
+        for (var y  = 1; y < 4; y++) {
+          for (var x  = 0; x < 3; x++) {
             var o = this._createBox(x * 2.5, y * 6, z * 2.5, material);
             this.scene.add(o);
           }
@@ -54,10 +54,10 @@
         //rigidBody.setAngularFactor({ x: 0, y: 0, z: 1 });
         this.bodies.push(rigidBody);
         rigidBody.on('begin_contact', function(data) {
-          //console.log('begin_contact');
+          console.log('begin_contact');
         });
         rigidBody.on('end_contact', function(data) {
-          //console.log('end_contact');
+          console.log('end_contact');
         });
       }.bind(this));
 

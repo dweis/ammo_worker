@@ -1,7 +1,8 @@
 define([ 'underscore' ], function(_) {
+  /* jshint unused: vars */
   "use strict";
 
-  var MAX_TRANSFORMS = 2000;
+  var MAX_TRANSFORMS = 1000;
 
   var CollisionFlags = {
     CF_STATIC_OBJECT: 1,
@@ -54,29 +55,24 @@ define([ 'underscore' ], function(_) {
     this.id = id;
     this.ammoData = ammoData;
     this.offset = this.id * 7;
+    this.collisions = {};
   }
 
   AmmoObject.prototype = {};
 
-  /*
   AmmoObject.prototype.update = function(buffer) {
   };
-  */
 
   function Vehicle(id, ammoData) {
+    AmmoObject.apply(this, arguments);
     this.type = 'btRaycastVehicle';
-    this.id = id;
-    this.ammoData = ammoData;
-    this.offset = this.id * 7;
   }
 
   Vehicle.prototype = new AmmoObject();
 
   function Wheel(id, ammoData) {
+    AmmoObject.apply(this, arguments);
     this.type = 'btWheelInfo';
-    this.id = id;
-    this.ammoData = ammoData;
-    this.offset = this.id * 7;
   }
 
   Wheel.prototype = new AmmoObject();
@@ -93,19 +89,47 @@ define([ 'underscore' ], function(_) {
     data[this.offset + 6] = tmpTrans[0].getRotation().w();
   };
 
+  function Point2PointConstraint(id, ammoData) {
+    AmmoObject.apply(this, arguments);
+    this.type = 'btPoint2PointConstraint';
+  }
+
+  Point2PointConstraint.prototype = new AmmoObject();
+
+  function SliderConstraint(id, ammoData) {
+    AmmoObject.apply(this, arguments);
+    this.type = 'btSliderConstraint';
+  }
+
+  SliderConstraint.prototype = new AmmoObject();
+
   function CollisionObject(id, ammoData) {
+    AmmoObject.apply(this, arguments);
     this.type = 'btCollisionObject';
-    this.id = id;
-    this.ammoData = ammoData;
   }
 
   CollisionObject.prototype = new AmmoObject();
 
+  function GhostObject(id, ammoData) {
+    AmmoObject.apply(this, arguments);
+    this.type = 'btGhostObject';
+  }
+
+  GhostObject.prototype.update = function(data) {
+    var trans = this.ammoData.getWorldTransform();
+
+    data[this.offset + 0] = trans.getOrigin().x();
+    data[this.offset + 1] = trans.getOrigin().y();
+    data[this.offset + 2] = trans.getOrigin().z();
+    data[this.offset + 3] = trans.getRotation().x();
+    data[this.offset + 4] = trans.getRotation().y();
+    data[this.offset + 5] = trans.getRotation().z();
+    data[this.offset + 6] = trans.getRotation().w();
+  };
+
   function RigidBody(id, ammoData) {
+    CollisionObject.apply(this, arguments);
     this.type = 'btRigidBody';
-    this.id = id;
-    this.ammoData = ammoData;
-    this.offset = this.id * 7;
   }
 
   RigidBody.prototype = new CollisionObject();
@@ -125,9 +149,8 @@ define([ 'underscore' ], function(_) {
   };
 
   function KinematicCharacterController(id, ammoData) {
+    AmmoObject.apply(this, arguments);
     this.type = 'btKinematicCharacterController';
-    this.id = id;
-    this.ammoData = ammoData;
   }
 
   KinematicCharacterController.prototype = new AmmoObject();
@@ -207,9 +230,6 @@ define([ 'underscore' ], function(_) {
       this.objects = new Array(MAX_TRANSFORMS);
       this.objectsByRef = {};
 
-      this.ghostCollisions = {};
-      this.collisions = {};
-
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
 
@@ -267,6 +287,78 @@ define([ 'underscore' ], function(_) {
               that.objects[i].update(update);
             }
           }
+
+          (function() {
+            var dispatcher = that.dynamicsWorld.getDispatcher(),
+                nManifolds = dispatcher.getNumManifolds(),
+                manifold,
+                nContacts,
+                point,
+                body1,
+                body2,
+                object1,
+                object2;
+
+            for (var i = 0; i < nManifolds; i++) {
+              manifold = dispatcher.getManifoldByIndexInternal(i);
+
+              nContacts = manifold.getNumContacts();
+
+              if (nContacts > 0) {
+                for (var j = 0; j < nContacts; j++) {
+                  point = manifold.getContactPoint(j);
+                  body1 = Ammo.wrapPointer(manifold.getBody0(), Ammo.btCollisionObject);
+                  body2 = Ammo.wrapPointer(manifold.getBody1(), Ammo.btCollisionObject);
+
+                  if (body1.userData && body2.userData) {
+                    object1 = that.objects[body1.userData.id];
+                    object2 = that.objects[body2.userData.id];
+
+                    if (!object1.collisions[object2.id] ||
+                        !object2.collisions[object1.id]) {
+                      self.postMessage({ command: 'event', arguments: [
+                          'begin_contact', {
+                            objectA: { type: object1.type, id: object1.id },
+                            objectB: { type: object2.type, id: object2.id }
+                          }
+                        ]
+                      });
+                    }
+
+                    object1.collisions[object2.id] = that.frames;
+                    object2.collisions[object1.id] = that.frames;
+                  }
+                }
+              }
+            }
+          })();
+
+          (function() {
+            var object1, object2;
+
+            for (var i = 0; i < that.objects.length; i++) {
+              object1 = that.objects[i];
+
+              if (object1) {
+                for (var j in object1.collisions) {
+                  if (object1.collisions[j] !== that.frames) {
+                    object2 = that.objects[j];
+
+                    delete object1.collisions[j];
+                    delete object2.collisions[i];
+
+                    self.postMessage({ command: 'event', arguments: [
+                        'end_contact', {
+                          objectA: { type: 'btRigidBody', id: object1.id },
+                          objectB: { type: 'btRigidBody', id: object2.id }
+                        }
+                      ]
+                    });
+                  }
+                }
+              }
+            }
+          })();
           /*
           for (i = 0; i < that.bodies.length; i++) {
             if (that.bodies[i]) {
@@ -838,9 +930,9 @@ define([ 'underscore' ], function(_) {
         return console.error('No unused ids!');
       }
 
-      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+      var rigidBodyA = this.objects[descriptor.rigidBodyIdA],
           rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' &&
-            this.bodies[descriptor.rigidBodyIdB],
+            this.objects[descriptor.rigidBodyIdB],
           constraint,
           id;
 
@@ -850,18 +942,20 @@ define([ 'underscore' ], function(_) {
         tmpVec[0].setZ(descriptor.pivotA.z);
 
         if (rigidBodyB) {
-          rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
+          rigidBodyB = this.objects[descriptor.rigidBodyIdB];
           tmpVec[1].setX(descriptor.pivotB.x);
           tmpVec[1].setY(descriptor.pivotB.y);
           tmpVec[1].setZ(descriptor.pivotB.z);
-          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB, tmpVec[0], tmpVec[1]);
+          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA.ammoData, rigidBodyB.ammoData, tmpVec[0], tmpVec[1]);
         } else {
-          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA, rigidBodyB);
+          constraint = new Ammo.btPoint2PointConstraint(rigidBodyA.ammoData, rigidBodyB.ammoData);
         }
 
         id = this.ids.pop();
 
-        this.constraints[id] = constraint;
+        var obj = new Point2PointConstraint(id, constraint);
+
+        this.objects[id] = obj;
 
         this.dynamicsWorld.addConstraint(constraint);
         constraint.enableFeedback();
@@ -877,9 +971,9 @@ define([ 'underscore' ], function(_) {
         return console.error('No unused ids!');
       }
 
-      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
+      var rigidBodyA = this.objects[descriptor.rigidBodyIdA],
           rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' &&
-            this.bodies[descriptor.rigidBodyIdB],
+            this.objects[descriptor.rigidBodyIdB],
           constraint,
           id;
 
@@ -913,14 +1007,18 @@ define([ 'underscore' ], function(_) {
           transformB.setOrigin(tmpVec[1]);
           transformB.setRotation(tmpQuaternion[1]);
 
-          constraint = new Ammo.btSliderConstraint(rigidBodyA, rigidBodyB,
+          constraint = new Ammo.btSliderConstraint(rigidBodyA.ammoData, rigidBodyB.ammoData,
             transformA, transformB);
         } else {
-          constraint = new Ammo.btSliderConstraint(rigidBodyA, transformA);
+          constraint = new Ammo.btSliderConstraint(rigidBodyA.ammoData, transformA);
         }
 
         id = this.ids.pop();
-        this.constraints[id] = constraint;
+
+        obj = new SliderConstraint(id, constraint);
+
+        this.objects[id] = obj;
+        this.objectsByRef[constraint] = obj;
 
         this.dynamicsWorld.addConstraint(constraint);
         constraint.enableFeedback();
@@ -932,34 +1030,34 @@ define([ 'underscore' ], function(_) {
     },
 
     SliderConstraint_setLowerLinLimit: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setLowerLinLimit(descriptor.limit);
+        constraint.ammoData.setLowerLinLimit(descriptor.limit);
       }
     },
 
     SliderConstraint_setUpperLinLimit: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setUpperLinLimit(descriptor.limit);
+        constraint.ammoData.setUpperLinLimit(descriptor.limit);
       }
     },
 
     SliderConstraint_setLowerAngLimit: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setLowerAngLimit(descriptor.limit);
+        constraint.ammoData.setLowerAngLimit(descriptor.limit);
       }
     },
 
     SliderConstraint_setUpperAngLimit: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setUpperAngLimit(descriptor.limit);
+        constraint.ammoData.setUpperAngLimit(descriptor.limit);
       }
     },
 
@@ -1277,10 +1375,10 @@ define([ 'underscore' ], function(_) {
     },
 
     DynamicsWorld_addGhostObject: function(descriptor) {
-      var ghost = this.ghosts[descriptor.ghostId];
+      var ghost = this.objects[descriptor.ghostId];
 
-      if (ghost) {
-        this.dynamicsWorld.addCollisionObject(ghost, descriptor.group, descriptor.mask);
+      if (ghost && ghost.ammoData) {
+        this.dynamicsWorld.addCollisionObject(ghost.ammoData, descriptor.group, descriptor.mask);
       }
     },
 
@@ -1330,14 +1428,17 @@ define([ 'underscore' ], function(_) {
 
       var id = this.ids.pop();
 
-      this.ghosts[id] = ghostObject;
-
       var o = Ammo.castObject(ghostObject, Ammo.btCollisionObject);
 
       ghostObject.userData = o.userData = {
         type: 'btGhostObject',
         id: id
       };
+
+      var obj = new GhostObject(id, ghostObject);
+
+      this.objects[id] = obj;
+      this.objectsByRef[ghostObject] = obj;
 
       if (typeof fn === 'function') {
         fn(id);
