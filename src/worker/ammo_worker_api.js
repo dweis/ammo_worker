@@ -919,6 +919,8 @@ define([ 'underscore' ], function(_) {
         var obj = new Wheel(id, wheelInfo, vehicle);
 
         vehicle.addWheel(obj);
+        
+        this.objects[id] = obj;
 
         if (typeof fn === 'function') {
           fn(id);

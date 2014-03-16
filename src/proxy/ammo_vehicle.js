@@ -1,15 +1,32 @@
-define([ 'underscore', './ammo_base_object' ], function(_, AmmoBaseObject) {
+define([ 'when', 'underscore', './ammo_base_object' ], function(when, _, AmmoBaseObject) {
   function AmmoVehicle(proxy, vehicleId, rigidBody) {
     this.proxy = proxy;
     this.vehicleId = vehicleId;
-    this.wheelBindings = [];
+    this.wheelBindings = {};
+    this.wheelIds = [];
     this.rigidBody = rigidBody;
-  } 
+  }
 
   AmmoVehicle.prototype = new AmmoBaseObject();
 
-  AmmoVehicle.prototype.addWheel = function(connectionPoint, wheelDirection, wheelAxle, 
+  AmmoVehicle.prototype.addWheel = function(connectionPoint, wheelDirection, wheelAxle,
       suspensionRestLength, wheelRadius, isFrontWheel, tuning) {
+
+        /*
+
+            var deferred = when.defer();
+
+            this.execute('Vehicle_create', descriptor, true).then(_.bind(function(vehicleId) {
+              var proxy = this;
+              setTimeout(function() {
+                var vehicle = new AmmoVehicle(proxy, vehicleId, rigidBody);
+                proxy.vehicles[vehicleId] = vehicle;
+                deferred.resolve(vehicle);
+              }, 0);
+            }, this));
+
+            return deferred.promise;
+            */
 
     var descriptor = {
       vehicleId: this.vehicleId,
@@ -22,7 +39,14 @@ define([ 'underscore', './ammo_base_object' ], function(_, AmmoBaseObject) {
       tuning: tuning
     };
 
-    return this.proxy.execute('Vehicle_addWheel', descriptor, true);
+    var deferred = when.defer();
+
+    this.proxy.execute('Vehicle_addWheel', descriptor, true).then(_.bind(function(wheelId) {
+      this.wheelIds.push(wheelId);
+      deferred.resolve(wheelId);
+    }, this));
+
+    return deferred.promise;
   };
 
   AmmoVehicle.prototype.setWheelInfo = function(wheelIndex, properties) {
@@ -79,9 +103,9 @@ define([ 'underscore', './ammo_base_object' ], function(_, AmmoBaseObject) {
     return this.proxy.execute('Vehicle_destroy', descriptor);
   };
 
-  AmmoVehicle.prototype.addWheelObject = function(wheelIndex, object) {
-    this.wheelBindings[wheelIndex] = this.proxy.adapter.createBinding(object, 
-        this.proxy.getWheelOffset(this.vehicleId, wheelIndex));  
+  AmmoVehicle.prototype.addWheelObject = function(wheelId, object) {
+    this.wheelBindings[wheelId] = this.proxy.adapter.createBinding(object,
+        wheelId * 7);
   };
 
   AmmoVehicle.prototype.update = function() {

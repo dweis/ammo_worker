@@ -586,7 +586,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
   };
 
   AmmoProxy.prototype.getGhostObjectOffset = function(ghostObjectId) {
-    return (this.opts.maxBodies * 7) + (this.opts.maxVehicles * 8 * 7) + (this.opts.maxKinematicCharacterControllers * 7) + (ghostObjectId * 7);
+    return ghostObjectId * 7;
   };
 
   AmmoProxy.prototype.getRigidBodyOffset = function(bodyId) {
@@ -594,7 +594,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
   };
 
   AmmoProxy.prototype.getWheelOffset = function(vehicleId, wheelIndex) {
-    return (this.opts.maxBodies * 7) + (vehicleId * 8 * 7) + (wheelIndex * 7);
+    return wheelIndex * 7;
   };
 
   AmmoProxy.prototype.getVehicle = function(vehicleId) {
@@ -606,7 +606,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
   };
 
   AmmoProxy.prototype.getKinematicCharacterControllerOffset = function(kinematicCharacterControllerId) {
-    return (this.opts.maxBodies * 7) + (this.opts.maxVehicles * 8 * 7) + (kinematicCharacterControllerId * 7);
+    return kinematicCharacterControllerId * 7;
   };
 
   AmmoProxy.prototype.getConstraint = function(constraintId) {
