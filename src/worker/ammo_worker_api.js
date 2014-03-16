@@ -95,9 +95,16 @@ define([ 'underscore' ], function(_) {
     data[this.offset + 6] = tmpTrans[0].getRotation().w();
   };
 
+  function HingeConstraint(id, ammoData) {
+    AmmoObject.apply(this, arguments);
+    this.type = 'btHingeConstraint';
+  }
+
+  HingeConstraint.prototype = new AmmoObject();
+
   function ConeTwistConstraint(id, ammoData) {
     AmmoObject.apply(this, arguments);
-    this.type = 'bt6DOFConstraint';
+    this.type = 'btConeTwistConstraint';
   }
 
   ConeTwistConstraint.prototype = new AmmoObject();
@@ -185,7 +192,6 @@ define([ 'underscore' ], function(_) {
     data[this.offset + 5] = trans.getRotation().z();
     data[this.offset + 6] = trans.getRotation().w();
   };
-
 
   self.console = self.console || {};
 
@@ -1290,9 +1296,8 @@ define([ 'underscore' ], function(_) {
         return console.error('No unused ids!');
       }
 
-      var rigidBodyA = this.bodies[descriptor.rigidBodyIdA],
-          rigidBodyB = typeof descriptor.rigidBodyIdB !== 'undefined' &&
-            this.bodies[descriptor.rigidBodyIdB],
+      var rigidBodyA = this.objects[descriptor.rigidBodyIdA],
+          rigidBodyB,
           constraint,
           id;
 
@@ -1304,23 +1309,23 @@ define([ 'underscore' ], function(_) {
         tmpVec[1].setX(descriptor.axisA.y);
         tmpVec[1].setX(descriptor.axisA.z);
 
-        if (rigidBodyB) {
-          rigidBodyB = this.bodies[descriptor.rigidBodyIdB];
+        if (descriptor.rigidBodyIdB) {
+          rigidBodyB = this.objects[descriptor.rigidBodyIdB];
           tmpVec[2].setX(descriptor.pivotB.x);
           tmpVec[2].setY(descriptor.pivotB.y);
           tmpVec[2].setZ(descriptor.pivotB.z);
           tmpVec[3].setX(descriptor.axisB.x);
           tmpVec[3].setY(descriptor.axisB.y);
           tmpVec[3].setZ(descriptor.axisB.z);
-          constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
+          constraint = new Ammo.btHingeConstraint(rigidBodyA.ammoData, rigidBodyB.ammoData,
               tmpVec[0], tmpVec[2], tmpVec[1], tmpVec[3]);
         } else {
-          constraint = new Ammo.btHingeConstraint(rigidBodyA, rigidBodyB,
-              tmpVec[0], tmpVec[1]);
+          constraint = new Ammo.btHingeConstraint(rigidBodyA, tmpVec[0], tmpVec[1]);
         }
 
         id = this.ids.pop();
-        this.constraints[id] = constraint;
+        var obj = new HingeConstraint(id, constraint);
+        this.objects[id] = obj;
 
         this.dynamicsWorld.addConstraint(constraint);
         constraint.enableFeedback();
@@ -1332,10 +1337,10 @@ define([ 'underscore' ], function(_) {
     },
 
     HingeConstraint_setLimit: function(descriptor) {
-      var constraint = this.constraints[descriptor.constraintId];
+      var constraint = this.objects[descriptor.constraintId];
 
       if (constraint) {
-        constraint.setLimit(descriptor.low, descriptor.high, descriptor.softness,
+        constraint.ammoData.setLimit(descriptor.low, descriptor.high, descriptor.softness,
               descriptor.biasFactor, descriptor.relaxationFactor);
       }
     },
@@ -1532,7 +1537,10 @@ define([ 'underscore' ], function(_) {
       this.dynamicsWorld.addAction(controller);
 
       var id = this.ids.pop();
-      this.characterControllers[id] = controller;
+
+      var obj = new KinematicCharacterController(id, controller);
+
+      this.objects[id] = obj;
 
       var o = Ammo.castObject(ghost, Ammo.btCollisionObject);
 
@@ -1547,102 +1555,102 @@ define([ 'underscore' ], function(_) {
     },
 
     KinematicCharacterController_setWalkDirection: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
+      var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
         tmpVec[0].setX(descriptor.direction.x);
         tmpVec[0].setY(descriptor.direction.y);
         tmpVec[0].setZ(descriptor.direction.z);
 
-        controller.setWalkDirection(tmpVec[0]);
+        controller.ammoData.setWalkDirection(tmpVec[0]);
       }
     },
 
     KinematicCharacterController_jump: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
+      var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        controller.jump();
+        controller.ammoData.jump();
       }
     },
 
     KinematicCharacterController_setJumpSpeed: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
+      var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        controller.setJumpSpeed(descriptor.jumpSpeed);
+        controller.ammoData.setJumpSpeed(descriptor.jumpSpeed);
       }
     },
 
     KinematicCharacterController_setFallSpeed: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
+      var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        controller.setFallSpeed(descriptor.fallSpeed);
+        controller.ammoData.setFallSpeed(descriptor.fallSpeed);
       }
     },
 
     KinematicCharacterController_setMaxJumpHeight: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
+      var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        controller.setMaxJumpHeight(descriptor.maxJumpHeight);
+        controller.ammoData.setMaxJumpHeight(descriptor.maxJumpHeight);
       }
     },
 
     KinematicCharacterController_setGravity: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
+      var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        controller.setGravity(descriptor.gravity);
+        controller.ammoData.setGravity(descriptor.gravity);
       }
     },
 
     KinematicCharacterController_setUpAxis: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
+      var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        controller.setUpAxis(descriptor.upAxis);
+        controller.ammoData.setUpAxis(descriptor.upAxis);
       }
     },
 
     KinematicCharacterController_setVelocityForTimeInterval: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
+      var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
         tmpVec[0].setX(descriptor.velocity.x);
         tmpVec[0].setY(descriptor.velocity.y);
         tmpVec[0].setZ(descriptor.velocity.z);
 
-        controller.setVelocityForTimeInterval(tmpVec[0], descriptor.interval);
+        controller.ammoData.setVelocityForTimeInterval(tmpVec[0], descriptor.interval);
       }
     },
 
     KinematicCharacterController_setUseGhostSweepTest: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
+      var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        controller.setUseGhostSweepTest(descriptor.useGhostSweepTest);
+        controller.ammoData.setUseGhostSweepTest(descriptor.useGhostSweepTest);
       }
     },
 
     KinematicCharacterController_setMaxSlope: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
+      var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        controller.setMaxSlope(descriptor.slopeRadians);
+        controller.ammoData.setMaxSlope(descriptor.slopeRadians);
       }
     },
 
     KinematicCharacterController_warp: function(descriptor) {
-      var controller = this.characterControllers[descriptor.controllerId];
+      var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
         tmpVec[0].setX(descriptor.origin.x);
         tmpVec[0].setY(descriptor.origin.y);
         tmpVec[0].setZ(descriptor.origin.z);
 
-        controller.warp(tmpVec[0]);
+        controller.ammoData.warp(tmpVec[0]);
       }
     },
 
