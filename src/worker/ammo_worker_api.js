@@ -1968,7 +1968,7 @@ define([ 'underscore' ], function(_) {
     },
 
     RigidBody_setAngularVelocity: function(descriptor) {
-      var body = this.bodies[descriptor.bodyId];
+      var body = this.objects[descriptor.bodyId];
 
       if (body.ammoData) {
         tmpVec[0].setX(descriptor.angularVelocity.x);
