@@ -66,13 +66,19 @@ define([ 'underscore' ], function(_) {
   function Vehicle(id, ammoData) {
     AmmoObject.apply(this, arguments);
     this.type = 'btRaycastVehicle';
+    this.wheels = [];
   }
 
   Vehicle.prototype = new AmmoObject();
 
-  function Wheel(id, ammoData) {
+  Vehicle.prototype.addWheel = function(wheel) {
+    this.wheels.push(wheel);
+  };
+
+  function Wheel(id, ammoData, vehicle) {
     AmmoObject.apply(this, arguments);
     this.type = 'btWheelInfo';
+    this.vehicle = vehicle;
   }
 
   Wheel.prototype = new AmmoObject();
@@ -782,7 +788,7 @@ define([ 'underscore' ], function(_) {
       }
 
       var vehicleTuning = new Ammo.btVehicleTuning(),
-          body = this.bodies[descriptor.bodyId],
+          body = this.objects[descriptor.bodyId],
           vehicle;
 
       if (!body) {
@@ -815,10 +821,10 @@ define([ 'underscore' ], function(_) {
         }
       }
 
-      vehicle = new Ammo.btRaycastVehicle(vehicleTuning, body, new Ammo.btDefaultVehicleRaycaster(this.dynamicsWorld));
+      vehicle = new Ammo.btRaycastVehicle(vehicleTuning, body.ammoData, new Ammo.btDefaultVehicleRaycaster(this.dynamicsWorld));
       vehicle.tuning = vehicleTuning;
 
-      body.setActivationState(ActivationStates.DISABLE_DEACTIVATION);
+      body.ammoData.setActivationState(ActivationStates.DISABLE_DEACTIVATION);
       vehicle.setCoordinateSystem(0, 1, 2);
 
       this.dynamicsWorld.addVehicle(vehicle);
@@ -830,7 +836,9 @@ define([ 'underscore' ], function(_) {
         id: id
       };
 
-      this.vehicles[id] = vehicle;
+      var obj = new Vehicle(id, vehicle);
+
+      this.objects[id] = obj;
 
       if (typeof fn === 'function') {
         fn(id);
@@ -838,14 +846,17 @@ define([ 'underscore' ], function(_) {
     },
 
     Vehicle_addWheel: function(descriptor, fn) {
-      var vehicle = this.vehicles[descriptor.vehicleId];
+      var vehicle = this.objects[descriptor.vehicleId];
+
+      if (!this.ids.length) {
+        return console.error('No unused transforms left!');
+      }
 
       if (vehicle !== undefined) {
-        var tuning = vehicle.tuning,
+        var tuning = vehicle.ammoData.tuning,
             connectionPoint = tmpVec[0],
             wheelDirection = tmpVec[1],
             wheelAxle = tmpVec[2];
-
 
         if (typeof descriptor.tuning === 'object') {
           tuning = new Ammo.btVehicleTuning();
@@ -887,7 +898,7 @@ define([ 'underscore' ], function(_) {
         wheelAxle.setY(descriptor.wheelAxle.y);
         wheelAxle.setZ(descriptor.wheelAxle.z);
 
-        vehicle.addWheel(
+        var wheelInfo = vehicle.ammoData.addWheel(
           connectionPoint,
           wheelDirection,
           wheelAxle,
@@ -897,32 +908,40 @@ define([ 'underscore' ], function(_) {
           descriptor.isFrontWheel
         );
 
+        var id = this.ids.pop();
+
+        var obj = new Wheel(id, wheelInfo, vehicle);
+
+        vehicle.addWheel(obj);
+
         if (typeof fn === 'function') {
-          fn(vehicle.getNumWheels() - 1);
+          fn(id);
         }
       }
     },
 
     Vehicle_setSteeringValue: function(descriptor) {
-      var vehicle = this.vehicles[descriptor.vehicleId];
+      var vehicle = this.objects[descriptor.vehicleId];
+
       if (vehicle) {
-        this.vehicles[descriptor.vehicleId].setSteeringValue(descriptor.steeringValue, descriptor.wheelIndex);
+        vehicle.ammoData.setSteeringValue(descriptor.steeringValue, descriptor.wheelIndex);
       }
     },
 
     Vehicle_setBrake: function(descriptor) {
-      var vehicle = this.vehicles[descriptor.vehicleId];
+      var vehicle = this.objects[descriptor.vehicleId];
+
       if (vehicle) {
-        this.vehicles[descriptor.vehicleId].setBrake(descriptor.brake, descriptor.wheelIndex);
+        vehicle.ammoData.setBrake(descriptor.brake, descriptor.wheelIndex);
       }
     },
 
     Vehicle_setWheelInfo: function(descriptor) {
-      var vehicle = this.vehicles[descriptor.vehicleId],
+      var vehicle = this.objects[descriptor.vehicleId],
           info;
-      if (vehicle) {
 
-        info = this.vehicles[descriptor.vehicleId].getWheelInfo(descriptor.wheelIndex);
+      if (vehicle) {
+        info = vehicle.ammoData.getWheelInfo(descriptor.wheelIndex);
 
         for (var i in descriptor.properties) {
           if (descriptor.properties.hasOwnProperty(i)) {
@@ -933,9 +952,10 @@ define([ 'underscore' ], function(_) {
     },
 
     Vehicle_applyEngineForce: function(descriptor) {
-      var vehicle = this.vehicles[descriptor.vehicleId];
+      var vehicle = this.objects[descriptor.vehicleId];
+
       if (vehicle) {
-        this.vehicles[descriptor.vehicleId].applyEngineForce(descriptor.force, descriptor.wheelIndex);
+        vehicle.ammoData.applyEngineForce(descriptor.force, descriptor.wheelIndex);
       }
     },
 
@@ -1983,12 +2003,12 @@ define([ 'underscore' ], function(_) {
 
     Vehicle_destroy: function(descriptor) {
       var id = descriptor.vehicleId,
-          vehicle = this.vehicles[id];
+          vehicle = this.objects[id];
 
       if (vehicle) {
         this.dynamicsWorld.removeVehicle(vehicle);
-        Ammo.destroy(vehicle);
-        this.vehicles[id] = undefined;
+        Ammo.destroy(vehicle.ammoData);
+        this.objects[id] = undefined;
         this.trigger('Vehicle_destroy', id);
         this.ids.push(id);
       }
