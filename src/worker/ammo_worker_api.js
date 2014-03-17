@@ -293,107 +293,117 @@ define([ 'underscore' ], function(_) {
       });
     },
 
+    doStepAddContacts: function() {
+      var dispatcher = this.dynamicsWorld.getDispatcher(),
+          nManifolds = dispatcher.getNumManifolds(),
+          manifold,
+          nContacts,
+          point,
+          body1,
+          body2,
+          object1,
+          object2;
+
+      for (var i = 0; i < nManifolds; i++) {
+        manifold = dispatcher.getManifoldByIndexInternal(i);
+
+        nContacts = manifold.getNumContacts();
+
+        if (nContacts > 0) {
+          for (var j = 0; j < nContacts; j++) {
+            point = manifold.getContactPoint(j);
+            body1 = Ammo.wrapPointer(manifold.getBody0(), Ammo.btCollisionObject);
+            body2 = Ammo.wrapPointer(manifold.getBody1(), Ammo.btCollisionObject);
+
+            if (body1.userData && body2.userData) {
+              object1 = this.objects[body1.userData.id];
+              object2 = this.objects[body2.userData.id];
+
+              if (!object1.collisions[object2.id] ||
+                  !object2.collisions[object1.id]) {
+                self.postMessage({ command: 'event', arguments: [
+                    'begin_contact', {
+                      objectA: { type: object1.type, id: object1.id },
+                      objectB: { type: object2.type, id: object2.id }
+                    }
+                  ]
+                });
+              }
+
+              object1.collisions[object2.id] = this.frames;
+              object2.collisions[object1.id] = this.frames;
+            }
+          }
+        }
+      }
+    },
+
+    doStepRemoveContacts: function() {
+      var object1, object2;
+
+      for (var i = 0; i < this.objects.length; i++) {
+        object1 = this.objects[i];
+
+        if (object1) {
+          for (var j in object1.collisions) {
+            if (object1.collisions[j] !== this.frames) {
+              object2 = this.objects[j];
+
+              delete object1.collisions[j];
+              delete object2.collisions[i];
+
+              self.postMessage({ command: 'event', arguments: [
+                  'end_contact', {
+                    objectA: { type: object1.type, id: object1.id },
+                    objectB: { type: object2.type, id: object2.id }
+                  }
+                ]
+              });
+            }
+          }
+        }
+      }
+    },
+
+    doStep: function(delta) {
+      var that = this, update, i;
+
+      that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);
+
+      if (that.buffers.length > 0) {
+        update = new Float32Array(that.buffers.pop());
+      }
+
+      if (update && update.buffer instanceof ArrayBuffer) {
+        for (i = 0; i < MAX_TRANSFORMS; i++) {
+          if (that.objects[i]) {
+            that.objects[i].update(update);
+          }
+        }
+
+        this.doStepAddContacts();
+        this.doStepRemoveContacts();
+
+        self.postMessage({ command: 'update', data: update.buffer }, [update.buffer]);
+      }
+    },
+
     startSimulation: function() {
       var that = this, last = Date.now();
 
       that.totalTime = 0;
       that.frames = 0;
+
       this.simulationTimerId = setInterval(function() {
-        var /*vehicle, */update, i, /*j, pos,*/ now = Date.now(),
-            delta = (now - last) / 1000;
+        var now = Date.now(), delta = (now - last) / 1000;
 
-        that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);
+        that.doStep(delta);
 
-        if (that.buffers.length > 0) {
-          update = new Float32Array(that.buffers.pop());
-        }
+        that.frames ++;
 
-        if (update && update.buffer instanceof ArrayBuffer) {
-          for (i = 0; i < MAX_TRANSFORMS; i++) {
-            if (that.objects[i]) {
-              that.objects[i].update(update);
-            }
-          }
-
-          (function() {
-            var dispatcher = that.dynamicsWorld.getDispatcher(),
-                nManifolds = dispatcher.getNumManifolds(),
-                manifold,
-                nContacts,
-                point,
-                body1,
-                body2,
-                object1,
-                object2;
-
-            for (var i = 0; i < nManifolds; i++) {
-              manifold = dispatcher.getManifoldByIndexInternal(i);
-
-              nContacts = manifold.getNumContacts();
-
-              if (nContacts > 0) {
-                for (var j = 0; j < nContacts; j++) {
-                  point = manifold.getContactPoint(j);
-                  body1 = Ammo.wrapPointer(manifold.getBody0(), Ammo.btCollisionObject);
-                  body2 = Ammo.wrapPointer(manifold.getBody1(), Ammo.btCollisionObject);
-
-                  if (body1.userData && body2.userData) {
-                    object1 = that.objects[body1.userData.id];
-                    object2 = that.objects[body2.userData.id];
-
-                    if (!object1.collisions[object2.id] ||
-                        !object2.collisions[object1.id]) {
-                      self.postMessage({ command: 'event', arguments: [
-                          'begin_contact', {
-                            objectA: { type: object1.type, id: object1.id },
-                            objectB: { type: object2.type, id: object2.id }
-                          }
-                        ]
-                      });
-                    }
-
-                    object1.collisions[object2.id] = that.frames;
-                    object2.collisions[object1.id] = that.frames;
-                  }
-                }
-              }
-            }
-          })();
-
-          (function() {
-            var object1, object2;
-
-            for (var i = 0; i < that.objects.length; i++) {
-              object1 = that.objects[i];
-
-              if (object1) {
-                for (var j in object1.collisions) {
-                  if (object1.collisions[j] !== that.frames) {
-                    object2 = that.objects[j];
-
-                    delete object1.collisions[j];
-                    delete object2.collisions[i];
-
-                    self.postMessage({ command: 'event', arguments: [
-                        'end_contact', {
-                          objectA: { type: object1.type, id: object1.id },
-                          objectB: { type: object2.type, id: object2.id }
-                        }
-                      ]
-                    });
-                  }
-                }
-              }
-            }
-          })();
-
-          self.postMessage({ command: 'update', data: update.buffer }, [update.buffer]);
-          that.frames ++;
-
-          last = now;
-          that.totalTime += delta;
-          that.fps = Math.round( that.frames / that.totalTime );
-        }
+        last = now;
+        that.totalTime += delta;
+        that.fps = Math.round( that.frames / that.totalTime );
       }, this.step * 1000);
     },
 

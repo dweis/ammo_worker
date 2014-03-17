@@ -16,7 +16,7 @@ var DemoScene = function() {
 DemoScene.prototype.init = function() {
   this._initProxy();
   this.proxy.setStep(1/60);
-  this.proxy.setIterations(3);
+  this.proxy.setIterations(2);
 
   setInterval(function() {
     this.proxy.getStats().
