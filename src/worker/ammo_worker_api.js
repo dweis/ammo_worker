@@ -243,8 +243,8 @@ define([ 'underscore' ], function(_) {
   }
 
   AmmoWorkerAPI.prototype = {
-    init: function() {
-      var bufferSize = (7 * MAX_TRANSFORMS * 8);
+    init: function(opts) {
+      var bufferSize = (7 * MAX_TRANSFORMS * 4);
 
       this.buffers = [
         new ArrayBuffer(bufferSize),
@@ -305,7 +305,7 @@ define([ 'underscore' ], function(_) {
         that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);
 
         if (that.buffers.length > 0) {
-          update = new Float64Array(that.buffers.pop());
+          update = new Float32Array(that.buffers.pop());
         }
 
         if (update && update.buffer instanceof ArrayBuffer) {
@@ -1746,6 +1746,21 @@ define([ 'underscore' ], function(_) {
       }
     },
 
+    RigidBody_getLinearVelocity: function(descriptor, fn) {
+      var body = this.objects[descriptor.bodyId],
+          lv;
+
+      if (body.ammoData) {
+        lv = body.ammoData.getLinearVelocity();
+
+        fn({
+          x: lv.x(),
+          y: lv.y(),
+          z: lv.z()
+        });
+      }
+    },
+
     RigidBody_setLinearFactor: function(descriptor) {
       var body = this.objects[descriptor.bodyId];
 
@@ -1754,6 +1769,21 @@ define([ 'underscore' ], function(_) {
         tmpVec[0].setY(descriptor.linearFactor.y);
         tmpVec[0].setZ(descriptor.linearFactor.z);
         body.ammoData.setLinearFactor(tmpVec[0]);
+      }
+    },
+
+    RigidBody_getAngularVelocity: function(descriptor, fn) {
+      var body = this.objects[descriptor.bodyId],
+          av;
+
+      if (body.ammoData) {
+        av = body.ammoData.getAngularVelocity();
+
+        fn({
+          x: av.x(),
+          y: av.y(),
+          z: av.z()
+        });
       }
     },
 

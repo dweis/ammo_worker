@@ -544,7 +544,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       }
       this.data = this.next;
     }
-    this.next = new Float64Array(data);
+    this.next = new Float32Array(data);
   };
 
   AmmoProxy.prototype.createCollisionObjectFromObject = function(object, shape) {
