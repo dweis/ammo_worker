@@ -253,10 +253,9 @@ define([ 'underscore' ], function(_) {
         new ArrayBuffer(bufferSize)
       ];
 
-      this.ids = _.range(1, MAX_TRANSFORMS + 1);
+      this.ids = _.range(0, MAX_TRANSFORMS);
 
       this.objects = new Array(MAX_TRANSFORMS);
-      this.objectsByRef = {};
 
       this.collisionConfiguration = new Ammo.btDefaultCollisionConfiguration();
       this.dispatcher = new Ammo.btCollisionDispatcher(this.collisionConfiguration);
@@ -876,7 +875,6 @@ define([ 'underscore' ], function(_) {
         var obj = new SliderConstraint(id, constraint);
 
         this.objects[id] = obj;
-        this.objectsByRef[constraint] = obj;
 
         this.dynamicsWorld.addConstraint(constraint);
         constraint.enableFeedback();
@@ -969,7 +967,6 @@ define([ 'underscore' ], function(_) {
 
         var obj = new DOF6Constraint(id, constraint);
         this.objects[id] = obj;
-        this.objectsByRef[constraint] = obj;
 
         this.dynamicsWorld.addConstraint(constraint);
         //constraint.enableFeedback();
@@ -1032,7 +1029,6 @@ define([ 'underscore' ], function(_) {
         var obj = new ConeTwistConstraint(id, constraint);
 
         this.objects[id] = obj;
-        this.objectsByRef[constraint] = obj;
 
         this.dynamicsWorld.addConstraint(constraint);
         //constraint.enableFeedback();
@@ -1302,7 +1298,6 @@ define([ 'underscore' ], function(_) {
       var obj = new GhostObject(id, ghostObject);
 
       this.objects[id] = obj;
-      this.objectsByRef[ghostObject] = obj;
 
       if (typeof fn === 'function') {
         fn(id);
@@ -1521,7 +1516,6 @@ define([ 'underscore' ], function(_) {
       var obj = new RigidBody(id, body);
 
       this.objects[id] = obj;
-      this.objectsByRef[body] = obj;
 
       var o = Ammo.castObject(body, Ammo.btCollisionObject);
 
@@ -1818,7 +1812,6 @@ define([ 'underscore' ], function(_) {
           body = this.objects[id];
 
       if (body.ammoData) {
-        this.objectsByRef[body.ammoData] = undefined;
         this.objects[id] = undefined;
         this.dynamicsWorld.removeRigidBody(body.ammoData);
         Ammo.destroy(body.ammoData);

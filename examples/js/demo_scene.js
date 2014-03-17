@@ -112,11 +112,12 @@ DemoScene.prototype._initScene = function() {
     }, this));
   */
 
-  this.proxy.createRigidBodyFromObject(ground, 1000000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'})
+  this.proxy.adapter.createRigidBodyFromObject(ground, 1000000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'})
     .then(_.bind(function(rigidBody) {
       rigidBody.setType('static');
       rigidBody.setFriction(0.5);
       rigidBody.addToWorld(1,255);
+
       this.groundBody = rigidBody;
     }, this));
 
@@ -147,6 +148,11 @@ DemoScene.prototype.update = function(delta) {
   var dt = delta - this.last;
   this.last = delta;
   this.stats.begin();
+
+  if (this.groundBody) {
+    this.groundBody.update();
+  }
+
   if (typeof this.preUpdate === 'function') {
     this.preUpdate(dt);
   }
