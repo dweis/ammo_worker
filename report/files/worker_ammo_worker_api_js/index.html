@@ -45,11 +45,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
-      <p class="stat">60.42</p>
+      <p class="stat">59.31</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
-      <p class="stat">1899</p>
+      <p class="stat">1758</p>
     </div>
   </div>
   <div class="row historical">
@@ -63,11 +63,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
-      <p class="stat">147.79</p>
+      <p class="stat">135.60</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
-      <p class="stat">26.29</p>
+      <p class="stat">23.65</p>
     </div>
   </div>
 </div>
@@ -90,7 +90,12 @@
 
 <div class="container">
   <div class="row">
-    <textarea id="file-source" class="col-md-12">define([ &#039;underscore&#039; ], function(_) {
+    <textarea id="file-source" class="col-md-12">define([ &#039;underscore&#039;, &#039;worker/objects/vehicle&#039;, &#039;worker/objects/wheel&#039;, &#039;worker/objects/point2point_constraint&#039;,
+         &#039;worker/objects/slider_constraint&#039;, &#039;worker/objects/dof6_constraint&#039;, &#039;worker/objects/conetwist_constraint&#039;,
+         &#039;worker/objects/hinge_constraint&#039;, &#039;worker/objects/ghost_object&#039;, &#039;worker/objects/kinematic_character_controller&#039;,
+         &#039;worker/objects/rigid_body&#039; ], 
+    function(_, Vehicle, Wheel, Point2PointConstraint, SliderConstraint, DOF6Constraint, ConeTwistConstraint,
+          HingeConstraint, GhostObject, KinematicCharacterController, RigidBody) {
   /* jshint unused: vars */
   &quot;use strict&quot;;
 
@@ -140,152 +145,6 @@
     new Ammo.btTransform(),
     new Ammo.btTransform()
   ];
-
-
-  function AmmoObject(id, ammoData) {
-    this.type = &quot;unknown&quot;;
-    this.id = id;
-    this.ammoData = ammoData;
-    this.offset = this.id * 7;
-    this.collisions = {};
-  }
-
-  AmmoObject.prototype = {};
-
-  AmmoObject.prototype.update = function(buffer) {
-  };
-
-  function Vehicle(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = &#039;btRaycastVehicle&#039;;
-    this.wheels = [];
-  }
-
-  Vehicle.prototype = new AmmoObject();
-
-  Vehicle.prototype.addWheel = function(wheel) {
-    this.wheels.push(wheel);
-    wheel.index = this.wheels.length - 1;
-  };
-
-  function Wheel(id, ammoData, vehicle) {
-    AmmoObject.apply(this, arguments);
-    this.type = &#039;btWheelInfo&#039;;
-    this.vehicle = vehicle;
-    this.index = -1;
-  }
-
-  Wheel.prototype = new AmmoObject();
-
-  Wheel.prototype.update = function(data) {
-    tmpTrans[0] = this.vehicle.ammoData.getWheelTransformWS(this.index);
-
-    data[this.offset + 0] = tmpTrans[0].getOrigin().x();
-    data[this.offset + 1] = tmpTrans[0].getOrigin().y();
-    data[this.offset + 2] = tmpTrans[0].getOrigin().z();
-    data[this.offset + 3] = tmpTrans[0].getRotation().x();
-    data[this.offset + 4] = tmpTrans[0].getRotation().y();
-    data[this.offset + 5] = tmpTrans[0].getRotation().z();
-    data[this.offset + 6] = tmpTrans[0].getRotation().w();
-  };
-
-  function HingeConstraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = &#039;btHingeConstraint&#039;;
-  }
-
-  HingeConstraint.prototype = new AmmoObject();
-
-  function ConeTwistConstraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = &#039;btConeTwistConstraint&#039;;
-  }
-
-  ConeTwistConstraint.prototype = new AmmoObject();
-
-  function DOF6Constraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = &#039;bt6DOFConstraint&#039;;
-  }
-
-  DOF6Constraint.prototype = new AmmoObject();
-
-  function Point2PointConstraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = &#039;btPoint2PointConstraint&#039;;
-  }
-
-  Point2PointConstraint.prototype = new AmmoObject();
-
-  function SliderConstraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = &#039;btSliderConstraint&#039;;
-  }
-
-  SliderConstraint.prototype = new AmmoObject();
-
-  function CollisionObject(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = &#039;btCollisionObject&#039;;
-  }
-
-  CollisionObject.prototype = new AmmoObject();
-
-  function GhostObject(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = &#039;btGhostObject&#039;;
-  }
-
-  GhostObject.prototype.update = function(data) {
-    var trans = this.ammoData.getWorldTransform();
-
-    data[this.offset + 0] = trans.getOrigin().x();
-    data[this.offset + 1] = trans.getOrigin().y();
-    data[this.offset + 2] = trans.getOrigin().z();
-    data[this.offset + 3] = trans.getRotation().x();
-    data[this.offset + 4] = trans.getRotation().y();
-    data[this.offset + 5] = trans.getRotation().z();
-    data[this.offset + 6] = trans.getRotation().w();
-  };
-
-  function RigidBody(id, ammoData) {
-    CollisionObject.apply(this, arguments);
-    this.type = &#039;btRigidBody&#039;;
-  }
-
-  RigidBody.prototype = new CollisionObject();
-
-  RigidBody.prototype.update = function(data) {
-    tmpTrans[0].setIdentity();
-
-    this.ammoData.getMotionState().getWorldTransform(tmpTrans[0]);
-
-    data[this.offset + 0] = tmpTrans[0].getOrigin().x();
-    data[this.offset + 1] = tmpTrans[0].getOrigin().y();
-    data[this.offset + 2] = tmpTrans[0].getOrigin().z();
-    data[this.offset + 3] = tmpTrans[0].getRotation().x();
-    data[this.offset + 4] = tmpTrans[0].getRotation().y();
-    data[this.offset + 5] = tmpTrans[0].getRotation().z();
-    data[this.offset + 6] = tmpTrans[0].getRotation().w();
-  };
-
-  function KinematicCharacterController(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = &#039;btKinematicCharacterController&#039;;
-  }
-
-  KinematicCharacterController.prototype = new AmmoObject();
-
-  KinematicCharacterController.prototype.update = function(data) {
-    var trans = this.ammoData.getGhostObject().getWorldTransform();
-    data[this.offset + 0] = trans.getOrigin().x();
-    data[this.offset + 1] = trans.getOrigin().y();
-    data[this.offset + 2] = trans.getOrigin().z();
-    data[this.offset + 3] = trans.getRotation().x();
-    data[this.offset + 4] = trans.getRotation().y();
-    data[this.offset + 5] = trans.getRotation().z();
-    data[this.offset + 6] = trans.getRotation().w();
-  };
 
   self.console = self.console || {};
 

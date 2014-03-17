@@ -1,4 +1,9 @@
-define([ 'underscore' ], function(_) {
+define([ 'underscore', 'worker/objects/vehicle', 'worker/objects/wheel', 'worker/objects/point2point_constraint',
+         'worker/objects/slider_constraint', 'worker/objects/dof6_constraint', 'worker/objects/conetwist_constraint',
+         'worker/objects/hinge_constraint', 'worker/objects/ghost_object', 'worker/objects/kinematic_character_controller',
+         'worker/objects/rigid_body' ], 
+    function(_, Vehicle, Wheel, Point2PointConstraint, SliderConstraint, DOF6Constraint, ConeTwistConstraint,
+          HingeConstraint, GhostObject, KinematicCharacterController, RigidBody) {
   /* jshint unused: vars */
   "use strict";
 
@@ -48,152 +53,6 @@ define([ 'underscore' ], function(_) {
     new Ammo.btTransform(),
     new Ammo.btTransform()
   ];
-
-
-  function AmmoObject(id, ammoData) {
-    this.type = "unknown";
-    this.id = id;
-    this.ammoData = ammoData;
-    this.offset = this.id * 7;
-    this.collisions = {};
-  }
-
-  AmmoObject.prototype = {};
-
-  AmmoObject.prototype.update = function(buffer) {
-  };
-
-  function Vehicle(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btRaycastVehicle';
-    this.wheels = [];
-  }
-
-  Vehicle.prototype = new AmmoObject();
-
-  Vehicle.prototype.addWheel = function(wheel) {
-    this.wheels.push(wheel);
-    wheel.index = this.wheels.length - 1;
-  };
-
-  function Wheel(id, ammoData, vehicle) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btWheelInfo';
-    this.vehicle = vehicle;
-    this.index = -1;
-  }
-
-  Wheel.prototype = new AmmoObject();
-
-  Wheel.prototype.update = function(data) {
-    tmpTrans[0] = this.vehicle.ammoData.getWheelTransformWS(this.index);
-
-    data[this.offset + 0] = tmpTrans[0].getOrigin().x();
-    data[this.offset + 1] = tmpTrans[0].getOrigin().y();
-    data[this.offset + 2] = tmpTrans[0].getOrigin().z();
-    data[this.offset + 3] = tmpTrans[0].getRotation().x();
-    data[this.offset + 4] = tmpTrans[0].getRotation().y();
-    data[this.offset + 5] = tmpTrans[0].getRotation().z();
-    data[this.offset + 6] = tmpTrans[0].getRotation().w();
-  };
-
-  function HingeConstraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btHingeConstraint';
-  }
-
-  HingeConstraint.prototype = new AmmoObject();
-
-  function ConeTwistConstraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btConeTwistConstraint';
-  }
-
-  ConeTwistConstraint.prototype = new AmmoObject();
-
-  function DOF6Constraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'bt6DOFConstraint';
-  }
-
-  DOF6Constraint.prototype = new AmmoObject();
-
-  function Point2PointConstraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btPoint2PointConstraint';
-  }
-
-  Point2PointConstraint.prototype = new AmmoObject();
-
-  function SliderConstraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btSliderConstraint';
-  }
-
-  SliderConstraint.prototype = new AmmoObject();
-
-  function CollisionObject(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btCollisionObject';
-  }
-
-  CollisionObject.prototype = new AmmoObject();
-
-  function GhostObject(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btGhostObject';
-  }
-
-  GhostObject.prototype.update = function(data) {
-    var trans = this.ammoData.getWorldTransform();
-
-    data[this.offset + 0] = trans.getOrigin().x();
-    data[this.offset + 1] = trans.getOrigin().y();
-    data[this.offset + 2] = trans.getOrigin().z();
-    data[this.offset + 3] = trans.getRotation().x();
-    data[this.offset + 4] = trans.getRotation().y();
-    data[this.offset + 5] = trans.getRotation().z();
-    data[this.offset + 6] = trans.getRotation().w();
-  };
-
-  function RigidBody(id, ammoData) {
-    CollisionObject.apply(this, arguments);
-    this.type = 'btRigidBody';
-  }
-
-  RigidBody.prototype = new CollisionObject();
-
-  RigidBody.prototype.update = function(data) {
-    tmpTrans[0].setIdentity();
-
-    this.ammoData.getMotionState().getWorldTransform(tmpTrans[0]);
-
-    data[this.offset + 0] = tmpTrans[0].getOrigin().x();
-    data[this.offset + 1] = tmpTrans[0].getOrigin().y();
-    data[this.offset + 2] = tmpTrans[0].getOrigin().z();
-    data[this.offset + 3] = tmpTrans[0].getRotation().x();
-    data[this.offset + 4] = tmpTrans[0].getRotation().y();
-    data[this.offset + 5] = tmpTrans[0].getRotation().z();
-    data[this.offset + 6] = tmpTrans[0].getRotation().w();
-  };
-
-  function KinematicCharacterController(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btKinematicCharacterController';
-  }
-
-  KinematicCharacterController.prototype = new AmmoObject();
-
-  KinematicCharacterController.prototype.update = function(data) {
-    var trans = this.ammoData.getGhostObject().getWorldTransform();
-    data[this.offset + 0] = trans.getOrigin().x();
-    data[this.offset + 1] = trans.getOrigin().y();
-    data[this.offset + 2] = trans.getOrigin().z();
-    data[this.offset + 3] = trans.getRotation().x();
-    data[this.offset + 4] = trans.getRotation().y();
-    data[this.offset + 5] = trans.getRotation().z();
-    data[this.offset + 6] = trans.getRotation().w();
-  };
 
   self.console = self.console || {};
 
