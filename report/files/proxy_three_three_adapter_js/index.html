@@ -63,11 +63,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
-      <p class="stat">113.18</p>
+      <p class="stat">112.87</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
-      <p class="stat">4.89</p>
+      <p class="stat">4.87</p>
     </div>
   </div>
 </div>
@@ -121,7 +121,7 @@
     var deferred = this.proxy.createRigidBody(shape, mass, position, quaternion);
 
     deferred.then(_.bind(function(rigidBody) {
-      rigidBody.binding = this.createBinding(object, rigidBody.bodyId * 7);
+      rigidBody.binding = this.createBinding(object, rigidBody.bodyId);
     }, this));
 
     return deferred;
@@ -150,7 +150,7 @@
 
     deferred.then(_.bind(function(kinematicCharacterController) {
       kinematicCharacterController.binding =
-        this.createBinding(object, kinematicCharacterController.controllerId * 7);
+        this.createBinding(object, kinematicCharacterController.controllerId);
     }, this));
 
     return deferred;
@@ -178,7 +178,7 @@
     var deferred = this.proxy.createGhostObject(shape, position, quaternion);
 
     deferred.then(_.bind(function(ghostObject) {
-      ghostObject.binding = this.createBinding(object, ghostObject.ghostId * 7);
+      ghostObject.binding = this.createBinding(object, ghostObject.ghostId);
     }, this));
 
     return deferred;

@@ -45,11 +45,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
-      <p class="stat">72.16</p>
+      <p class="stat">72.55</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
-      <p class="stat">122</p>
+      <p class="stat">102</p>
     </div>
   </div>
   <div class="row historical">
@@ -63,11 +63,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
-      <p class="stat">22.78</p>
+      <p class="stat">21.60</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
-      <p class="stat">0.80</p>
+      <p class="stat">0.75</p>
     </div>
   </div>
 </div>
@@ -95,7 +95,6 @@
     this.proxy = proxy;
     this.vehicleId = vehicleId;
     this.wheelBindings = {};
-    this.wheelIds = [];
     this.rigidBody = rigidBody;
   }
 
@@ -103,23 +102,6 @@
 
   AmmoVehicle.prototype.addWheel = function(connectionPoint, wheelDirection, wheelAxle,
       suspensionRestLength, wheelRadius, isFrontWheel, tuning) {
-
-        /*
-
-            var deferred = when.defer();
-
-            this.execute(&#039;Vehicle_create&#039;, descriptor, true).then(_.bind(function(vehicleId) {
-              var proxy = this;
-              setTimeout(function() {
-                var vehicle = new AmmoVehicle(proxy, vehicleId, rigidBody);
-                proxy.vehicles[vehicleId] = vehicle;
-                deferred.resolve(vehicle);
-              }, 0);
-            }, this));
-
-            return deferred.promise;
-            */
-
     var descriptor = {
       vehicleId: this.vehicleId,
       connectionPoint: connectionPoint,
@@ -134,47 +116,46 @@
     var deferred = when.defer();
 
     this.proxy.execute(&#039;Vehicle_addWheel&#039;, descriptor, true).then(_.bind(function(wheelId) {
-      this.wheelIds.push(wheelId);
       deferred.resolve(wheelId);
     }, this));
 
     return deferred.promise;
   };
 
-  AmmoVehicle.prototype.setWheelInfo = function(wheelIndex, properties) {
+  AmmoVehicle.prototype.setWheelInfo = function(wheelId, properties) {
     var descriptor = {
       vehicleId: this.vehicleId,
-      wheelIndex: wheelIndex,
+      wheelId: wheelId,
       properties: properties
     };
 
     return this.proxy.execute(&#039;Vehicle_setWheelInfo&#039;, descriptor);
   };
 
-  AmmoVehicle.prototype.setBrake = function(wheelIndex, brake) {
+  AmmoVehicle.prototype.setBrake = function(wheelId, brake) {
     var descriptor = {
       vehicleId: this.vehicleId,
-      wheelIndex: wheelIndex,
+      wheelId: wheelId,
       brake: brake
     };
 
     return this.proxy.execute(&#039;Vehicle_setBrake&#039;, descriptor);
   };
 
-  AmmoVehicle.prototype.applyEngineForce = function(wheelIndex, force) {
+  AmmoVehicle.prototype.applyEngineForce = function(wheelId, force) {
     var descriptor = {
       vehicleId: this.vehicleId,
-      wheelIndex: wheelIndex,
+      wheelId: wheelId,
       force: force
     };
 
     return this.proxy.execute(&#039;Vehicle_applyEngineForce&#039;, descriptor);
   };
 
-  AmmoVehicle.prototype.setSteeringValue = function(wheelIndex, steeringValue) {
+  AmmoVehicle.prototype.setSteeringValue = function(wheelId, steeringValue) {
     var descriptor = {
       vehicleId: this.vehicleId,
-      wheelIndex: wheelIndex,
+      wheelId: wheelId,
       steeringValue: steeringValue
     };
 
@@ -196,8 +177,7 @@
   };
 
   AmmoVehicle.prototype.addWheelObject = function(wheelId, object) {
-    this.wheelBindings[wheelId] = this.proxy.adapter.createBinding(object,
-        wheelId * 7);
+    this.wheelBindings[wheelId] = this.proxy.adapter.createBinding(object, wheelId);
   };
 
   AmmoVehicle.prototype.update = function() {

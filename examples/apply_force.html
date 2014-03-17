@@ -42,7 +42,7 @@
       o.position.y = 10 + (Math.random() * 20) - 10;
       o.position.z = (Math.random() * 30) - 15;
 
-      this.proxy.createRigidBodyFromObject(o, 10)
+      this.proxy.createRigidBodyFromObject(o, 10, { shape: 'auto', strategy: 'compound_bounding_box' })
         .then(function(rigidBody) {
           rigidBody.addToWorld();
           this.bodies.push(rigidBody);
