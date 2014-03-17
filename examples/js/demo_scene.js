@@ -15,10 +15,8 @@ var DemoScene = function() {
 
 DemoScene.prototype.init = function() {
   this._initProxy();
-  /*
-  this.proxy.setStep(1/120);
-  this.proxy.setIterations(10);
-  */
+  this.proxy.setStep(1/60);
+  this.proxy.setIterations(3);
 
   setInterval(function() {
     this.proxy.getStats().
@@ -27,11 +25,11 @@ DemoScene.prototype.init = function() {
       }.bind(this));
   }.bind(this), 500);
 
-  window.addEventListener('blur', function() { 
+  window.addEventListener('blur', function() {
     this.proxy.stopSimulation();
   }.bind(this));
 
-  window.addEventListener('focus', function() { 
+  window.addEventListener('focus', function() {
     this.proxy.startSimulation();
   }.bind(this));
 };
@@ -75,7 +73,7 @@ DemoScene.prototype._initScene = function() {
   renderer.shadowMapEnabled = true;
   renderer.shadowMapSoft = true;
   renderer.shadowMapType = THREE.PCFSoftShadowMap;
-  
+
   renderer.physicallyBasedShading = true;
   var camera = this.camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
   var scene = this.scene = new THREE.Scene();
@@ -98,7 +96,7 @@ DemoScene.prototype._initScene = function() {
     color: 0x666666
   });
 
-  var ground = new THREE.Mesh(new THREE.CubeGeometry(1000,0.01,1000, 1, 1, 1),groundMaterial); 
+  var ground = new THREE.Mesh(new THREE.BoxGeometry(1000,0.01,1000, 1, 1, 1),groundMaterial);
   //ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
   ground.receiveShadow = true;
   ground.position.y = 0;
@@ -120,7 +118,6 @@ DemoScene.prototype._initScene = function() {
       rigidBody.setFriction(0.5);
       rigidBody.addToWorld(1,255);
       this.groundBody = rigidBody;
-      console.log(rigidBody);
     }, this));
 
   scene.add(camera);

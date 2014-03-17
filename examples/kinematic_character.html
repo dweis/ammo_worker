@@ -72,7 +72,7 @@
     SimpleDemo.prototype._createGhost = function(material) {
       var o = new THREE.Object3D();
 
-      o.add(new THREE.Mesh(new THREE.CubeGeometry(2, 2, 2), material));
+      o.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
 
       /*
       o.position.x = (Math.random() * 30) - 15;
@@ -111,7 +111,7 @@
 
     SimpleDemo.prototype._createStep = function(i, material) {
       var cube = new THREE.Object3D();
-      cube.add(new THREE.Mesh(new THREE.CubeGeometry(2, 1, 8), material));
+      cube.add(new THREE.Mesh(new THREE.BoxGeometry(2, 1, 8), material));
       cube.position.x = i * 2;
       cube.position.y = i * 1;
       cube.position.z = 0;
@@ -123,9 +123,9 @@
         }.bind(this));
     };
 
-    SimpleDemo.prototype._createCube = function(material) {
+    SimpleDemo.prototype._createBox = function(material) {
       var cube = new THREE.Object3D();
-      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material));
+      cube.add(new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), material));
       cube.position.x = (Math.random() * 500) - 250;
       cube.position.y = 10 + (Math.random() * 50);
       cube.position.z = (Math.random() * 500) - 250;
@@ -177,7 +177,7 @@
       cube.add(cameraRig);
 
       for (var i = 0; i < 100; i++) {
-        this._createCube(material);
+        this._createBox(material);
       }
 
       // steps

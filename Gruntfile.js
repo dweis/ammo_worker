@@ -2,6 +2,13 @@ var path = require('path');
 
 module.exports = function(grunt) {
   grunt.initConfig({
+    plato: {
+      your_task: {
+        files: {
+          'report': ['src/proxy/**/*.js', 'src/worker/**/*.js'],
+        }
+      },
+    },
     requirejs: {
       proxy_minified: {
         options: {
@@ -166,6 +173,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-requirejs');
   grunt.loadNpmTasks('grunt-s3');
+  grunt.loadNpmTasks('grunt-plato');
 
   grunt.registerTask('default', [ 'jshint', 'requirejs:worker_development', 'requirejs:proxy_development' ]);
   grunt.registerTask('deploy', [ 'default', 's3' ]);

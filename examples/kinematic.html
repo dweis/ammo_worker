@@ -26,9 +26,9 @@
 
     SimpleDemo.prototype = new DemoScene();
 
-    SimpleDemo.prototype._createCube = function(material) {
+    SimpleDemo.prototype._createBox = function(material) {
       var cube = new THREE.Object3D();
-      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material));
+      cube.add(new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), material));
       cube.position.x = (Math.random() * 50) - 25;
       cube.position.y = 10 + (Math.random() * 10);
       cube.position.z = (Math.random() * 50) - 25;
@@ -54,13 +54,13 @@
 
       var cube = new THREE.Object3D();
 
-      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material2));
+      cube.add(new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), material2));
       cube.position.y = 10;
       cube.children[0].castShadow = true;
       this.scene.add(cube);
 
       for (var i = 0; i < 100; i++) {
-        this._createCube(material);
+        this._createBox(material);
       }
 
       this.proxy.createRigidBodyFromObject(cube, 1, { shape: 'auto', strategy: 'compound_bounding_box' })
