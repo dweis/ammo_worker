@@ -24,7 +24,7 @@
       var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 }),
           material2 = new THREE.MeshLambertMaterial({ color: 0xFF0000 });
 
-      var o  = new THREE.Mesh(new THREE.CubeGeometry(6, 2, 6), material2);
+      var o  = new THREE.Mesh(new THREE.BoxGeometry(6, 2, 6), material2);
       this.scene.add(o);
       o.position.x = 0;
       o.position.y = 10;
@@ -32,6 +32,9 @@
 
       this.proxy.createGhostObjectFromObject(o, { shape: 'box', halfExtents: { x: 4, y: 1, z: 4 } }).then(function(ghost) {
             ghost.addToWorld();
+
+
+            /*
         ghost.on('ghost_enter', function() {
           console.log('ghost_in');
         });
@@ -41,10 +44,21 @@
         ghost.on('ghost_exit', function() {
           console.log('bye bye!');
         });
+        */
+
+        ghost.on('begin_contact', function() {
+          console.log('begin contact', arguments);
+        });
+
+        ghost.on('end_contact', function() {
+          console.log('end contact', arguments);
+        });
+
+
         this.ghost = ghost;
       }.bind(this))
       .otherwise(function(err) {
-        console.error('An error occured while adding the ghost object', err.message);   
+        console.error('An error occured while adding the ghost object', err.message);
       });
 
       this.bodies = [];
@@ -57,7 +71,7 @@
     SimpleDemo.prototype._createBox = function(material) {
       var o = new THREE.Object3D();
 
-      o.add(new THREE.Mesh(new THREE.CubeGeometry(2, 2, 2), material));
+      o.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
 
       /*
       o.position.x = (Math.random() * 30) - 15;
@@ -77,14 +91,11 @@
       }).then(function(rigidBody) {
         rigidBody.addToWorld();
         this.bodies.push(rigidBody);
-        rigidBody.on('ghost_enter', function() {
+        rigidBody.on('begin_contact', function() {
           console.log('body_in');
         });
-        rigidBody.on('ghost_exit', function() {
+        rigidBody.on('end_contact', function() {
           console.log('body_out');
-        });
-        rigidBody.on('ghost_exit', function() {
-          console.log('leaving ghost!');
         });
       }.bind(this));
 

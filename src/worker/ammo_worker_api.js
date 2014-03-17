@@ -55,7 +55,6 @@ define([ 'underscore' ], function(_) {
     this.id = id;
     this.ammoData = ammoData;
     this.offset = this.id * 7;
-    this.collisions = {};
   }
 
   AmmoObject.prototype = {};
@@ -375,8 +374,8 @@ define([ 'underscore' ], function(_) {
 
                     self.postMessage({ command: 'event', arguments: [
                         'end_contact', {
-                          objectA: { type: 'btRigidBody', id: object1.id },
-                          objectB: { type: 'btRigidBody', id: object2.id }
+                          objectA: { type: object1.type, id: object1.id },
+                          objectB: { type: object2.type, id: object2.id }
                         }
                       ]
                     });
@@ -385,192 +384,6 @@ define([ 'underscore' ], function(_) {
               }
             }
           })();
-          /*
-          for (i = 0; i < that.bodies.length; i++) {
-            if (that.bodies[i]) {
-              tmpTrans[0].setIdentity();
-              that.bodies[i].getMotionState().getWorldTransform(tmpTrans[0]);
-              pos = that.OFFSET_RIGID_BODY + (i * 7);
-
-              update[pos + 0] = tmpTrans[0].getOrigin().x();
-              update[pos + 1] = tmpTrans[0].getOrigin().y();
-              update[pos + 2] = tmpTrans[0].getOrigin().z();
-              update[pos + 3] = tmpTrans[0].getRotation().x();
-              update[pos + 4] = tmpTrans[0].getRotation().y();
-              update[pos + 5] = tmpTrans[0].getRotation().z();
-              update[pos + 6] = tmpTrans[0].getRotation().w();
-            }
-          }
-          */
-
-          /*
-          for (i = 0; i < that.vehicles.length; i++) {
-            if (that.vehicles[i]) {
-              vehicle = that.vehicles[i];
-
-              for ( j = 0; j < vehicle.getNumWheels() + 1; j++ ) {
-                tmpTrans[0] = vehicle.getWheelInfo(j).get_m_worldTransform();
-                pos = that.OFFSET_VEHICLE + (i * that.maxWheelsPerVehicle * 7) + (j * 7);
-
-                update[pos + 0] = tmpTrans[0].getOrigin().x();
-                update[pos + 1] = tmpTrans[0].getOrigin().y();
-                update[pos + 2] = tmpTrans[0].getOrigin().z();
-                update[pos + 3] = tmpTrans[0].getRotation().x();
-                update[pos + 4] = tmpTrans[0].getRotation().y();
-                update[pos + 5] = tmpTrans[0].getRotation().z();
-                update[pos + 6] = tmpTrans[0].getRotation().w();
-              }
-            }
-          }
-          */
-
-          /*
-          for (i = 0; i < that.characterControllers.length; i++) {
-            if (that.characterControllers[i]) {
-              var trans = that.characterControllers[i].getGhostObject().getWorldTransform();
-              pos = that.OFFSET_KINEMATIC_CHARACTER + (i * 7);
-
-              update[pos + 0] = trans.getOrigin().x();
-              update[pos + 1] = trans.getOrigin().y();
-              update[pos + 2] = trans.getOrigin().z();
-              update[pos + 3] = trans.getRotation().x();
-              update[pos + 4] = trans.getRotation().y();
-              update[pos + 5] = trans.getRotation().z();
-              update[pos + 6] = trans.getRotation().w();
-            }
-          }
-          */
-
-          /*
-          (function() {
-            var dispatcher = that.dynamicsWorld.getDispatcher(),
-                nManifolds = dispatcher.getNumManifolds(),
-                manifold,
-                nContacts,
-                point,
-                key1,
-                type1,
-                key2,
-                type2,
-                body1,
-                body2,
-                l,
-                h;
-
-            var previous = that.collisions,
-                current = {};
-
-            for (var i = 0; i < nManifolds; i++) {
-              manifold = dispatcher.getManifoldByIndexInternal(i);
-
-              nContacts = manifold.getNumContacts();
-
-              if (nContacts > 0) {
-                for (var j = 0; j < nContacts; j++) {
-                  point = manifold.getContactPoint(j);
-                  body1 = Ammo.wrapPointer(manifold.getBody0(), Ammo.btCollisionObject);
-                  body2 = Ammo.wrapPointer(manifold.getBody1(), Ammo.btCollisionObject);
-
-                  if (body1.userData && body2.userData) {
-                    key1 = body1.userData.id;
-                    key2 = body2.userData.id;
-                    type1 = body1.userData.type;
-                    type2 = body2.userData.type;
-                    l = Math.min(key1, key2);
-                    h = Math.max(key1, key2);
-
-                    current[l] = current[l] || {};
-                    current[l][h] = true;
-                    current[h] = current[h] || {};
-                    current[h][l] = true;
-
-                    if (current[l][h] && !previous[l] || !previous[l][h]) {
-                      self.postMessage({ command: 'event', arguments: [
-                          'begin_contact', {
-                            objectA: { type: type1, id: key1 },
-                            objectB: { type: type2, id: key2 }
-                          }
-                        ]
-                      });
-                    }
-                  }
-                }
-              }
-            }
-
-            _.each(previous, function(source, sourceId) {
-              _.each(source, function(other, otherId) {
-                if (!current[sourceId] || !current[sourceId][otherId]) {
-                  self.postMessage({ command: 'event', arguments: [
-                      'end_contact', {
-                        objectA: { type: 'btRigidBody', id: sourceId },
-                        objectB: { type: 'btRigidBody', id: otherId }
-                      }
-                    ]
-                  });
-                }
-              });
-            });
-
-            that.collisions = current;
-          })();
-          */
-
-          /*
-          that.ghosts.forEach(function(ghost, id) {
-            if (ghost) {
-              var trans = ghost.getWorldTransform();
-              pos = that.OFFSET_GHOST_OBJECT + (id * 7);
-
-              update[pos + 0] = trans.getOrigin().x();
-              update[pos + 1] = trans.getOrigin().y();
-              update[pos + 2] = trans.getOrigin().z();
-              update[pos + 3] = trans.getRotation().x();
-              update[pos + 4] = trans.getRotation().y();
-              update[pos + 5] = trans.getRotation().z();
-              update[pos + 6] = trans.getRotation().w();
-
-              that.ghostCollisions[id] = that.ghostCollisions[id] || {};
-
-              var i,
-                  key,
-                  type,
-                  num = ghost.getNumOverlappingObjects(),
-                  newCollisions = {},
-                  body;
-
-              if (num > 0) {
-                for (i = 0; i < num; i++) {
-                  body = Ammo.castObject(ghost.getOverlappingObject(i), Ammo.btCollisionObject);
-                  if (body.userData) {
-                    key = body.userData.id;
-
-                    newCollisions[key] = body.userData.type;
-
-                    if (!that.ghostCollisions[id][key]) {
-                      self.postMessage({ command: 'event', arguments: [ 'ghost_enter', {
-                        objectA: { type: 'btGhostObject', id: id },
-                        objectB: { type: body.userData.type, id: body.userData.id }
-                      } ]});
-                    }
-                  }
-                }
-              }
-
-              for (key in that.ghostCollisions[id]) {
-                if (!newCollisions[key]) {
-                  type = that.ghostCollisions[id][key];
-                  self.postMessage({ command: 'event', arguments: [ 'ghost_exit', {
-                    objectA: { type: 'btGhostObject', id: id },
-                    objectB: { type: type, id: key }
-                  } ]});
-                  delete that.ghostCollisions[id][key];
-                }
-              }
-              that.ghostCollisions[id] = newCollisions;
-            }
-          }.bind(this));
-          */
 
           self.postMessage({ command: 'update', data: update.buffer }, [update.buffer]);
           that.frames ++;
@@ -919,7 +732,7 @@ define([ 'underscore' ], function(_) {
         var obj = new Wheel(id, wheelInfo, vehicle);
 
         vehicle.addWheel(obj);
-        
+
         this.objects[id] = obj;
 
         if (typeof fn === 'function') {
@@ -1824,10 +1637,10 @@ define([ 'underscore' ], function(_) {
           rotation.setW(descriptor.rotation.w);
         }
 
-        if (body.isKinematicObject()) {
-          body.getMotionState().setWorldTransform(tmpTrans[0]);
+        if (body.ammoData.isKinematicObject()) {
+          body.ammoData.getMotionState().setWorldTransform(tmpTrans[0]);
         } else {
-          body.setWorldTransform(tmpTrans[0]);
+          body.ammoData.setWorldTransform(tmpTrans[0]);
         }
       }
     },
@@ -1986,12 +1799,12 @@ define([ 'underscore' ], function(_) {
 
     Constraint_destroy: function(descriptor) {
       var id = descriptor && descriptor.constraintId,
-          constraint = this.constraints[id];
+          constraint = this.objects[id];
 
       if (constraint) {
-        this.dynamicsWorld.removeConstraint(constraint);
-        Ammo.destroy(constraint);
-        this.constraints[id] = undefined;
+        this.dynamicsWorld.removeConstraint(constraint.ammoData);
+        Ammo.destroy(constraint.ammoData);
+        this.objects[id] = undefined;
         this.trigger('Constraint_destroy', id);
         this.ids.push(id);
       }
@@ -2026,12 +1839,12 @@ define([ 'underscore' ], function(_) {
 
     GhostObject_destroy: function(descriptor) {
       var id = descriptor.ghostId,
-          ghost = this.ghosts[id];
+          ghost = this.objects[id];
 
       if (ghost) {
-        this.dynamicsWorld.removeCollisionObject(ghost);
-        Ammo.destroy(ghost);
-        this.ghosts[id] = undefined;
+        this.dynamicsWorld.removeCollisionObject(ghost.ammoData);
+        Ammo.destroy(ghost.ammoData);
+        this.objects[id] = undefined;
         this.trigger('GhostObject_destroy', id);
         this.ids.push(id);
       }

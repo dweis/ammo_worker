@@ -74,9 +74,9 @@
 
     SimpleDemo.prototype = new DemoScene();
 
-    SimpleDemo.prototype._createCube = function(material) {
+    SimpleDemo.prototype._createBox = function(material) {
       var cube = new THREE.Object3D();
-      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material));
+      cube.add(new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), material));
       cube.children[0].castShadow = true;
       cube.position.x = (Math.random() * 500) - 250;
       cube.position.y = 10 + (Math.random() * 50);
@@ -107,7 +107,7 @@
       this.scene.add(cube);
 
       for (var i = 0; i < 100; i++) {
-        this._createCube(material);
+        this._createBox(material);
       }
 
       cube.add(this.camera);

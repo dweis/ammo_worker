@@ -96,7 +96,7 @@ DemoScene.prototype._initScene = function() {
     color: 0x666666
   });
 
-  var ground = new THREE.Mesh(new THREE.CubeGeometry(1000,0.01,1000, 1, 1, 1),groundMaterial);
+  var ground = new THREE.Mesh(new THREE.BoxGeometry(1000,0.01,1000, 1, 1, 1),groundMaterial);
   //ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
   ground.receiveShadow = true;
   ground.position.y = 0;
@@ -118,7 +118,6 @@ DemoScene.prototype._initScene = function() {
       rigidBody.setFriction(0.5);
       rigidBody.addToWorld(1,255);
       this.groundBody = rigidBody;
-      console.log(rigidBody);
     }, this));
 
   scene.add(camera);

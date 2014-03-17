@@ -93,7 +93,7 @@
       o.add(o1);
       o1.position.y = 1;
 
-      o1.add(new THREE.Mesh(new THREE.CubeGeometry(2, 1, 4), material));
+      o1.add(new THREE.Mesh(new THREE.BoxGeometry(2, 1, 4), material));
 
       o.traverse(function(o) {
         o.castShadow = true;

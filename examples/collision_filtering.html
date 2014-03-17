@@ -33,7 +33,7 @@
     SimpleDemo.prototype._createBox = function(material) {
       var o = new THREE.Object3D();
 
-      o.add(new THREE.Mesh(new THREE.CubeGeometry(2, 2, 2), material));
+      o.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
 
       o.position.x = (Math.random() * 30) - 15;
       o.position.y = 10 + (Math.random() * 20) - 10;

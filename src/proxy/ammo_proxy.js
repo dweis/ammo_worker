@@ -79,27 +79,6 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       }
     });
 
-    this.on('ghost_enter', _.bind(function(descriptor) {
-      var objA = this.getObjectByDescriptor(descriptor.objectA),
-          objB = this.getObjectByDescriptor(descriptor.objectB);
-
-      if (objA && _.isFunction(objA.trigger)) {
-        objA.trigger('ghost_enter', objB, objA);
-      }
-
-      if (objB && _.isFunction(objB.trigger)) {
-        objB.trigger('ghost_enter', objA, objB);
-      }
-    }, this));
-
-    this.on('ghost_exit', _.bind(function(descriptor) {
-      var objA = this.getObjectByDescriptor(descriptor.objectA),
-          objB = this.getObjectByDescriptor(descriptor.objectB);
-
-      objA.trigger('ghost_exit', objB, objA);
-      objB.trigger('ghost_exit', objA, objB);
-    }, this));
-
     this.on('begin_contact', _.bind(function(descriptor) {
       var objA = this.getObjectByDescriptor(descriptor.objectA),
           objB = this.getObjectByDescriptor(descriptor.objectB);
@@ -585,28 +564,12 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     return this.adapter.createKinematicCharacterControllerFromObject(object, shape, stepHeight);
   };
 
-  AmmoProxy.prototype.getGhostObjectOffset = function(ghostObjectId) {
-    return ghostObjectId * 7;
-  };
-
-  AmmoProxy.prototype.getRigidBodyOffset = function(bodyId) {
-    return bodyId * 7;
-  };
-
-  AmmoProxy.prototype.getWheelOffset = function(vehicleId, wheelIndex) {
-    return wheelIndex * 7;
-  };
-
   AmmoProxy.prototype.getVehicle = function(vehicleId) {
     if (this.vehicles[vehicleId]) {
       return this.vehicles[vehicleId];
     }
 
     console.warn('Asked for non-existent vehicle with ID: ' + vehicleId);
-  };
-
-  AmmoProxy.prototype.getKinematicCharacterControllerOffset = function(kinematicCharacterControllerId) {
-    return kinematicCharacterControllerId * 7;
   };
 
   AmmoProxy.prototype.getConstraint = function(constraintId) {
