@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - proxy/ammo_rigid_body.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome-ie7.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>proxy/ammo_rigid_body.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">69.36</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">214</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">37.82</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">2.02</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">define([ &#039;when&#039;, &#039;underscore&#039;, &#039;./ammo_collision_object&#039; ], function(when, _, AmmoCollisionObject) {
+  function AmmoRigidBody(proxy, bodyId) {
+    this.proxy = proxy;
+    this.bodyId = bodyId;
+    this.binding = undefined;
+    this.position = { x: 0, y: 0, z: 0 };
+    this.rotation = { x: 0, y: 0, z: 0, w: 1 };
+    this.linearVelocity = { x: 0, y: 0, z: 0 };
+    this.angularVelocity = { x: 0, y: 0, z: 0 };
+  }
+
+  AmmoRigidBody.prototype = new AmmoCollisionObject();
+
+  AmmoRigidBody.prototype.update = function() {
+    if (this.binding &amp;&amp; this.binding.update) {
+      this.binding.update();
+    }
+  };
+
+  AmmoRigidBody.prototype.setType = function(type) {
+    return this.proxy.execute(&#039;RigidBody_setType&#039;, {
+      bodyId: this.bodyId,
+      type: type
+    });
+  };
+
+  AmmoRigidBody.prototype.setDamping = function(linearDamping, angularDamping) {
+    return this.proxy.execute(&#039;RigidBody_setDamping&#039;, {
+      bodyId: this.bodyId,
+      linearDamping: linearDamping,
+      angularDamping: angularDamping
+    });
+  };
+
+  AmmoRigidBody.prototype.applyTorque = function(torque) {
+    return this.proxy.execute(&#039;RigidBody_applyTorque&#039;, {
+      bodyId: this.bodyId,
+      torque: {
+        x: torque.x,
+        y: torque.y,
+        z: torque.z
+      }
+    });
+  };
+
+  AmmoRigidBody.prototype.applyForce = function(force, relativePosition) {
+    return this.proxy.execute(&#039;RigidBody_applyForce&#039;, {
+      bodyId: this.bodyId,
+      force: force,
+      relativePosition: relativePosition || { x: 0, y: 0, z: 0 }
+    });
+  };
+
+  AmmoRigidBody.prototype.applyCentralForce = function(force) {
+    return this.proxy.execute(&#039;RigidBody_applyCentralForce&#039;, {
+      bodyId: this.bodyId,
+      force: {
+        x: force.x,
+        y: force.y,
+        z: force.z
+      }
+    });
+  };
+
+  AmmoRigidBody.prototype.applyImpulse = function(impulse, relativePosition) {
+    return this.proxy.execute(&#039;RigidBody_applyImpulse&#039;, {
+      bodyId: this.bodyId,
+      impulse: {
+        x: impulse.x,
+        y: impulse.y,
+        z: impulse.z
+      },
+      relativePosition: relativePosition &amp;&amp; {
+        x: relativePosition.x,
+        y: relativePosition.y,
+        z: relativePosition.z
+      } || { x: 0, y: 0, z: 0 }
+    });
+  };
+
+  AmmoRigidBody.prototype.applyCentralImpulse = function(impulse) {
+    return this.proxy.execute(&#039;RigidBody_applyCentralImpulse&#039;, {
+      bodyId: this.bodyId,
+      impulse: {
+        x: impulse.x,
+        y: impulse.y,
+        z: impulse.z
+      }
+    });
+  };
+
+  AmmoRigidBody.prototype.setFriction = function(friction) {
+    return this.proxy.execute(&#039;RigidBody_setFriction&#039;, {
+      bodyId: this.bodyId,
+      friction: friction
+    });
+  };
+
+  AmmoRigidBody.prototype.setRestitution = function(restitution) {
+    return this.proxy.execute(&#039;RigidBody_setRestitution&#039;, {
+      bodyId: this.bodyId,
+      restitution: restitution
+    });
+  };
+
+  AmmoRigidBody.prototype.setLinearFactor = function(linearFactor) {
+    return this.proxy.execute(&#039;RigidBody_setLinearFactor&#039;, {
+      bodyId: this.bodyId,
+      linearFactor: {
+        x: linearFactor.x,
+        y: linearFactor.y,
+        z: linearFactor.z
+      }
+    });
+  };
+
+  AmmoRigidBody.prototype.setAngularFactor = function(angularFactor) {
+    return this.proxy.execute(&#039;RigidBody_setAngularFactor&#039;, {
+      bodyId: this.bodyId,
+      angularFactor: {
+        x: angularFactor.x,
+        y: angularFactor.y,
+        z: angularFactor.z
+      }
+    });
+  };
+
+  AmmoRigidBody.prototype.getLinearVelocity = function() {
+    var deferred = when.defer();
+
+    this.proxy.execute(&#039;RigidBody_getLinearVelocity&#039;, { bodyId: this.bodyId }, true)
+      .then(_.bind(function(linearVelocity) {
+        deferred.resolve(linearVelocity);
+      }, this));
+
+    return deferred.promise;
+  };
+
+  AmmoRigidBody.prototype.setLinearVelocity = function(linearVelocity) {
+    return this.proxy.execute(&#039;RigidBody_setLinearVelocity&#039;, {
+      bodyId: this.bodyId,
+      linearVelocity: {
+        x: linearVelocity.x,
+        y: linearVelocity.y,
+        z: linearVelocity.z
+      }
+    });
+  };
+
+  AmmoRigidBody.prototype.getAngularVelocity = function() {
+    var deferred = when.defer();
+
+    this.proxy.execute(&#039;RigidBody_getAngularVelocity&#039;, { bodyId: this.bodyId }, true)
+      .then(_.bind(function(angularVelocity) {
+        deferred.resolve(angularVelocity);
+      }, this));
+
+    return deferred.promise;
+  };
+
+  AmmoRigidBody.prototype.setAngularVelocity = function(angularVelocity) {
+    return this.proxy.execute(&#039;RigidBody_setAngularVelocity&#039;, {
+      bodyId: this.bodyId,
+      angularVelocity: {
+        x: angularVelocity.x,
+        y: angularVelocity.y,
+        z: angularVelocity.z
+      }
+    });
+  };
+
+
+  AmmoRigidBody.prototype.destroy = function() {
+    var deferred = this.proxy.execute(&#039;RigidBody_destroy&#039;, { bodyId: this.bodyId });
+
+    this.bodyId = undefined;
+
+    this.binding.destroy();
+
+    return deferred;
+  };
+
+
+  AmmoRigidBody.prototype.addToWorld = function(group, mask) {
+    return this.proxy.execute(&#039;DynamicsWorld_addRigidBody&#039;, {
+      bodyId: this.bodyId,
+      group: group,
+      mask: mask
+    });
+  };
+
+  AmmoRigidBody.prototype.setWorldTransform = function(position, rotation) {
+    return this.proxy.execute(&#039;RigidBody_setWorldTransform&#039;, {
+      bodyId: this.bodyId,
+      position: position,
+      rotation: rotation
+    });
+  };
+
+  AmmoRigidBody.prototype.clearForces = function() {
+    return this.proxy.execute(&#039;RigidBody_clearForces&#039;, {
+      bodyId: this.bodyId
+    });
+  };
+
+  AmmoRigidBody.prototype.setActivationState = function(activationState) {
+    return this.proxy.execute(&#039;CollisionObject_setActivationState&#039;, {
+      bodyId: this.bodyId,
+      activationState: activationState
+    });
+  };
+
+  return AmmoRigidBody;
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

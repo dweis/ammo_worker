@@ -29,7 +29,7 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
     var deferred = this.proxy.createRigidBody(shape, mass, position, quaternion);
 
     deferred.then(_.bind(function(rigidBody) {
-      rigidBody.binding = this.createBinding(object, this.proxy.getRigidBodyOffset(rigidBody.bodyId));
+      rigidBody.binding = this.createBinding(object, rigidBody.bodyId);
     }, this));
 
     return deferred;
@@ -57,7 +57,8 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
     var deferred = this.proxy.createKinematicCharacterController(shape, position, quaternion, stepHeight);
 
     deferred.then(_.bind(function(kinematicCharacterController) {
-      kinematicCharacterController.binding = this.createBinding(object, this.proxy.getKinematicCharacterControllerOffset(kinematicCharacterController.controllerId));
+      kinematicCharacterController.binding =
+        this.createBinding(object, kinematicCharacterController.controllerId);
     }, this));
 
     return deferred;
@@ -85,8 +86,36 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
     var deferred = this.proxy.createGhostObject(shape, position, quaternion);
 
     deferred.then(_.bind(function(ghostObject) {
-      ghostObject.binding = this.createBinding(object, this.proxy.getGhostObjectOffset(ghostObject.ghostId));
+      ghostObject.binding = this.createBinding(object, ghostObject.ghostId);
     }, this));
+
+    return deferred;
+  };
+
+  THREEAdapter.prototype.createCollisionObjectFromObject = function(object, shape) {
+    if (!shape) {
+      shape = this._getShapeJSON(object);
+    } else if (shape.shape === 'auto') {
+      shape = this._getShapeJSON(object, { strategy: shape.strategy });
+    }
+
+    var position = {
+        x: object.position.x,
+        y: object.position.y,
+        z: object.position.z
+      },
+      quaternion = {
+        x: object.quaternion.x,
+        y: object.quaternion.y,
+        z: object.quaternion.z,
+        w: object.quaternion.w
+      };
+
+    var deferred = this.proxy.createCollisionObject(shape, position, quaternion);
+
+    //deferred.then(_.bind(function(collisionObject) {
+      //ghostObject.binding = this.createBinding(object, this.proxy.getGhostObjectOffset(ghostObject.ghostId));
+    //}, this));
 
     return deferred;
   };
@@ -150,12 +179,12 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
         rotation = new THREE.Quaternion(),
         scale = new THREE.Vector3();
 
-        scale.getScaleFromMatrix(o.matrixWorld);
+        scale.setFromMatrixScale(o.matrixWorld);
 
         tmpMatrix.copy(inverseParent);
         tmpMatrix.multiply(o.matrixWorld);
 
-        position.getPositionFromMatrix(tmpMatrix);
+        position.setFromMatrixPosition(tmpMatrix);
         tmpMatrix.extractRotation(tmpMatrix);
         rotation.setFromRotationMatrix(tmpMatrix);
 
@@ -209,7 +238,7 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
 
     var inverseParent = new THREE.Matrix4(),
         tmpMatrix = new THREE.Matrix4();
-        
+
     inverseParent.getInverse(o.matrixWorld);
 
     o.traverse(function(child) {
@@ -222,7 +251,7 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
       tmpMatrix.multiply(child.matrixWorld);
 
       if (child instanceof THREE.Mesh && !child.isBB) {
-        scale.getScaleFromMatrix(child.matrixWorld);
+        scale.setFromMatrixScale(child.matrixWorld);
 
         if (geometry instanceof THREE.BufferGeometry) {
           if (!geometry.attributes.position.array) {

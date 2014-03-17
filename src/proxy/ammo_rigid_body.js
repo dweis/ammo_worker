@@ -1,4 +1,4 @@
-define([ './ammo_base_object' ], function(AmmoBaseObject) {
+define([ 'when', 'underscore', './ammo_collision_object' ], function(when, _, AmmoCollisionObject) {
   function AmmoRigidBody(proxy, bodyId) {
     this.proxy = proxy;
     this.bodyId = bodyId;
@@ -7,9 +7,9 @@ define([ './ammo_base_object' ], function(AmmoBaseObject) {
     this.rotation = { x: 0, y: 0, z: 0, w: 1 };
     this.linearVelocity = { x: 0, y: 0, z: 0 };
     this.angularVelocity = { x: 0, y: 0, z: 0 };
-  } 
+  }
 
-  AmmoRigidBody.prototype = new AmmoBaseObject();
+  AmmoRigidBody.prototype = new AmmoCollisionObject();
 
   AmmoRigidBody.prototype.update = function() {
     if (this.binding && this.binding.update) {
@@ -125,6 +125,17 @@ define([ './ammo_base_object' ], function(AmmoBaseObject) {
     });
   };
 
+  AmmoRigidBody.prototype.getLinearVelocity = function() {
+    var deferred = when.defer();
+
+    this.proxy.execute('RigidBody_getLinearVelocity', { bodyId: this.bodyId }, true)
+      .then(_.bind(function(linearVelocity) {
+        deferred.resolve(linearVelocity);
+      }, this));
+
+    return deferred.promise;
+  };
+
   AmmoRigidBody.prototype.setLinearVelocity = function(linearVelocity) {
     return this.proxy.execute('RigidBody_setLinearVelocity', {
       bodyId: this.bodyId,
@@ -134,6 +145,17 @@ define([ './ammo_base_object' ], function(AmmoBaseObject) {
         z: linearVelocity.z
       }
     });
+  };
+
+  AmmoRigidBody.prototype.getAngularVelocity = function() {
+    var deferred = when.defer();
+
+    this.proxy.execute('RigidBody_getAngularVelocity', { bodyId: this.bodyId }, true)
+      .then(_.bind(function(angularVelocity) {
+        deferred.resolve(angularVelocity);
+      }, this));
+
+    return deferred.promise;
   };
 
   AmmoRigidBody.prototype.setAngularVelocity = function(angularVelocity) {
@@ -178,6 +200,13 @@ define([ './ammo_base_object' ], function(AmmoBaseObject) {
   AmmoRigidBody.prototype.clearForces = function() {
     return this.proxy.execute('RigidBody_clearForces', {
       bodyId: this.bodyId
+    });
+  };
+
+  AmmoRigidBody.prototype.setActivationState = function(activationState) {
+    return this.proxy.execute('CollisionObject_setActivationState', {
+      bodyId: this.bodyId,
+      activationState: activationState
     });
   };
 

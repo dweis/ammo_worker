@@ -1,5 +1,14 @@
+var path = require('path');
+
 module.exports = function(grunt) {
   grunt.initConfig({
+    plato: {
+      your_task: {
+        files: {
+          'report': ['src/proxy/**/*.js', 'src/worker/**/*.js'],
+        }
+      },
+    },
     requirejs: {
       proxy_minified: {
         options: {
@@ -125,12 +134,47 @@ module.exports = function(grunt) {
           spawn: false
         }
       }
+    },
+
+    s3: {
+      options: {
+        endpoint: 'storage.googleapis.com'
+      },
+      runtime: {
+        options: {
+          bucket: 'assets.verold.com',
+          headers: {
+            'Cache-Control': 'public, max-age=3600'
+          }
+        },
+        upload: [
+          {
+            src: path.join('build', 'ammo_proxy.min.js'),
+            dest: 'verold_api/lib/ammo_proxy.min.js',
+            options: {
+              gzip: true,
+              access: 'public-read'
+            }
+          },
+          {
+            src: path.join('build', 'ammo_proxy.js'),
+            dest: 'verold_api/lib/ammo_proxy.js',
+            options: {
+              gzip: true,
+              access: 'public-read'
+            }
+          }
+        ]
+      }
     }
   });
 
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-requirejs');
+  grunt.loadNpmTasks('grunt-s3');
+  grunt.loadNpmTasks('grunt-plato');
 
   grunt.registerTask('default', [ 'jshint', 'requirejs:worker_development', 'requirejs:proxy_development' ]);
+  grunt.registerTask('deploy', [ 'default', 's3' ]);
 };

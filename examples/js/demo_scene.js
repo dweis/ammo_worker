@@ -15,10 +15,8 @@ var DemoScene = function() {
 
 DemoScene.prototype.init = function() {
   this._initProxy();
-  /*
-  this.proxy.setStep(1/120);
-  this.proxy.setIterations(10);
-  */
+  this.proxy.setStep(1/60);
+  this.proxy.setIterations(2);
 
   setInterval(function() {
     this.proxy.getStats().
@@ -27,11 +25,11 @@ DemoScene.prototype.init = function() {
       }.bind(this));
   }.bind(this), 500);
 
-  window.addEventListener('blur', function() { 
+  window.addEventListener('blur', function() {
     this.proxy.stopSimulation();
   }.bind(this));
 
-  window.addEventListener('focus', function() { 
+  window.addEventListener('focus', function() {
     this.proxy.startSimulation();
   }.bind(this));
 };
@@ -75,6 +73,7 @@ DemoScene.prototype._initScene = function() {
   renderer.shadowMapEnabled = true;
   renderer.shadowMapSoft = true;
   renderer.shadowMapType = THREE.PCFSoftShadowMap;
+
   renderer.physicallyBasedShading = true;
   var camera = this.camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
   var scene = this.scene = new THREE.Scene();
@@ -97,26 +96,42 @@ DemoScene.prototype._initScene = function() {
     color: 0x666666
   });
 
-  var ground = new THREE.Mesh(new THREE.CubeGeometry(1000,0.01,1000, 1, 1, 1),groundMaterial); 
+  var ground = new THREE.Mesh(new THREE.BoxGeometry(1000,0.01,1000, 1, 1, 1),groundMaterial);
   //ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
   ground.receiveShadow = true;
   ground.position.y = 0;
   scene.add(ground);
   scene.updateMatrixWorld();
 
-  this.proxy.adapter.createRigidBodyFromObject(ground, 500000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'}).then(_.bind(function(rigidBody) {
-    rigidBody.setType('static');
-    rigidBody.setFriction(0.5);
-    rigidBody.addToWorld(1,255);
-    this.groundBody = rigidBody;
-  }, this));
+  /*
+  this.proxy.createCollisionObjectFromObject(ground, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'})
+    .then(_.bind(function(collisionObject) {
+      collisionObject.setFriction(0.5);
+      collisionObject.addToWorld(1,255);
+      this.groundBody = collisionObject;
+    }, this));
+  */
+
+  this.proxy.adapter.createRigidBodyFromObject(ground, 1000000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'})
+    .then(_.bind(function(rigidBody) {
+      rigidBody.setType('static');
+      rigidBody.setFriction(0.5);
+      rigidBody.addToWorld(1,255);
+
+      this.groundBody = rigidBody;
+    }, this));
 
   scene.add(camera);
 
   var light = new THREE.DirectionalLight( 0xCCCCCC );
-  light.position.set( 20, 80, 0 );
+  light.position.set( 100, 200, 0 );
   light.target.position.copy( scene.position );
   light.castShadow = true;
+  light.shadowCameraNear = 10;
+  light.shadowCameraFar = 500;
+  light.shadowMapHeight = 2048;
+  light.shadowMapWidth = 2048;
+  light.shadowBias = 0.1;
   scene.add(light);
 
   if (typeof this.initDemo === 'function') {
@@ -133,6 +148,11 @@ DemoScene.prototype.update = function(delta) {
   var dt = delta - this.last;
   this.last = delta;
   this.stats.begin();
+
+  if (this.groundBody) {
+    this.groundBody.update();
+  }
+
   if (typeof this.preUpdate === 'function') {
     this.preUpdate(dt);
   }

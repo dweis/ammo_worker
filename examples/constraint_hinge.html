@@ -51,7 +51,7 @@
 
       hinge = new THREE.Object3D();
 
-      hinge.add(new THREE.Mesh(new THREE.CubeGeometry(0.3, 4, 0.3), material));
+      hinge.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 4, 0.3), material));
       hinge.position.y = 2.4;
       hinge.position.x = -8.4;
       hinge.children[0].castShadow = true;
@@ -63,7 +63,7 @@
         this.bodies.push(rigidBody); 
 
         door = new THREE.Object3D();
-        door.add(new THREE.Mesh(new THREE.CubeGeometry(2, 4, 0.3), material));
+        door.add(new THREE.Mesh(new THREE.BoxGeometry(2, 4, 0.3), material));
         door.position.y = 2.4;
         door.position.x = -6;
         door.children[0].castShadow = true;

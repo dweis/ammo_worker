@@ -51,9 +51,9 @@
 
     SimpleDemo.prototype = new DemoScene();
 
-    SimpleDemo.prototype._createCube = function(x, y, z, material) {
+    SimpleDemo.prototype._createBox = function(x, y, z, material) {
       var cube = new THREE.Object3D();
-      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material));
+      cube.add(new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), material));
 
       cube.position.x = 2 + (x * 4);
       cube.position.y = 2 + (y * 4);
@@ -81,7 +81,7 @@
       console.log('creating cube');
       var cube = new THREE.Object3D();
 
-      cube.add(new THREE.Mesh(new THREE.CubeGeometry(4, 4, 4), material2));
+      cube.add(new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), material2));
       cube.position.x = -10;
       cube.position.y = 10;
       cube.position.z = 10;
@@ -97,7 +97,7 @@
         rigidBody.setFriction(0.01);
         rigidBody.setRestitution(0.01);
         rigidBody.addToWorld();
-        this.cubeBody = rigidBody; 
+        this.cubeBody = rigidBody;
         console.log(this.cubeBody);
       }.bind(this));
 
@@ -105,7 +105,7 @@
       for (var z = 0; z < 5; z ++) {
         for (var y = 0; y < 5; y ++) {
           for (var x = 0; x < 5; x++) {
-            this._createCube(x, y, z, material);
+            this._createBox(x, y, z, material);
           }
         }
       }
@@ -115,7 +115,7 @@
       var torque = 0, force = 0;
 
       if (this.cubeBody) {
-        if (this.keys.left) { 
+        if (this.keys.left) {
           torque += 5;
         }
 

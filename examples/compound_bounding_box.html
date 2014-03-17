@@ -49,7 +49,7 @@
   CompoundDemo.prototype._createCompoundShape = function(material) {
     var o = new THREE.Object3D();
 
-    o.add(new THREE.Mesh(new THREE.CubeGeometry(2, 2, 2), material));
+    o.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
 
     var o1 = new THREE.Object3D();
     o1.position.x = -2;
@@ -59,7 +59,7 @@
     o1.scale.y = Math.floor(Math.random() * 2) + 1;
     o1.scale.z = Math.floor(Math.random() * 2) + 1;
     //o1.quaternion.setFromAxisAngle({ x: 0, y: 1, z: 0 }, Math.PI/4);
-    o1.add(new THREE.Mesh(new THREE.CubeGeometry(2, 2, 2), material));
+    o1.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
     o.add(o1);
 
     var o2 = new THREE.Object3D();
@@ -70,7 +70,7 @@
     o2.scale.y = Math.floor(Math.random() * 2) + 1;
     o2.scale.z = Math.floor(Math.random() * 2) + 1;
     //o2.quaternion.setFromAxisAngle({ x: 0, y: 1, z: 0 }, Math.PI/4);
-    o2.add(new THREE.Mesh(new THREE.CubeGeometry(2, 2, 2), material));
+    o2.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
     o.add(o2);
 
     o.traverse(function(o) {
