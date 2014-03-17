@@ -3,7 +3,6 @@ define([ 'when', 'underscore', './ammo_base_object' ], function(when, _, AmmoBas
     this.proxy = proxy;
     this.vehicleId = vehicleId;
     this.wheelBindings = {};
-    this.wheelIds = [];
     this.rigidBody = rigidBody;
   }
 
@@ -11,23 +10,6 @@ define([ 'when', 'underscore', './ammo_base_object' ], function(when, _, AmmoBas
 
   AmmoVehicle.prototype.addWheel = function(connectionPoint, wheelDirection, wheelAxle,
       suspensionRestLength, wheelRadius, isFrontWheel, tuning) {
-
-        /*
-
-            var deferred = when.defer();
-
-            this.execute('Vehicle_create', descriptor, true).then(_.bind(function(vehicleId) {
-              var proxy = this;
-              setTimeout(function() {
-                var vehicle = new AmmoVehicle(proxy, vehicleId, rigidBody);
-                proxy.vehicles[vehicleId] = vehicle;
-                deferred.resolve(vehicle);
-              }, 0);
-            }, this));
-
-            return deferred.promise;
-            */
-
     var descriptor = {
       vehicleId: this.vehicleId,
       connectionPoint: connectionPoint,
@@ -42,47 +24,46 @@ define([ 'when', 'underscore', './ammo_base_object' ], function(when, _, AmmoBas
     var deferred = when.defer();
 
     this.proxy.execute('Vehicle_addWheel', descriptor, true).then(_.bind(function(wheelId) {
-      this.wheelIds.push(wheelId);
       deferred.resolve(wheelId);
     }, this));
 
     return deferred.promise;
   };
 
-  AmmoVehicle.prototype.setWheelInfo = function(wheelIndex, properties) {
+  AmmoVehicle.prototype.setWheelInfo = function(wheelId, properties) {
     var descriptor = {
       vehicleId: this.vehicleId,
-      wheelIndex: wheelIndex,
+      wheelId: wheelId,
       properties: properties
     };
 
     return this.proxy.execute('Vehicle_setWheelInfo', descriptor);
   };
 
-  AmmoVehicle.prototype.setBrake = function(wheelIndex, brake) {
+  AmmoVehicle.prototype.setBrake = function(wheelId, brake) {
     var descriptor = {
       vehicleId: this.vehicleId,
-      wheelIndex: wheelIndex,
+      wheelId: wheelId,
       brake: brake
     };
 
     return this.proxy.execute('Vehicle_setBrake', descriptor);
   };
 
-  AmmoVehicle.prototype.applyEngineForce = function(wheelIndex, force) {
+  AmmoVehicle.prototype.applyEngineForce = function(wheelId, force) {
     var descriptor = {
       vehicleId: this.vehicleId,
-      wheelIndex: wheelIndex,
+      wheelId: wheelId,
       force: force
     };
 
     return this.proxy.execute('Vehicle_applyEngineForce', descriptor);
   };
 
-  AmmoVehicle.prototype.setSteeringValue = function(wheelIndex, steeringValue) {
+  AmmoVehicle.prototype.setSteeringValue = function(wheelId, steeringValue) {
     var descriptor = {
       vehicleId: this.vehicleId,
-      wheelIndex: wheelIndex,
+      wheelId: wheelId,
       steeringValue: steeringValue
     };
 
@@ -104,8 +85,7 @@ define([ 'when', 'underscore', './ammo_base_object' ], function(when, _, AmmoBas
   };
 
   AmmoVehicle.prototype.addWheelObject = function(wheelId, object) {
-    this.wheelBindings[wheelId] = this.proxy.adapter.createBinding(object,
-        wheelId * 7);
+    this.wheelBindings[wheelId] = this.proxy.adapter.createBinding(object, wheelId);
   };
 
   AmmoVehicle.prototype.update = function() {

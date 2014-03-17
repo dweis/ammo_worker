@@ -55,6 +55,7 @@ define([ 'underscore' ], function(_) {
     this.id = id;
     this.ammoData = ammoData;
     this.offset = this.id * 7;
+    this.collisions = {};
   }
 
   AmmoObject.prototype = {};
@@ -745,7 +746,7 @@ define([ 'underscore' ], function(_) {
       var vehicle = this.objects[descriptor.vehicleId];
 
       if (vehicle) {
-        vehicle.ammoData.setSteeringValue(descriptor.steeringValue, descriptor.wheelIndex);
+        vehicle.ammoData.setSteeringValue(descriptor.steeringValue, descriptor.wheelId);
       }
     },
 
@@ -753,7 +754,7 @@ define([ 'underscore' ], function(_) {
       var vehicle = this.objects[descriptor.vehicleId];
 
       if (vehicle) {
-        vehicle.ammoData.setBrake(descriptor.brake, descriptor.wheelIndex);
+        vehicle.ammoData.setBrake(descriptor.brake, descriptor.wheelId);
       }
     },
 
@@ -762,7 +763,7 @@ define([ 'underscore' ], function(_) {
           info;
 
       if (vehicle) {
-        info = vehicle.ammoData.getWheelInfo(descriptor.wheelIndex);
+        info = vehicle.ammoData.getWheelInfo(descriptor.wheelId);
 
         for (var i in descriptor.properties) {
           if (descriptor.properties.hasOwnProperty(i)) {
@@ -776,7 +777,7 @@ define([ 'underscore' ], function(_) {
       var vehicle = this.objects[descriptor.vehicleId];
 
       if (vehicle) {
-        vehicle.ammoData.applyEngineForce(descriptor.force, descriptor.wheelIndex);
+        vehicle.ammoData.applyEngineForce(descriptor.force, descriptor.wheelId);
       }
     },
 

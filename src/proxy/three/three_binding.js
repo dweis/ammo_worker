@@ -2,7 +2,7 @@ define([], function() {
   function THREEBinding(proxy, object, offset) {
     this.proxy = proxy;
     this.object = object;
-    this.offset = offset;
+    this.offset = offset * 7;
 
     this.position = new THREE.Vector3();
     this.quaternion = new THREE.Quaternion();

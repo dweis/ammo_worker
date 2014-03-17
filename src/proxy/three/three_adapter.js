@@ -29,7 +29,7 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
     var deferred = this.proxy.createRigidBody(shape, mass, position, quaternion);
 
     deferred.then(_.bind(function(rigidBody) {
-      rigidBody.binding = this.createBinding(object, rigidBody.bodyId * 7);
+      rigidBody.binding = this.createBinding(object, rigidBody.bodyId);
     }, this));
 
     return deferred;
@@ -58,7 +58,7 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
 
     deferred.then(_.bind(function(kinematicCharacterController) {
       kinematicCharacterController.binding =
-        this.createBinding(object, kinematicCharacterController.controllerId * 7);
+        this.createBinding(object, kinematicCharacterController.controllerId);
     }, this));
 
     return deferred;
@@ -86,7 +86,7 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
     var deferred = this.proxy.createGhostObject(shape, position, quaternion);
 
     deferred.then(_.bind(function(ghostObject) {
-      ghostObject.binding = this.createBinding(object, ghostObject.ghostId * 7);
+      ghostObject.binding = this.createBinding(object, ghostObject.ghostId);
     }, this));
 
     return deferred;
