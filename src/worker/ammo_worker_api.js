@@ -73,18 +73,20 @@ define([ 'underscore' ], function(_) {
 
   Vehicle.prototype.addWheel = function(wheel) {
     this.wheels.push(wheel);
+    wheel.index = this.wheels.length - 1;
   };
 
   function Wheel(id, ammoData, vehicle) {
     AmmoObject.apply(this, arguments);
     this.type = 'btWheelInfo';
     this.vehicle = vehicle;
+    this.index = -1;
   }
 
   Wheel.prototype = new AmmoObject();
 
   Wheel.prototype.update = function(data) {
-    tmpTrans[0] = this.ammoData.get_m_worldTransform();
+    tmpTrans[0] = this.vehicle.ammoData.getWheelTransformWS(this.index);
 
     data[this.offset + 0] = tmpTrans[0].getOrigin().x();
     data[this.offset + 1] = tmpTrans[0].getOrigin().y();
