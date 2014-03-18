@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - worker/mixins/rigid_body.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome-ie7.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>worker/mixins/rigid_body.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">61.84</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">324</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">64.46</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">3.61</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">define([ &#039;worker/constants/collision_flags&#039;, &#039;worker/constants/activation_states&#039;,
+        &#039;worker/objects/rigid_body&#039; ], function(CollisionFlags, ActivationStates, RigidBody) {
+  var tmpVec = [
+      new Ammo.btVector3(),
+      new Ammo.btVector3()
+    ],
+    tmpQuaternion = [
+      new Ammo.btVector3()
+    ],
+    tmpTrans = [
+      new Ammo.btTransform()
+    ];
+
+  return {
+    RigidBody_create: function(descriptor, fn) {
+      if (!this.ids.length) {
+        return console.error(&#039;No unused ids!&#039;);
+      }
+
+      var colShape,
+          startTransform = tmpTrans[0],
+          isDynamic = (descriptor.mass !== 0),
+          localInertia = tmpVec[0],
+          origin = tmpVec[1],
+          rotation = tmpQuaternion[0],
+          myMotionState,
+          rbInfo,
+          body;
+
+      startTransform.setIdentity();
+      localInertia.setZero();
+
+      colShape = this._createShape(descriptor.shape);
+
+      if (!colShape) {
+        throw(&#039;Invalid collision shape!&#039;);
+      }
+
+      if (isDynamic) {
+        colShape.calculateLocalInertia(descriptor.mass,localInertia);
+      }
+
+      origin.setX(descriptor.position.x);
+      origin.setY(descriptor.position.y);
+      origin.setZ(descriptor.position.z);
+
+      rotation.setX(descriptor.quaternion.x);
+      rotation.setY(descriptor.quaternion.y);
+      rotation.setZ(descriptor.quaternion.z);
+      rotation.setW(descriptor.quaternion.w);
+
+      startTransform.setOrigin(origin);
+      startTransform.setRotation(rotation);
+
+      myMotionState = new Ammo.btDefaultMotionState(startTransform);
+      rbInfo = new Ammo.btRigidBodyConstructionInfo(descriptor.mass, myMotionState, colShape, localInertia);
+      body = new Ammo.btRigidBody(rbInfo);
+
+      var id = this.ids.pop();
+
+      var obj = new RigidBody(id, body);
+
+      this.objects[id] = obj;
+
+      var o = Ammo.castObject(body, Ammo.btCollisionObject);
+
+      body.userData = o.userData = {
+        type: &#039;btRigidBody&#039;,
+        id: id
+      };
+
+      if (typeof fn === &#039;function&#039;) {
+        fn(id);
+      }
+    },
+
+    RigidBody_setType: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body &amp;&amp; body.ammoData) {
+        switch (descriptor.type) {
+        case &#039;static&#039;:
+          body.ammoData.setCollisionFlags(CollisionFlags.CF_STATIC_OBJECT);
+          body.ammoData.setActivationState(ActivationStates.DISABLE_SIMULATION);
+          break;
+        case &#039;kinematic&#039;:
+          body.ammoData.setCollisionFlags(CollisionFlags.CF_KINEMATIC_OBJECT);
+          body.ammoData.setActivationState(ActivationStates.DISABLE_DEACTIVATION);
+          break;
+        default:
+          console.warn(&#039;unknown body type: &#039; + descriptor.type + &#039;, defaulting to dynamic&#039;);
+          body.ammoData.setCollisionFlags(0);
+          break;
+        case &#039;dynamic&#039;:
+          body.ammoData.setCollisionFlags(0);
+          break;
+        }
+      }
+    },
+
+    RigidBody_setWorldTransform: function(descriptor) {
+      var body = this.objects[descriptor.bodyId],
+          position,
+          rotation;
+
+      if (body.ammoData) {
+        tmpTrans[0].setIdentity();
+        body.ammoData.getMotionState().getWorldTransform(tmpTrans[0]);
+        position = tmpTrans[0].getOrigin();
+        rotation = tmpTrans[0].getRotation();
+
+        if (descriptor.position) {
+          position.setX(descriptor.position.x);
+          position.setY(descriptor.position.y);
+          position.setZ(descriptor.position.z);
+        }
+
+        if (descriptor.rotation) {
+          rotation.setX(descriptor.rotation.x);
+          rotation.setY(descriptor.rotation.y);
+          rotation.setZ(descriptor.rotation.z);
+          rotation.setW(descriptor.rotation.w);
+        }
+
+        if (body.ammoData.isKinematicObject()) {
+          body.ammoData.getMotionState().setWorldTransform(tmpTrans[0]);
+        } else {
+          body.ammoData.setWorldTransform(tmpTrans[0]);
+        }
+      }
+    },
+
+    RigidBody_clearForces: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body.ammoData) {
+        body.ammoData.clearForces();
+        body.ammoData.activate();
+      }
+    },
+
+    RigidBody_applyForce: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body.ammoData) {
+        tmpVec[0].setX(descriptor.force.x);
+        tmpVec[0].setY(descriptor.force.y);
+        tmpVec[0].setZ(descriptor.force.z);
+        tmpVec[1].setX(descriptor.relativePosition.x);
+        tmpVec[1].setY(descriptor.relativePosition.y);
+        tmpVec[1].setZ(descriptor.relativePosition.z);
+
+        body.ammoData.applyForce(tmpVec[0], tmpVec[1]);
+        body.ammoData.activate();
+      }
+    },
+
+    RigidBody_applyCentralForce: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body.ammoData) {
+        tmpVec[0].setX(descriptor.force.x);
+        tmpVec[0].setY(descriptor.force.y);
+        tmpVec[0].setZ(descriptor.force.z);
+
+        body.ammoData.applyCentralForce(tmpVec[0]);
+        body.ammoData.activate();
+      }
+    },
+
+    RigidBody_applyImpulse: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body.ammoData) {
+        tmpVec[0].setX(descriptor.impulse.x);
+        tmpVec[0].setY(descriptor.impulse.y);
+        tmpVec[0].setZ(descriptor.impulse.z);
+        tmpVec[1].setX(descriptor.relativePosition.x);
+        tmpVec[1].setY(descriptor.relativePosition.y);
+        tmpVec[1].setZ(descriptor.relativePosition.z);
+
+        body.ammoData.applyImpulse(tmpVec[0], tmpVec[1]);
+        body.ammoData.activate();
+      }
+    },
+
+    RigidBody_applyCentralImpulse: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body.ammoData) {
+        tmpVec[0].setX(descriptor.force.x);
+        tmpVec[0].setY(descriptor.force.y);
+        tmpVec[0].setZ(descriptor.force.z);
+
+        body.ammoData.applyCentralImpulse(tmpVec[0]);
+        body.ammoData.activate();
+      }
+    },
+
+    RigidBody_applyTorque: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body.ammoData) {
+        tmpVec[0].setX(descriptor.torque.x);
+        tmpVec[0].setY(descriptor.torque.y);
+        tmpVec[0].setZ(descriptor.torque.z);
+
+        body.ammoData.applyTorque(tmpVec[0]);
+        body.ammoData.activate();
+      }
+    },
+
+    RigidBody_setRestitution: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body &amp;&amp; body.ammoData) {
+        body.ammoData.setRestitution(descriptor.restitution);
+      }
+    },
+
+    RigidBody_setFriction: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body &amp;&amp; body.ammoData) {
+        body.ammoData.setFriction(descriptor.friction);
+      }
+    },
+
+    RigidBody_setDamping: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body.ammoData) {
+        body.ammoData.setDamping(descriptor.linearDamping, descriptor.angularDamping);
+      }
+    },
+
+    RigidBody_getLinearVelocity: function(descriptor, fn) {
+      var body = this.objects[descriptor.bodyId],
+          lv;
+
+      if (body.ammoData) {
+        lv = body.ammoData.getLinearVelocity();
+
+        fn({
+          x: lv.x(),
+          y: lv.y(),
+          z: lv.z()
+        });
+      }
+    },
+
+    RigidBody_setLinearFactor: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body.ammoData) {
+        tmpVec[0].setX(descriptor.linearFactor.x);
+        tmpVec[0].setY(descriptor.linearFactor.y);
+        tmpVec[0].setZ(descriptor.linearFactor.z);
+        body.ammoData.setLinearFactor(tmpVec[0]);
+      }
+    },
+
+    RigidBody_getAngularVelocity: function(descriptor, fn) {
+      var body = this.objects[descriptor.bodyId],
+          av;
+
+      if (body.ammoData) {
+        av = body.ammoData.getAngularVelocity();
+
+        fn({
+          x: av.x(),
+          y: av.y(),
+          z: av.z()
+        });
+      }
+    },
+
+    RigidBody_setAngularFactor: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body.ammoData) {
+        tmpVec[0].setX(descriptor.angularFactor.x);
+        tmpVec[0].setY(descriptor.angularFactor.y);
+        tmpVec[0].setZ(descriptor.angularFactor.z);
+        body.ammoData.setAngularFactor(tmpVec[0]);
+      }
+    },
+
+    RigidBody_setLinearVelocity: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body.ammoData) {
+        tmpVec[0].setX(descriptor.linearVelocity.x);
+        tmpVec[0].setY(descriptor.linearVelocity.y);
+        tmpVec[0].setZ(descriptor.linearVelocity.z);
+        body.ammoData.setLinearVelocity(tmpVec[0]);
+      }
+    },
+
+    RigidBody_setAngularVelocity: function(descriptor) {
+      var body = this.objects[descriptor.bodyId];
+
+      if (body.ammoData) {
+        tmpVec[0].setX(descriptor.angularVelocity.x);
+        tmpVec[0].setY(descriptor.angularVelocity.y);
+        tmpVec[0].setZ(descriptor.angularVelocity.z);
+        body.ammoData.setAngularVelocity(tmpVec[0]);
+      }
+    },
+
+    RigidBody_destroy: function(descriptor) {
+      var id = descriptor &amp;&amp; descriptor.bodyId,
+          body = this.objects[id];
+
+      if (body.ammoData) {
+        this.objects[id] = undefined;
+        this.dynamicsWorld.removeRigidBody(body.ammoData);
+        Ammo.destroy(body.ammoData);
+        this.trigger(&#039;RigidBody_destroy&#039;, id);
+        this.ids.push(id);
+      }
+    }
+  };
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>
