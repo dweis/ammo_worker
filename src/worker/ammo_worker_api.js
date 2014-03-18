@@ -18,7 +18,7 @@ define([ 'underscore',
           VehicleMixin) {
   "use strict";
 
-  var MAX_TRANSFORMS = 1000;
+  var MAX_TRANSFORMS = 4000;
 
   var tmpVec = [
     new Ammo.btVector3(),
