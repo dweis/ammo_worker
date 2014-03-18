@@ -183,6 +183,9 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     case 'btGhostObject':
       return this.ghosts[descriptor.id];
 
+    case 'btCollisionObject':
+      return this.collisionObjects[descriptor.id];
+
     case 'btKinematicCharacterController':
       return this.kinematicCharacterControllers[descriptor.id];
 

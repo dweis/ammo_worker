@@ -80,7 +80,7 @@ define([ 'underscore',
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
-        new ArrayBuffer(bufferSize)
+        //new ArrayBuffer(bufferSize)
       ];
 
       this.ids = _.range(0, MAX_TRANSFORMS);

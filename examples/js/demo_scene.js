@@ -93,7 +93,7 @@ DemoScene.prototype._initScene = function() {
   container.appendChild(renderer.domElement);
 
   var groundMaterial = new THREE.MeshLambertMaterial({
-    color: 0x666666
+    color: 0x999999
   });
 
   var ground = new THREE.Mesh(new THREE.BoxGeometry(1000,0.01,1000, 1, 1, 1),groundMaterial);
@@ -106,16 +106,17 @@ DemoScene.prototype._initScene = function() {
   /*
   this.proxy.createCollisionObjectFromObject(ground, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'})
     .then(_.bind(function(collisionObject) {
-      collisionObject.setFriction(0.5);
+      //collisionObject.setFriction(0.5);
       collisionObject.addToWorld(1,255);
       this.groundBody = collisionObject;
     }, this));
-  */
+    */
 
   this.proxy.adapter.createRigidBodyFromObject(ground, 1000000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'})
     .then(_.bind(function(rigidBody) {
       rigidBody.setType('static');
       rigidBody.setFriction(0.5);
+      rigidBody.setRestitution(0.8);
       rigidBody.addToWorld(1,255);
 
       this.groundBody = rigidBody;

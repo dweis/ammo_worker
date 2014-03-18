@@ -1,7 +1,5 @@
 /* jshint unused:vars */
 define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
-  var tmpTrans;
-
   function Wheel(id, ammoData, vehicle) {
     AmmoObject.apply(this, arguments);
     this.type = 'btWheelInfo';
@@ -12,15 +10,15 @@ define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
   Wheel.prototype = new AmmoObject();
 
   Wheel.prototype.update = function(data) {
-    tmpTrans = this.vehicle.ammoData.getWheelTransformWS(this.index);
+    var trans = this.vehicle.ammoData.getWheelTransformWS(this.index);
 
-    data[this.offset + 0] = tmpTrans.getOrigin().x();
-    data[this.offset + 1] = tmpTrans.getOrigin().y();
-    data[this.offset + 2] = tmpTrans.getOrigin().z();
-    data[this.offset + 3] = tmpTrans.getRotation().x();
-    data[this.offset + 4] = tmpTrans.getRotation().y();
-    data[this.offset + 5] = tmpTrans.getRotation().z();
-    data[this.offset + 6] = tmpTrans.getRotation().w();
+    data[this.offset + 0] = trans.getOrigin().x();
+    data[this.offset + 1] = trans.getOrigin().y();
+    data[this.offset + 2] = trans.getOrigin().z();
+    data[this.offset + 3] = trans.getRotation().x();
+    data[this.offset + 4] = trans.getRotation().y();
+    data[this.offset + 5] = trans.getRotation().z();
+    data[this.offset + 6] = trans.getRotation().w();
   };
 
   return Wheel;
