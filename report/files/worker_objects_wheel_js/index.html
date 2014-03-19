@@ -45,11 +45,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
-      <p class="stat">69.33</p>
+      <p class="stat">69.55</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
-      <p class="stat">26</p>
+      <p class="stat">24</p>
     </div>
   </div>
   <div class="row historical">
@@ -63,7 +63,7 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
-      <p class="stat">13.33</p>
+      <p class="stat">13.18</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
@@ -92,8 +92,6 @@
   <div class="row">
     <textarea id="file-source" class="col-md-12">/* jshint unused:vars */
 define([ &#039;worker/objects/ammo_object&#039; ], function(AmmoObject) {
-  var tmpTrans;
-
   function Wheel(id, ammoData, vehicle) {
     AmmoObject.apply(this, arguments);
     this.type = &#039;btWheelInfo&#039;;
@@ -104,15 +102,15 @@ define([ &#039;worker/objects/ammo_object&#039; ], function(AmmoObject) {
   Wheel.prototype = new AmmoObject();
 
   Wheel.prototype.update = function(data) {
-    tmpTrans = this.vehicle.ammoData.getWheelTransformWS(this.index);
+    var trans = this.vehicle.ammoData.getWheelTransformWS(this.index);
 
-    data[this.offset + 0] = tmpTrans.getOrigin().x();
-    data[this.offset + 1] = tmpTrans.getOrigin().y();
-    data[this.offset + 2] = tmpTrans.getOrigin().z();
-    data[this.offset + 3] = tmpTrans.getRotation().x();
-    data[this.offset + 4] = tmpTrans.getRotation().y();
-    data[this.offset + 5] = tmpTrans.getRotation().z();
-    data[this.offset + 6] = tmpTrans.getRotation().w();
+    data[this.offset + 0] = trans.getOrigin().x();
+    data[this.offset + 1] = trans.getOrigin().y();
+    data[this.offset + 2] = trans.getOrigin().z();
+    data[this.offset + 3] = trans.getRotation().x();
+    data[this.offset + 4] = trans.getRotation().y();
+    data[this.offset + 5] = trans.getRotation().z();
+    data[this.offset + 6] = trans.getRotation().w();
   };
 
   return Wheel;

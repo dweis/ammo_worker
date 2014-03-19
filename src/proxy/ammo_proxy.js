@@ -574,6 +574,36 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     console.warn('Asked for non-existent ghost object with ID: ' + ghostObjectId);
   };
 
+  AmmoProxy.prototype.setUserData = function(key, value) {
+    this.execute('AmmoProxy_setUserData', { key: key, value: value });
+  };
+
+  AmmoProxy.prototype.runOnce = function(fn) {
+    if (typeof fn !== 'function') {
+      return console.error('fn is not a function!');
+    }
+
+    this.execute('AmmoProxy_runOnce', fn.toString());
+  };
+
+  AmmoProxy.prototype.runInPostUpdate = function(fn) {
+    if (typeof fn !== 'function') {
+      return console.error('fn is not a function!');
+    }
+
+    var deferred = when.defer();
+
+    this
+      .execute('AmmoProxy_runInPostUpdate', fn.toString(), true)
+      .then(_.bind(function(fnId) {
+        setTimeout(function() {
+          deferred.resolve(fnId);
+        }, 0);
+      },this));
+
+    return deferred.promise;
+  };
+
   _.extend(AmmoProxy.prototype, Events);
 
   return AmmoProxy;

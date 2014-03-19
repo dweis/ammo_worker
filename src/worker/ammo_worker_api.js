@@ -1,4 +1,6 @@
+/* jshint evil: true */
 define([ 'underscore',
+         'worker/user_functions',
          'worker/mixins/collision_object',
          'worker/mixins/constraint',
          'worker/mixins/dynamics_world',
@@ -8,6 +10,7 @@ define([ 'underscore',
          'worker/mixins/shapes',
          'worker/mixins/vehicle' ],
     function(_,
+          UserFunctions,
           CollisionObjectMixin,
           ConstraintMixin,
           DynamicsWorldMixin,
@@ -82,6 +85,8 @@ define([ 'underscore',
         new ArrayBuffer(bufferSize),
         //new ArrayBuffer(bufferSize)
       ];
+
+      this.userFunctions = new UserFunctions(this);
 
       this.ids = _.range(0, MAX_TRANSFORMS);
 
@@ -214,6 +219,7 @@ define([ 'underscore',
 
         this.doStepAddContacts();
         this.doStepRemoveContacts();
+        this.userFunctions.postUpdate(delta);
 
         self.postMessage({ command: 'update', data: update.buffer }, [update.buffer]);
       }
@@ -305,6 +311,20 @@ define([ 'underscore',
           this.aabbCallback);
 
       fn(this.aabbCallback.bodies);
+    },
+
+    AmmoProxy_setUserData: function(descriptor) {
+      this.userFunctions[descriptor.key] = descriptor.value;
+    },
+
+    AmmoProxy_runOnce: function(userFn) {
+      userFn = eval('(' + userFn + ')');
+      this.userFunctions.runOnce(userFn);
+    },
+
+    AmmoProxy_runInPostUpdate: function(userFn, fn) {
+      userFn = eval('(' + userFn + ')');
+      fn(this.userFunctions.runInPostUpdate(userFn));
     },
 
     trigger: function() {

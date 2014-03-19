@@ -45,11 +45,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
-      <p class="stat">63.72</p>
+      <p class="stat">65.04</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
-      <p class="stat">332</p>
+      <p class="stat">352</p>
     </div>
   </div>
   <div class="row historical">
@@ -63,11 +63,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
-      <p class="stat">59.15</p>
+      <p class="stat">57.10</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
-      <p class="stat">3.58</p>
+      <p class="stat">3.72</p>
     </div>
   </div>
 </div>
@@ -90,7 +90,9 @@
 
 <div class="container">
   <div class="row">
-    <textarea id="file-source" class="col-md-12">define([ &#039;underscore&#039;,
+    <textarea id="file-source" class="col-md-12">/* jshint evil: true */
+define([ &#039;underscore&#039;,
+         &#039;worker/user_functions&#039;,
          &#039;worker/mixins/collision_object&#039;,
          &#039;worker/mixins/constraint&#039;,
          &#039;worker/mixins/dynamics_world&#039;,
@@ -100,6 +102,7 @@
          &#039;worker/mixins/shapes&#039;,
          &#039;worker/mixins/vehicle&#039; ],
     function(_,
+          UserFunctions,
           CollisionObjectMixin,
           ConstraintMixin,
           DynamicsWorldMixin,
@@ -110,7 +113,7 @@
           VehicleMixin) {
   &quot;use strict&quot;;
 
-  var MAX_TRANSFORMS = 1000;
+  var MAX_TRANSFORMS = 4000;
 
   var tmpVec = [
     new Ammo.btVector3(),
@@ -172,8 +175,10 @@
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
-        new ArrayBuffer(bufferSize)
+        //new ArrayBuffer(bufferSize)
       ];
+
+      this.userFunctions = new UserFunctions(this);
 
       this.ids = _.range(0, MAX_TRANSFORMS);
 
@@ -241,13 +246,10 @@
               object1 = this.objects[body1.userData.id];
               object2 = this.objects[body2.userData.id];
 
-              if (!object1.collisions[object2.id] ||
-                  !object2.collisions[object1.id]) {
+              if ((object1 &amp;&amp; !object1.collisions[object2.id]) ||
+                  (object2 &amp;&amp; !object2.collisions[object1.id])) {
                 self.postMessage({ command: &#039;event&#039;, arguments: [
-                    &#039;begin_contact&#039;, {
-                      objectA: { type: object1.type, id: object1.id },
-                      objectB: { type: object2.type, id: object2.id }
-                    }
+                    &#039;begin_contact&#039;, object1.id, object2.id
                   ]
                 });
               }
@@ -271,16 +273,20 @@
             if (object1.collisions[j] !== this.frames) {
               object2 = this.objects[j];
 
-              delete object1.collisions[j];
-              delete object2.collisions[i];
+              if (object1) {
+                delete object1.collisions[j];
+              }
 
-              self.postMessage({ command: &#039;event&#039;, arguments: [
-                  &#039;end_contact&#039;, {
-                    objectA: { type: object1.type, id: object1.id },
-                    objectB: { type: object2.type, id: object2.id }
-                  }
-                ]
-              });
+              if (object2) {
+                delete object2.collisions[i];
+              }
+
+              if (object1 &amp;&amp; object2) {
+                self.postMessage({ command: &#039;event&#039;, arguments: [
+                    &#039;end_contact&#039;, object1.id, object2.id
+                  ]
+                });
+              }
             }
           }
         }
@@ -305,6 +311,7 @@
 
         this.doStepAddContacts();
         this.doStepRemoveContacts();
+        this.userFunctions.postUpdate(delta);
 
         self.postMessage({ command: &#039;update&#039;, data: update.buffer }, [update.buffer]);
       }
@@ -396,6 +403,20 @@
           this.aabbCallback);
 
       fn(this.aabbCallback.bodies);
+    },
+
+    AmmoProxy_setUserData: function(descriptor) {
+      this.userFunctions[descriptor.key] = descriptor.value;
+    },
+
+    AmmoProxy_runOnce: function(userFn) {
+      userFn = eval(&#039;(&#039; + userFn + &#039;)&#039;);
+      this.userFunctions.runOnce(userFn);
+    },
+
+    AmmoProxy_runInPostUpdate: function(userFn, fn) {
+      userFn = eval(&#039;(&#039; + userFn + &#039;)&#039;);
+      fn(this.userFunctions.runInPostUpdate(userFn));
     },
 
     trigger: function() {
