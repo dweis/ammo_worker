@@ -3,6 +3,8 @@ define([ 'worker/objects/conetwist_constraint', 'worker/objects/point2point_cons
     function(ConeTwistConstraint, Point2PointConstraint, DOF6Constraint, HingeConstraint, SliderConstraint ) {
   var tmpVec = [
     new Ammo.btVector3(),
+    new Ammo.btVector3(),
+    new Ammo.btVector3(),
     new Ammo.btVector3()
   ];
 

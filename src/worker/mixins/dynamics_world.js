@@ -89,13 +89,10 @@ define([], function() {
     },
 
     DynamicsWorld_addCollisionObject: function(descriptor) {
-      console.log('adding collisionObject: ' + JSON.stringify(descriptor));
-      var collisionObject = this.collisionObjects[descriptor.collisionObjectId];
+      var collisionObject = this.objects[descriptor.collisionObjectId];
 
       if (collisionObject) {
-        console.log('before');
-        this.dynamicsWorld.addCollisionObject(collisionObject, descriptor.group, descriptor.mask);
-        console.log('after');
+        this.dynamicsWorld.addCollisionObject(collisionObject.ammoData, descriptor.group, descriptor.mask);
       }
     }
   };

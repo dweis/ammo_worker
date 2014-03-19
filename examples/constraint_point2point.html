@@ -43,7 +43,7 @@
           last = body;
         }.bind(this));
 
-        this.proxy.createPoint2PointConstraint(this.bodies[0], 
+        this.proxy.createPoint2PointConstraint(this.bodies[0],
             this.bodies[this.bodies.length - 1],
             { x: 0, y: -2, z: 0 },
             { x: 0, y: 2, z: 0 });

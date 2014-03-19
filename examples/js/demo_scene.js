@@ -1,3 +1,25 @@
+/*
+░░░░░░░░░▄░░░░░░░░░░░░░░▄░░░░
+░░░░░░░░▌▒█░░░░░░░░░░░▄▀▒▌░░░
+░░░░░░░░▌▒▒█░░░░░░░░▄▀▒▒▒▐░░░
+░░░░░░░▐▄▀▒▒▀▀▀▀▄▄▄▀▒▒▒▒▒▐░░░
+░░░░░▄▄▀▒░▒▒▒▒▒▒▒▒▒█▒▒▄█▒▐░░░
+░░░▄▀▒▒▒░░░▒▒▒░░░▒▒▒▀██▀▒▌░░░
+░░▐▒▒▒▄▄▒▒▒▒░░░▒▒▒▒▒▒▒▀▄▒▒▌░░
+░░▌░░▌█▀▒▒▒▒▒▄▀█▄▒▒▒▒▒▒▒█▒▐░░
+░▐░░░▒▒▒▒▒▒▒▒▌██▀▒▒░░░▒▒▒▀▄▌░
+░▌░▒▄██▄▒▒▒▒▒▒▒▒▒░░░░░░▒▒▒▒▌░
+▀▒▀▐▄█▄█▌▄░▀▒▒░░░░░░░░░░▒▒▒▐░
+▐▒▒▐▀▐▀▒░▄▄▒▄▒▒▒▒▒▒░▒░▒░▒▒▒▒▌
+▐▒▒▒▀▀▄▄▒▒▒▄▒▒▒▒▒▒▒▒░▒░▒░▒▒▐░
+░▌▒▒▒▒▒▒▀▀▀▒▒▒▒▒▒░▒░▒░▒░▒▒▒▌░
+░▐▒▒▒▒▒▒▒▒▒▒▒▒▒▒░▒░▒░▒▒▄▒▒▐░░
+░░▀▄▒▒▒▒▒▒▒▒▒▒▒░▒░▒░▒▄▒▒▒▒▌░░
+░░░░▀▄▒▒▒▒▒▒▒▒▒▒▄▄▄▀▒▒▒▒▄▀░░░
+░░░░░░▀▄▄▄▄▄▄▀▀▀▒▒▒▒▒▄▄▀░░░░░
+░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▀▀░░░░░░░░
+*/
+
 var DemoScene = function() {
   var div = document.createElement('div');
   div.id = 'physics-stats';
@@ -71,7 +93,7 @@ DemoScene.prototype._initScene = function() {
   // and a scene
   var renderer = this.renderer = new THREE.WebGLRenderer();
   renderer.shadowMapEnabled = true;
-  renderer.shadowMapSoft = true;
+  renderer.shadowMapSoft = false;
   renderer.shadowMapType = THREE.PCFSoftShadowMap;
 
   renderer.physicallyBasedShading = true;
@@ -93,7 +115,7 @@ DemoScene.prototype._initScene = function() {
   container.appendChild(renderer.domElement);
 
   var groundMaterial = new THREE.MeshLambertMaterial({
-    color: 0x666666
+    color: 0x999999
   });
 
   var ground = new THREE.Mesh(new THREE.BoxGeometry(1000,0.01,1000, 1, 1, 1),groundMaterial);
@@ -106,16 +128,17 @@ DemoScene.prototype._initScene = function() {
   /*
   this.proxy.createCollisionObjectFromObject(ground, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'})
     .then(_.bind(function(collisionObject) {
-      collisionObject.setFriction(0.5);
+      //collisionObject.setFriction(0.5);
       collisionObject.addToWorld(1,255);
       this.groundBody = collisionObject;
     }, this));
-  */
+    */
 
   this.proxy.adapter.createRigidBodyFromObject(ground, 1000000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'})
     .then(_.bind(function(rigidBody) {
       rigidBody.setType('static');
       rigidBody.setFriction(0.5);
+      rigidBody.setRestitution(0.8);
       rigidBody.addToWorld(1,255);
 
       this.groundBody = rigidBody;
@@ -127,7 +150,7 @@ DemoScene.prototype._initScene = function() {
   light.position.set( 100, 200, 0 );
   light.target.position.copy( scene.position );
   light.castShadow = true;
-  light.shadowCameraNear = 10;
+  light.shadowCameraNear = 100;
   light.shadowCameraFar = 500;
   light.shadowMapHeight = 2048;
   light.shadowMapWidth = 2048;

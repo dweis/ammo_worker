@@ -22,93 +22,83 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     opts.gravity = opts.gravity || { x: 0, y: -9.82, z: 0};
     opts.iterations = opts.iterations || 10;
     opts.step = opts.step || 1/60;
-    opts.maxBodies = opts.maxBodies || 1000;
-    opts.maxVehicles = opts.maxVehicles || 32;
-    opts.maxWheelsPerVehicle = opts.maxWheelsPerVehicle || 8;
-    opts.maxKinematicCharacterControllers = opts.maxKinematicCharacterControllers || 16;
-    opts.maxGhostObjects = opts.maxGhostObjects || 500;
 
-    var bodies = this.bodies = [];
-    var constraints = this.constraints = [];
-    var vehicles = this.vehicles = [];
-    var ghosts = this.ghosts = [];
-    var kinematicCharacterControllers = this.kinematicCharacterControllers = [];
-    var collisionObjects = this.collisionObjects = [];
+    var objects = this.objects = new Array(4000);
 
     this.adapter = new THREEAdapter(this);
 
     this.on('GhostObject_destroy', function(id) {
-      if (ghosts[id]) {
-        ghosts[id].trigger('destroy');
-        ghosts[id] = undefined;
+      if (objects[id]) {
+        objects[id].trigger('destroy');
+        objects[id] = undefined;
       }
     });
 
     this.on('RigidBody_destroy', function(id) {
-      if (bodies[id]) {
-        bodies[id].trigger('destroy');
-        bodies[id] = undefined;
+      if (objects[id]) {
+        objects[id].trigger('destroy');
+        objects[id] = undefined;
       }
     });
 
     this.on('Vehicle_destroy', function(id) {
-      if (vehicles[id]) {
-        vehicles[id].trigger('destroy');
-        vehicles[id] = undefined;
+      if (objects[id]) {
+        objects[id].trigger('destroy');
+        objects[id] = undefined;
       }
     });
 
     this.on('Constraint_destroy', function(id) {
-      if (constraints[id]) {
-        constraints[id].trigger('destroy');
-        constraints[id] = undefined;
+      if (objects[id]) {
+        objects[id].trigger('destroy');
+        objects[id] = undefined;
       }
     });
 
     this.on('KinematicCharacterController_destroy', function(id) {
-      if (kinematicCharacterControllers[id]) {
-        kinematicCharacterControllers[id].destroy();
-        kinematicCharacterControllers[id] = undefined;
+      if (objects[id]) {
+        objects[id].destroy();
+        objects[id] = undefined;
       }
     });
 
     this.on('CollisionObject_destroy', function(id) {
-      if (collisionObjects[id]) {
-        collisionObjects[id].destroy();
-        collisionObjects[id] = undefined;
+      if (objects[id]) {
+        objects[id].destroy();
+        objects[id] = undefined;
       }
     });
-
-    this.on('begin_contact', _.bind(function(descriptor) {
-      var objA = this.getObjectByDescriptor(descriptor.objectA),
-          objB = this.getObjectByDescriptor(descriptor.objectB);
-
-      if (objA) {
-        objA.trigger('begin_contact', objB, objA);
-      }
-
-      if (objB) {
-        objB.trigger('begin_contact', objA, objB);
-      }
-    }, this));
-
-    this.on('end_contact', _.bind(function(descriptor) {
-      var objA = this.getObjectByDescriptor(descriptor.objectA),
-          objB = this.getObjectByDescriptor(descriptor.objectB);
-
-      if (objA) {
-        objA.trigger('end_contact', objB, objA);
-      }
-
-      if (objB) {
-        objB.trigger('end_contact', objA, objB);
-      }
-    }, this));
 
     this.setStep(opts.step);
     this.setIterations(opts.iterations);
     this.setGravity(opts.gravity);
   }
+
+  AmmoProxy.prototype.beginContact = function(idA, idB) {
+    var objA = this.objects[idA],
+        objB = this.objects[idB];
+
+    if (objA) {
+      objA.trigger('begin_contact', objB, objA);
+    }
+
+    if (objB) {
+      objB.trigger('begin_contact', objA, objB);
+    }
+  };
+
+  AmmoProxy.prototype.endContact = function(idA, idB) {
+    var objA = this.objects[idA],
+        objB = this.objects[idB];
+
+    if (objA) {
+      objA.trigger('end_contact', objB, objA);
+    }
+
+    if (objB) {
+      objB.trigger('end_contact', objA, objB);
+    }
+  };
 
   AmmoProxy.prototype.onCommand = function(command) {
     if (command.data.command === 'console') {
@@ -120,7 +110,14 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
         console[method].apply(console, command.data.arguments[1]);
       }
     } else if (command.data.command === 'event') {
-      this.trigger.apply(this, command.data.arguments);
+      switch(command.data.arguments[0]) {
+      case 'begin_contact':
+        return this.beginContact(command.data.arguments[1], command.data.arguments[2]);
+      case 'end_contact':
+        return this.endContact(command.data.arguments[1], command.data.arguments[2]);
+      default:
+        return this.trigger.apply(this, command.data.arguments);
+      }
     } else if (command.data.command === 'response') {
       this.promises[command.data.reqId].resolve(command.data.descriptor);
       delete this.promises[command.data.reqId];
@@ -173,25 +170,6 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     }
     var url = window.URL.createObjectURL(blob);
     this.worker = new Worker(url);
-  };
-
-  AmmoProxy.prototype.getObjectByDescriptor = function(descriptor) {
-    switch (descriptor.type) {
-    case 'btRigidBody':
-      return this.bodies[descriptor.id];
-
-    case 'btGhostObject':
-      return this.ghosts[descriptor.id];
-
-    case 'btKinematicCharacterController':
-      return this.kinematicCharacterControllers[descriptor.id];
-
-    case 'btRaycastVehicle':
-      return this.vehicles[descriptor.id];
-
-    default:
-      return console.error('unknown type: ', descriptor.type);
-    }
   };
 
   AmmoProxy.prototype.execute = function(method, descriptor, promise) {
@@ -258,7 +236,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       var proxy = this;
       setTimeout(function() {
         var vehicle = new AmmoVehicle(proxy, vehicleId, rigidBody);
-        proxy.vehicles[vehicleId] = vehicle;
+        proxy.objects[vehicleId] = vehicle;
         deferred.resolve(vehicle);
       }, 0);
     }, this));
@@ -278,7 +256,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       var proxy = this;
       setTimeout(function() {
         var ghost = new AmmoGhostObject(proxy, ghostId);
-        proxy.ghosts[ghostId] = ghost;
+        proxy.objects[ghostId] = ghost;
         deferred.resolve(ghost);
       }, 0);
     }, this));
@@ -298,7 +276,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       var proxy = this;
       setTimeout(function() {
         var collisionObject = new AmmoCollisionObject(proxy, collisionObjectId);
-        proxy.collisionObjects[collisionObjectId] = collisionObject;
+        proxy.objects[collisionObjectId] = collisionObject;
         deferred.resolve(collisionObject);
       }, 0);
     }, this));
@@ -319,7 +297,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       var proxy = this;
       setTimeout(function() {
         var controller = new AmmoKinematicCharacterController(proxy, kinematicCharacterControllerId);
-        proxy.kinematicCharacterControllers[kinematicCharacterControllerId] = controller;
+        proxy.objects[kinematicCharacterControllerId] = controller;
         deferred.resolve(controller);
       }, 0);
     }, this));
@@ -340,7 +318,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       var proxy = this;
       setTimeout(function() {
         var body = new AmmoRigidBody(proxy, bodyId);
-        proxy.bodies[bodyId] = body;
+        proxy.objects[bodyId] = body;
         deferred.resolve(body);
       }, 0);
     }, this));
@@ -367,7 +345,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       var proxy = this;
       setTimeout(function() {
         var constraint = new AmmoPoint2PointConstraint(proxy, constraintId);
-        proxy.constraints[constraintId] = constraint;
+        proxy.objects[constraintId] = constraint;
         deferred.resolve(constraint);
       }, 0);
     },this));
@@ -412,7 +390,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       var proxy = this;
       setTimeout(function() {
         var constraint = new AmmoSliderConstraint(proxy, constraintId);
-        proxy.constraints[constraintId] = constraint;
+        proxy.objects[constraintId] = constraint;
         deferred.resolve(constraint);
       }, 0);
     },this));
@@ -458,7 +436,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       var proxy = this;
       setTimeout(function() {
         var constraint = new AmmoConeTwistConstraint(proxy, constraintId);
-        proxy.constraints[constraintId] = constraint;
+        proxy.objects[constraintId] = constraint;
         deferred.resolve(constraint);
       }, 0);
     },this));
@@ -503,7 +481,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       var proxy = this;
       setTimeout(function() {
         var constraint = new AmmoConeTwistConstraint(proxy, constraintId);
-        proxy.constraints[constraintId] = constraint;
+        proxy.objects[constraintId] = constraint;
         deferred.resolve(constraint);
       }, 0);
     },this));
@@ -526,7 +504,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       var proxy = this;
       setTimeout(function() {
         var constraint = new AmmoHingeConstraint(proxy, constraintId);
-        proxy.constraints[constraintId] = constraint;
+        proxy.objects[constraintId] = constraint;
         deferred.resolve(constraint);
       }, 0);
     },this));
