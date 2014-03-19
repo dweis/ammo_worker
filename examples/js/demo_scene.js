@@ -1,3 +1,25 @@
+/*
+░░░░░░░░░▄░░░░░░░░░░░░░░▄░░░░
+░░░░░░░░▌▒█░░░░░░░░░░░▄▀▒▌░░░
+░░░░░░░░▌▒▒█░░░░░░░░▄▀▒▒▒▐░░░
+░░░░░░░▐▄▀▒▒▀▀▀▀▄▄▄▀▒▒▒▒▒▐░░░
+░░░░░▄▄▀▒░▒▒▒▒▒▒▒▒▒█▒▒▄█▒▐░░░
+░░░▄▀▒▒▒░░░▒▒▒░░░▒▒▒▀██▀▒▌░░░
+░░▐▒▒▒▄▄▒▒▒▒░░░▒▒▒▒▒▒▒▀▄▒▒▌░░
+░░▌░░▌█▀▒▒▒▒▒▄▀█▄▒▒▒▒▒▒▒█▒▐░░
+░▐░░░▒▒▒▒▒▒▒▒▌██▀▒▒░░░▒▒▒▀▄▌░
+░▌░▒▄██▄▒▒▒▒▒▒▒▒▒░░░░░░▒▒▒▒▌░
+▀▒▀▐▄█▄█▌▄░▀▒▒░░░░░░░░░░▒▒▒▐░
+▐▒▒▐▀▐▀▒░▄▄▒▄▒▒▒▒▒▒░▒░▒░▒▒▒▒▌
+▐▒▒▒▀▀▄▄▒▒▒▄▒▒▒▒▒▒▒▒░▒░▒░▒▒▐░
+░▌▒▒▒▒▒▒▀▀▀▒▒▒▒▒▒░▒░▒░▒░▒▒▒▌░
+░▐▒▒▒▒▒▒▒▒▒▒▒▒▒▒░▒░▒░▒▒▄▒▒▐░░
+░░▀▄▒▒▒▒▒▒▒▒▒▒▒░▒░▒░▒▄▒▒▒▒▌░░
+░░░░▀▄▒▒▒▒▒▒▒▒▒▒▄▄▄▀▒▒▒▒▄▀░░░
+░░░░░░▀▄▄▄▄▄▄▀▀▀▒▒▒▒▒▄▄▀░░░░░
+░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▀▀░░░░░░░░
+*/
+
 var DemoScene = function() {
   var div = document.createElement('div');
   div.id = 'physics-stats';
@@ -71,7 +93,7 @@ DemoScene.prototype._initScene = function() {
   // and a scene
   var renderer = this.renderer = new THREE.WebGLRenderer();
   renderer.shadowMapEnabled = true;
-  renderer.shadowMapSoft = true;
+  renderer.shadowMapSoft = false;
   renderer.shadowMapType = THREE.PCFSoftShadowMap;
 
   renderer.physicallyBasedShading = true;
@@ -128,7 +150,7 @@ DemoScene.prototype._initScene = function() {
   light.position.set( 100, 200, 0 );
   light.target.position.copy( scene.position );
   light.castShadow = true;
-  light.shadowCameraNear = 10;
+  light.shadowCameraNear = 100;
   light.shadowCameraFar = 500;
   light.shadowMapHeight = 2048;
   light.shadowMapWidth = 2048;

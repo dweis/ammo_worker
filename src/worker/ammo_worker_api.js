@@ -152,10 +152,7 @@ define([ 'underscore',
               if (!object1.collisions[object2.id] ||
                   !object2.collisions[object1.id]) {
                 self.postMessage({ command: 'event', arguments: [
-                    'begin_contact', {
-                      objectA: { type: object1.type, id: object1.id },
-                      objectB: { type: object2.type, id: object2.id }
-                    }
+                    'begin_contact', object1.id, object2.id
                   ]
                 });
               }
@@ -183,10 +180,7 @@ define([ 'underscore',
               delete object2.collisions[i];
 
               self.postMessage({ command: 'event', arguments: [
-                  'end_contact', {
-                    objectA: { type: object1.type, id: object1.id },
-                    objectB: { type: object2.type, id: object2.id }
-                  }
+                  'end_contact', object1.id, object2.id
                 ]
               });
             }
