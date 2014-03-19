@@ -149,8 +149,8 @@ define([ 'underscore',
               object1 = this.objects[body1.userData.id];
               object2 = this.objects[body2.userData.id];
 
-              if (!object1.collisions[object2.id] ||
-                  !object2.collisions[object1.id]) {
+              if ((object1 && !object1.collisions[object2.id]) ||
+                  (object2 && !object2.collisions[object1.id])) {
                 self.postMessage({ command: 'event', arguments: [
                     'begin_contact', object1.id, object2.id
                   ]
@@ -176,13 +176,20 @@ define([ 'underscore',
             if (object1.collisions[j] !== this.frames) {
               object2 = this.objects[j];
 
-              delete object1.collisions[j];
-              delete object2.collisions[i];
+              if (object1) {
+                delete object1.collisions[j];
+              }
 
-              self.postMessage({ command: 'event', arguments: [
-                  'end_contact', object1.id, object2.id
-                ]
-              });
+              if (object2) {
+                delete object2.collisions[i];
+              }
+
+              if (object1 && object2) {
+                self.postMessage({ command: 'event', arguments: [
+                    'end_contact', object1.id, object2.id
+                  ]
+                });
+              }
             }
           }
         }
