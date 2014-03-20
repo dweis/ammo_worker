@@ -84,14 +84,11 @@
 
       this.proxy.createGhostObjectFromObject(o, { shape: 'box', halfExtents: { x: 4, y: 1, z: 4 } }).then(function(ghost) {
             ghost.addToWorld();
-        ghost.on('ghost_enter', function() {
-          console.log('ghost_in');
+        ghost.on('begin_contact', function() {
+          console.log('begin_contact');
         });
-        ghost.on('ghost_exit', function() {
-          console.log('ghost_out');
-        });
-        ghost.on('ghost_exit', function() {
-          console.log('bye bye!');
+        ghost.on('end_contact', function() {
+          console.log('end_contact');
         });
         this.ghost = ghost;
       }.bind(this))

@@ -586,7 +586,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     this.execute('AmmoProxy_runOnce', fn.toString());
   };
 
-  AmmoProxy.prototype.runInPostUpdate = function(fn) {
+  AmmoProxy.prototype.runPostStep = function(fn) {
     if (typeof fn !== 'function') {
       return console.error('fn is not a function!');
     }
@@ -594,7 +594,25 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     var deferred = when.defer();
 
     this
-      .execute('AmmoProxy_runInPostUpdate', fn.toString(), true)
+      .execute('AmmoProxy_runPostStep', fn.toString(), true)
+      .then(_.bind(function(fnId) {
+        setTimeout(function() {
+          deferred.resolve(fnId);
+        }, 0);
+      },this));
+
+    return deferred.promise;
+  };
+
+  AmmoProxy.prototype.runPreStep = function(fn) {
+    if (typeof fn !== 'function') {
+      return console.error('fn is not a function!');
+    }
+
+    var deferred = when.defer();
+
+    this
+      .execute('AmmoProxy_runPreStep', fn.toString(), true)
       .then(_.bind(function(fnId) {
         setTimeout(function() {
           deferred.resolve(fnId);

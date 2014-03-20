@@ -34,18 +34,6 @@
             ghost.addToWorld();
 
 
-            /*
-        ghost.on('ghost_enter', function() {
-          console.log('ghost_in');
-        });
-        ghost.on('ghost_exit', function() {
-          console.log('ghost_out');
-        });
-        ghost.on('ghost_exit', function() {
-          console.log('bye bye!');
-        });
-        */
-
         ghost.on('begin_contact', function() {
           console.log('begin contact', arguments);
         });

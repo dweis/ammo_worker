@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Performance Test</title>
+  <title>User Functions Test</title>
   <style>
   html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
   </style>
@@ -45,10 +45,14 @@
 
         this.proxy.runOnce(function() {
           this.tmpVec = new Ammo.btVector3();
+          this.tmpVec2 = new Ammo.btVector3();
+          this.tmpTrans = new Ammo.btTransform();
+          this.tmpTrans2 = new Ammo.btTransform();
+          this.tmpQuaternion = new Ammo.btQuaternion();
         });
 
-        this.proxy.runInPostUpdate(function(delta) {
-          var object;
+        this.proxy.runPostStep(function(delta) {
+          var object, object2;
 
           if (!this.bodyIds) {
             return;
@@ -57,9 +61,22 @@
           for (var i = 0; i < this.bodyIds.length; i++) {
             object = this.worker.objects[this.bodyIds[i]];
 
+            object2 = this.worker.objects[this.bodyIds[i+0]] || 
+                this.worker.objects[this.bodyIds[0]];
+
             if (object) {
-              this.tmpVec.setX(0);
-              this.tmpVec.setY(Math.random() * 2500 * delta);
+              this.tmpTrans.setIdentity();
+              this.tmpTrans2.setIdentity();
+
+              object.ammoData.getMotionState().getWorldTransform(this.tmpTrans);
+              object2.ammoData.getMotionState().getWorldTransform(this.tmpTrans2);
+              this.tmpVec = this.tmpTrans.getOrigin();
+              this.tmpVec2 = this.tmpTrans2.getOrigin();
+
+              this.tmpVec.setX(this.tmpTrans.getOrigin().x() * -10 * delta);
+              this.tmpVec.setY(this.tmpTrans.getOrigin().y() * 100 * delta);
+              this.tmpVec.setZ(this.tmpTrans.getOrigin().z() * -10 * delta);
+
               object.ammoData.applyCentralForce(this.tmpVec);
             }
           }

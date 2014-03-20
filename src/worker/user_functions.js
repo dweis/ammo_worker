@@ -2,7 +2,8 @@ define([], function() {
   function UserFunctions(worker) {
     this.worker = worker;
 
-    this.postUpdateFunctions = [];
+    this.preStepFunctions = [];
+    this.postStepFunctions = [];
   }
 
   UserFunctions.prototype = {};
@@ -11,14 +12,25 @@ define([], function() {
     fn.apply(this);
   };
 
-  UserFunctions.prototype.runInPostUpdate = function(fn) {
-    var id = this.postUpdateFunctions.push(fn);
+  UserFunctions.prototype.runPreStep = function(fn) {
+    var id = this.preStepFunctions.push(fn);
     return id;
   };
 
-  UserFunctions.prototype.postUpdate = function(delta) {
-    for (var i = 0; i < this.postUpdateFunctions.length; i++) {
-      this.postUpdateFunctions[i].call(this, delta);
+  UserFunctions.prototype.runPostStep = function(fn) {
+    var id = this.postStepFunctions.push(fn);
+    return id;
+  };
+
+  UserFunctions.prototype.preStep = function(delta) {
+    for (var i = 0; i < this.preStepFunctions.length; i++) {
+      this.preStepFunctions[i].call(this, delta);
+    }
+  };
+
+  UserFunctions.prototype.postStep = function(delta) {
+    for (var i = 0; i < this.postStepFunctions.length; i++) {
+      this.postStepFunctions[i].call(this, delta);
     }
   };
 

@@ -205,6 +205,7 @@ define([ 'underscore',
     doStep: function(delta) {
       var that = this, update, i;
 
+      this.userFunctions.preStep(delta);
       that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);
 
       if (that.buffers.length > 0) {
@@ -217,13 +218,13 @@ define([ 'underscore',
             that.objects[i].update(update);
           }
         }
-
         this.doStepAddContacts();
         this.doStepRemoveContacts();
-        this.userFunctions.postUpdate(delta);
 
         self.postMessage({ command: 'update', data: update.buffer }, [update.buffer]);
       }
+
+      this.userFunctions.postStep(delta);
     },
 
     startSimulation: function() {
@@ -323,9 +324,14 @@ define([ 'underscore',
       this.userFunctions.runOnce(userFn);
     },
 
-    AmmoProxy_runInPostUpdate: function(userFn, fn) {
+    AmmoProxy_runPreStep: function(userFn, fn) {
       userFn = eval('(' + userFn + ')');
-      fn(this.userFunctions.runInPostUpdate(userFn));
+      fn(this.userFunctions.runPreStep(userFn));
+    },
+
+    AmmoProxy_runPostStep: function(userFn, fn) {
+      userFn = eval('(' + userFn + ')');
+      fn(this.userFunctions.runPostStep(userFn));
     },
 
     trigger: function() {
