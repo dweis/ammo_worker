@@ -83,7 +83,8 @@ define([ 'underscore',
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
-        //new ArrayBuffer(bufferSize)
+        new ArrayBuffer(bufferSize),
+        new ArrayBuffer(bufferSize)
       ];
 
       this.userFunctions = new UserFunctions(this);

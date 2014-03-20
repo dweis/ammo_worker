@@ -1,5 +1,5 @@
 define([ 'worker/constants/collision_flags', 'worker/objects/ghost_object' ],
-    function(GhostObject, CollisionFlags) {
+    function(CollisionFlags, GhostObject) {
   var tmpVec = [
       new Ammo.btVector3()
     ],
