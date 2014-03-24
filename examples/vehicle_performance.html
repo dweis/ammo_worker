@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Vehicle Test</title>
+  <style>
+  html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
+  </style>
+</head>
+<body>
+  <div id="container">
+  </div>
+  <script src="js/three.js"></script>
+  <script src="js/stats.min.js"></script>
+  <script src="js/OrbitControls.js"></script>
+  <script src="../build/ammo_proxy.js"></script>
+  <script src="js/demo_scene.js"></script>
+  <script>
+    var NUM_VEHICLES = 40;
+
+    function updateWheels() {
+      for (var i = 0; i < 4; i++) {
+        demo.vehicle.setWheelInfo(i, {
+          frictionSlip: config.frictionSlip,
+          rollInfluence: config.rollInfluence,
+          suspensionStiffness: config.suspensionStiffness,
+          wheelsRadius: config.wheelsRadius,
+          /*
+          suspensionDamping: config.suspensionDamping,
+          suspensionCompression: config.suspensionCompression,
+          connectionHeight: config.connectionHeight,
+          */
+          suspensionRestLength1: config.suspensionRestLength,
+          maxSuspensionTravelCm: config.maxSuspensionTravelCm,
+          maxSuspensionForce: config.maxSuspensionForce,
+          wheelsDampingCompression: config.wheelsDampingCompression,
+          wheelsDampingRelaxation: config.wheelsDampingRelaxation,
+        });
+      }
+    }
+
+    var config = {
+      // Gas/brake/steering
+      maxEngineForce: 400,
+      maxBreakingForce: 100,
+      steeringClamp: 0.3,
+
+      // Per wheel config
+      wheelsRadius: 0.75,
+      wheelWidth: 0.25,
+      rollInfluence: 100,
+      connectionHeight: 0,
+      suspensionRestLength: 0.8,
+      wheelsDampingCompression: 10,
+      wheelsDampingRelaxation: 5,
+
+      // Vehicle Tuning
+      suspensionDamping: 2.3,
+      suspensionCompression: 4.4,
+      suspensionStiffness: 20,
+      // Also set on  wheels
+      maxSuspensionTravelCm: 100,
+      frictionSlip: 1000,
+      maxSuspensionForce: 8000
+    };
+
+    function VehicleTest() {
+    }
+
+    VehicleTest.prototype = new DemoScene();
+
+    VehicleTest.prototype.initDemo = function() {
+      var material = new THREE.MeshLambertMaterial({ color: 0xCC0000 });
+
+      var that = this;
+      this.vehicles = [];
+      this.cubes = [];
+
+      var tuning =  {
+        suspensionsStiffness: config.suspensionStiffness,
+        suspensionCompression: config.suspensionCompression,
+        suspensionDamping: config.suspensionDamping,
+        maxSuspensionTravelCm: config.maxSuspensionTravelCm,
+        maxSuspensionForce: config.maxSuspensionForce,
+        frictionSlip: config.frictionSlip
+      };
+
+      for (var i = 0; i < NUM_VEHICLES; i++) {
+        var c = new THREE.Object3D();
+
+        this.scene.add(c);
+
+        c.position.y = 5;
+        c.position.x = Math.sin(i) * 30;
+        c.position.z = Math.cos(i) * 30;
+
+        var c1 = new THREE.Object3D();
+
+        c1.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
+
+        c.add(c1);
+
+        var o = new THREE.Object3D();
+
+        var o1 = new THREE.Object3D();
+
+        o.add(o1);
+        o1.position.y = 0;
+        o1.position.x = 0;
+
+        o1.add(new THREE.Mesh(new THREE.BoxGeometry(2, 1, 4), material));
+
+        o.traverse(function(o) {
+          o.castShadow = true;
+        });
+
+        this.chasis = o;
+
+        this.wheels = [];
+
+        this.scene.add(o);
+
+        o.position.y = 3;
+        o.position.x = Math.sin(i) * 30;
+        o.position.z = Math.cos(i) * 30;
+
+        this.scene.updateMatrixWorld(true);
+
+        this.proxy.createRigidBodyFromObject(c, 100, { shape: 'box', halfExtents: { x: 1, y: 1, z: 1 }}).then(function(cubeObject) {
+          cubeObject.addToWorld();
+          this.cubes.push(cubeObject);
+        }.bind(this));
+
+        this.proxy.createRigidBodyFromObject(o, 1000, { shape: 'box', halfExtents: { x:1, y: 0.5, z: 2}}).then(function(rigidBody) {
+          rigidBody.addToWorld();
+          that.proxy.createVehicle(rigidBody, tuning).then(function(vehicle) {
+            var wheel, cylinder, euler = new THREE.Euler(),
+                wheelDirection = { x: 0, y: -1, z: 0 },
+                wheelAxle = { x: -1, y: 0, z: 0 };
+
+            euler.set(0, 0, Math.PI/2);
+            this.vehicles.push(vehicle);
+
+            for ( var i = 0; i < 4; i++ ) {
+              vehicle.addWheel({
+                  x: i % 2 === 0 ? -1.6 : 1.6,
+                  y: config.connectionHeight,
+                  z: i < 2 ? 2 : -2
+                },
+                wheelDirection,
+                wheelAxle,
+                config.suspensionRestLength,
+                config.wheelsRadius,
+                i < 2 ? false : true, tuning)
+              .then(function(wheelIndex) {
+                wheel = new THREE.Object3D();
+                cylinder = new THREE.Mesh(new THREE.CylinderGeometry(config.wheelsRadius,
+                    config.wheelsRadius, config.wheelsRadius/3), material);
+                cylinder.add(
+                  new THREE.Mesh(new THREE.CylinderGeometry(config.wheelsRadius * 0.5,
+                    config.wheelsRadius* 0.5, config.wheelsRadius/2), material));
+                cylinder.quaternion.setFromEuler(euler);
+                wheel.wheelIndex = wheelIndex;
+                this.wheels[wheelIndex] = wheel;
+                wheel.add(cylinder);
+
+                o.add(wheel);
+
+                vehicle.setWheelInfo(wheelIndex, {
+                  suspensionStiffness: config.suspensionStiffness,
+                  /*
+                  suspensionDamping: config.suspensionDamping,
+                  suspensionCompression: config.suspensionCompression,
+                  */
+                  frictionSlip: config.frictionSlip,
+                  rollInfluence: config.rollInfluence,
+                  maxSuspensionTravelCm: config.maxSuspensionTravelCm,
+                  maxSuspensionForce: config.maxSuspensionForce
+                });
+
+                vehicle.addWheelObject(wheelIndex, wheel);
+              }.bind(this)),
+              function(err) {
+                console.error(err);
+              }
+            }
+          }.bind(this));
+        }.bind(this));
+      }
+    };
+
+    VehicleTest.prototype.updateBody = function() {
+      if (this.vehicles && this.vehicles.length) {
+        for (var i = 0; i < this.vehicles.length; i++) {
+          this.vehicles[i].update();
+        }
+      }
+
+      if (this.cubes && this.cubes.length) {
+        for (var j = 0; j < this.cubes.length; j++) {
+          this.cubes[j].update();
+        }
+      }
+    };
+
+    VehicleTest.prototype.preUpdate = function() {
+      if (this.vehicles && this.vehicles.length) {
+        for (var j = 0; j < this.vehicles.length; j++) {
+          for (var i = 0; i < 4; i++) {
+            this.vehicles[j].setBrake(i, 0);
+            this.vehicles[j].applyEngineForce(i, config.maxEngineForce);
+
+            if (i < 2) {
+              this.vehicles[j].setSteeringValue(i, j % 2 === 0 ? config.steeringClamp : -config.steeringClamp);
+            }
+          }
+        }
+      }
+
+      this.updateBody();
+    };
+
+    var demo = new VehicleTest();
+
+    demo.init();
+  </script>
+</body>
+</html>
