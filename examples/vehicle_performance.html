@@ -125,12 +125,12 @@
 
         this.scene.updateMatrixWorld(true);
 
-        this.proxy.createRigidBodyFromObject(c, 100, { shape: 'box', halfExtents: { x: 1, y: 1, z: 1 }}).then(function(cubeObject) {
+        this.proxy.createRigidBodyFromObject(c, 100/*, { shape: 'box', halfExtents: { x: 1, y: 1, z: 1 }}*/).then(function(cubeObject) {
           cubeObject.addToWorld();
           this.cubes.push(cubeObject);
         }.bind(this));
 
-        this.proxy.createRigidBodyFromObject(o, 1000, { shape: 'box', halfExtents: { x:1, y: 0.5, z: 2}}).then(function(rigidBody) {
+        this.proxy.createRigidBodyFromObject(o, 1000/*, { shape: 'box', halfExtents: { x:1, y: 0.5, z: 2}}*/).then(function(rigidBody) {
           rigidBody.addToWorld();
           that.proxy.createVehicle(rigidBody, tuning).then(function(vehicle) {
             var wheel, cylinder, euler = new THREE.Euler(),
