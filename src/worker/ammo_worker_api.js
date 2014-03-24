@@ -1,4 +1,6 @@
+/* jshint evil: true */
 define([ 'underscore',
+         'worker/user_functions',
          'worker/mixins/collision_object',
          'worker/mixins/constraint',
          'worker/mixins/dynamics_world',
@@ -8,6 +10,7 @@ define([ 'underscore',
          'worker/mixins/shapes',
          'worker/mixins/vehicle' ],
     function(_,
+          UserFunctions,
           CollisionObjectMixin,
           ConstraintMixin,
           DynamicsWorldMixin,
@@ -80,8 +83,11 @@ define([ 'underscore',
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
-        //new ArrayBuffer(bufferSize)
+        new ArrayBuffer(bufferSize),
+        new ArrayBuffer(bufferSize)
       ];
+
+      this.userFunctions = new UserFunctions(this);
 
       this.ids = _.range(0, MAX_TRANSFORMS);
 
@@ -149,8 +155,8 @@ define([ 'underscore',
               object1 = this.objects[body1.userData.id];
               object2 = this.objects[body2.userData.id];
 
-              if (!object1.collisions[object2.id] ||
-                  !object2.collisions[object1.id]) {
+              if ((object1 && !object1.collisions[object2.id]) ||
+                  (object2 && !object2.collisions[object1.id])) {
                 self.postMessage({ command: 'event', arguments: [
                     'begin_contact', object1.id, object2.id
                   ]
@@ -176,13 +182,20 @@ define([ 'underscore',
             if (object1.collisions[j] !== this.frames) {
               object2 = this.objects[j];
 
-              delete object1.collisions[j];
-              delete object2.collisions[i];
+              if (object1) {
+                delete object1.collisions[j];
+              }
 
-              self.postMessage({ command: 'event', arguments: [
-                  'end_contact', object1.id, object2.id
-                ]
-              });
+              if (object2) {
+                delete object2.collisions[i];
+              }
+
+              if (object1 && object2) {
+                self.postMessage({ command: 'event', arguments: [
+                    'end_contact', object1.id, object2.id
+                  ]
+                });
+              }
             }
           }
         }
@@ -192,6 +205,7 @@ define([ 'underscore',
     doStep: function(delta) {
       var that = this, update, i;
 
+      this.userFunctions.preStep(delta);
       that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);
 
       if (that.buffers.length > 0) {
@@ -204,12 +218,13 @@ define([ 'underscore',
             that.objects[i].update(update);
           }
         }
-
         this.doStepAddContacts();
         this.doStepRemoveContacts();
 
         self.postMessage({ command: 'update', data: update.buffer }, [update.buffer]);
       }
+
+      this.userFunctions.postStep(delta);
     },
 
     startSimulation: function() {
@@ -298,6 +313,25 @@ define([ 'underscore',
           this.aabbCallback);
 
       fn(this.aabbCallback.bodies);
+    },
+
+    AmmoProxy_setUserData: function(descriptor) {
+      this.userFunctions[descriptor.key] = descriptor.value;
+    },
+
+    AmmoProxy_runOnce: function(userFn) {
+      userFn = eval('(' + userFn + ')');
+      this.userFunctions.runOnce(userFn);
+    },
+
+    AmmoProxy_runPreStep: function(userFn, fn) {
+      userFn = eval('(' + userFn + ')');
+      fn(this.userFunctions.runPreStep(userFn));
+    },
+
+    AmmoProxy_runPostStep: function(userFn, fn) {
+      userFn = eval('(' + userFn + ')');
+      fn(this.userFunctions.runPostStep(userFn));
     },
 
     trigger: function() {

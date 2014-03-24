@@ -50,10 +50,10 @@ define([], function() {
 
       colShape = new Ammo.btConvexHullShape();
 
-      for (var i = 0; i < shape.vertices.length/3; i+=3) {
-        tmpVec[0].setX(shape.vertices[i*3+0]);
-        tmpVec[0].setY(shape.vertices[i*3+1]);
-        tmpVec[0].setZ(shape.vertices[i*3+2]);
+      for (var i = 0; i < shape.vertices.length; i+=3) {
+        tmpVec[0].setX(shape.vertices[i+0]);
+        tmpVec[0].setY(shape.vertices[i+1]);
+        tmpVec[0].setZ(shape.vertices[i+2]);
         colShape.addPoint(tmpVec[0]);
       }
 
