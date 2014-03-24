@@ -178,6 +178,22 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
       }
     },
 
+    Vehicle_setEngineForce: function(descriptor) {
+      var vehicle = this.objects[descriptor.vehicleId],
+          wheel;
+
+      if (vehicle) {
+        //vehicle.engineForce = descriptor.force
+        //vehicle.ammoData.applyEngineForce(descriptor.force, descriptor.wheelId);
+
+        wheel = vehicle.wheels[descriptor.wheelId];
+
+        if (wheel) {
+          wheel.force = descriptor.force;
+        }
+      }
+    },
+
     Vehicle_applyEngineForce: function(descriptor) {
       var vehicle = this.objects[descriptor.vehicleId];
 

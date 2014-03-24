@@ -50,6 +50,16 @@ define([ 'when', 'underscore', './ammo_base_object' ], function(when, _, AmmoBas
     return this.proxy.execute('Vehicle_setBrake', descriptor);
   };
 
+  AmmoVehicle.prototype.setEngineForce = function(wheelId, force) {
+    var descriptor = {
+      vehicleId: this.vehicleId,
+      wheelId: wheelId,
+      force: force
+    };
+
+    return this.proxy.execute('Vehicle_setEngineForce', descriptor);
+  };
+
   AmmoVehicle.prototype.applyEngineForce = function(wheelId, force) {
     var descriptor = {
       vehicleId: this.vehicleId,
