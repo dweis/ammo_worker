@@ -22,7 +22,7 @@ define([ 'worker/objects/conetwist_constraint', 'worker/objects/point2point_cons
         this.dynamicsWorld.removeConstraint(constraint.ammoData);
         Ammo.destroy(constraint.ammoData);
         this.objects[id] = undefined;
-        this.trigger('Constraint_destroy', id);
+        this.trigger('destroy', id);
         this.ids.push(id);
       }
     },

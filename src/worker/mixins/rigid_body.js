@@ -316,7 +316,7 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
         this.objects[id] = undefined;
         this.dynamicsWorld.removeRigidBody(body.ammoData);
         Ammo.destroy(body.ammoData);
-        this.trigger('RigidBody_destroy', id);
+        this.trigger('destroy', id);
         this.ids.push(id);
       }
     }

@@ -27,44 +27,9 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
 
     this.adapter = new THREEAdapter(this);
 
-    this.on('GhostObject_destroy', function(id) {
+    this.on('destroy', function(id) {
       if (objects[id]) {
         objects[id].trigger('destroy');
-        objects[id] = undefined;
-      }
-    });
-
-    this.on('RigidBody_destroy', function(id) {
-      if (objects[id]) {
-        objects[id].trigger('destroy');
-        objects[id] = undefined;
-      }
-    });
-
-    this.on('Vehicle_destroy', function(id) {
-      if (objects[id]) {
-        objects[id].trigger('destroy');
-        objects[id] = undefined;
-      }
-    });
-
-    this.on('Constraint_destroy', function(id) {
-      if (objects[id]) {
-        objects[id].trigger('destroy');
-        objects[id] = undefined;
-      }
-    });
-
-    this.on('KinematicCharacterController_destroy', function(id) {
-      if (objects[id]) {
-        objects[id].destroy();
-        objects[id] = undefined;
-      }
-    });
-
-    this.on('CollisionObject_destroy', function(id) {
-      if (objects[id]) {
-        objects[id].destroy();
         objects[id] = undefined;
       }
     });
@@ -540,38 +505,6 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
 
   AmmoProxy.prototype.createKinematicCharacterControllerFromObject = function(object, shape, stepHeight) {
     return this.adapter.createKinematicCharacterControllerFromObject(object, shape, stepHeight);
-  };
-
-  AmmoProxy.prototype.getVehicle = function(vehicleId) {
-    if (this.vehicles[vehicleId]) {
-      return this.vehicles[vehicleId];
-    }
-
-    console.warn('Asked for non-existent vehicle with ID: ' + vehicleId);
-  };
-
-  AmmoProxy.prototype.getConstraint = function(constraintId) {
-    if (this.constraints[constraintId]) {
-      return this.constraints[constraintId];
-    }
-
-    console.warn('Asked for non-existent constraint with ID: ' + constraintId);
-  };
-
-  AmmoProxy.prototype.getRigidBody = function(rigidBodyId) {
-    if (this.bodies[rigidBodyId]) {
-      return this.bodies[rigidBodyId];
-    }
-
-    console.warn('Asked for non-existent rigid body with ID: ' + rigidBodyId);
-  };
-
-  AmmoProxy.prototype.getGhostObject = function(ghostObjectId) {
-    if (this.ghosts[ghostObjectId]) {
-      return this.ghosts[ghostObjectId];
-    }
-
-    console.warn('Asked for non-existent ghost object with ID: ' + ghostObjectId);
   };
 
   AmmoProxy.prototype.setUserData = function(key, value) {
