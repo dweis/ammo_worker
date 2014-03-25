@@ -215,7 +215,7 @@ define([ 'underscore',
       if (update && update.buffer instanceof ArrayBuffer) {
         for (i = 0; i < MAX_TRANSFORMS; i++) {
           if (that.objects[i]) {
-            that.objects[i].update(update);
+            that.objects[i].update(update, delta);
           }
         }
         this.doStepAddContacts();

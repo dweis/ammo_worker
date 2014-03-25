@@ -5,11 +5,12 @@ define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
     this.type = 'btWheelInfo';
     this.vehicle = vehicle;
     this.index = -1;
+    this.force = 0;
   }
 
   Wheel.prototype = new AmmoObject();
 
-  Wheel.prototype.update = function(data) {
+  Wheel.prototype.update = function(data, delta) {
     var trans = this.vehicle.ammoData.getWheelTransformWS(this.index);
 
     data[this.offset + 0] = trans.getOrigin().x();
@@ -19,6 +20,8 @@ define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
     data[this.offset + 4] = trans.getRotation().y();
     data[this.offset + 5] = trans.getRotation().z();
     data[this.offset + 6] = trans.getRotation().w();
+
+    this.vehicle.ammoData.applyEngineForce(this.force * delta, this.index);
   };
 
   return Wheel;
