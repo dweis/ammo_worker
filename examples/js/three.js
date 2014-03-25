@@ -142,8 +142,8 @@ THREE.AddOperation = 2;
 
 THREE.UVMapping = function () {};
 
-THREE.BoxReflectionMapping = function () {};
-THREE.BoxRefractionMapping = function () {};
+THREE.CubeReflectionMapping = function () {};
+THREE.CubeRefractionMapping = function () {};
 
 THREE.SphericalReflectionMapping = function () {};
 THREE.SphericalRefractionMapping = function () {};
@@ -632,18 +632,6 @@ THREE.Quaternion.prototype = {
 
 	_x: 0,_y: 0, _z: 0, _w: 0,
 
-	_euler: undefined,
-
-	_updateEuler: function ( callback ) {
-
-		if ( this._euler !== undefined ) {
-
-			this._euler.setFromQuaternion( this, undefined, false );
-
-		}
-
-	},
-
 	get x () {
 
 		return this._x;
@@ -653,7 +641,7 @@ THREE.Quaternion.prototype = {
 	set x ( value ) {
 
 		this._x = value;
-		this._updateEuler();
+		this.onChangeCallback();
 
 	},
 
@@ -666,7 +654,7 @@ THREE.Quaternion.prototype = {
 	set y ( value ) {
 
 		this._y = value;
-		this._updateEuler();
+		this.onChangeCallback();
 
 	},
 
@@ -679,7 +667,7 @@ THREE.Quaternion.prototype = {
 	set z ( value ) {
 
 		this._z = value;
-		this._updateEuler();
+		this.onChangeCallback();
 
 	},
 
@@ -692,7 +680,7 @@ THREE.Quaternion.prototype = {
 	set w ( value ) {
 
 		this._w = value;
-		this._updateEuler();
+		this.onChangeCallback();
 
 	},
 
@@ -703,7 +691,7 @@ THREE.Quaternion.prototype = {
 		this._z = z;
 		this._w = w;
 
-		this._updateEuler();
+		this.onChangeCallback();
 
 		return this;
 
@@ -716,7 +704,7 @@ THREE.Quaternion.prototype = {
 		this._z = quaternion._z;
 		this._w = quaternion._w;
 
-		this._updateEuler();
+		this.onChangeCallback();
 
 		return this;
 
@@ -784,7 +772,7 @@ THREE.Quaternion.prototype = {
 
 		}
 
-		if ( update !== false ) this._updateEuler();
+		if ( update !== false ) this.onChangeCallback();
 
 		return this;
 
@@ -803,7 +791,7 @@ THREE.Quaternion.prototype = {
 		this._z = axis.z * s;
 		this._w = Math.cos( halfAngle );
 
-		this._updateEuler();
+		this.onChangeCallback();
 
 		return this;
 
@@ -862,7 +850,7 @@ THREE.Quaternion.prototype = {
 
 		}
 
-		this._updateEuler();
+		this.onChangeCallback();
 
 		return this;
 
@@ -870,21 +858,43 @@ THREE.Quaternion.prototype = {
 
 	setFromUnitVectors: function () {
 
-		// http://lolengine.net/blog/2013/09/18/beautiful-maths-quaternion-from-vectors
+		// http://lolengine.net/blog/2014/02/24/quaternion-from-two-vectors-final
 
 		// assumes direction vectors vFrom and vTo are normalized
 
-		var v1;
+		var v1, r;
+
+		var EPS = 0.000001;
 
 		return function( vFrom, vTo ) {
 
 			if ( v1 === undefined ) v1 = new THREE.Vector3();
 
-			v1.crossVectors( vFrom, vTo );
+			r = vFrom.dot( vTo ) + 1;
 
-			this.set( v1.x, v1.y, v1.z, vFrom.dot( vTo ) + 1 ).normalize();
+			if ( r < EPS ) {
 
-			this._updateEuler();
+				r = 0;
+
+				if ( Math.abs( vFrom.x ) > Math.abs( vFrom.z ) ) {
+
+					v1.set( - vFrom.y, vFrom.x, 0 );
+
+				} else {
+
+					v1.set( 0, - vFrom.z, vFrom.y );
+
+				}
+
+			} else {
+
+				v1.crossVectors( vFrom, vTo );
+
+			}
+
+			this.set( v1.x, v1.y, v1.z, r ).normalize();
+
+			this.onChangeCallback();
 
 			return this;
 
@@ -906,7 +916,7 @@ THREE.Quaternion.prototype = {
 		this._y *= -1;
 		this._z *= -1;
 
-		this._updateEuler();
+		this.onChangeCallback();
 
 		return this;
 
@@ -975,7 +985,7 @@ THREE.Quaternion.prototype = {
 		this._z = qaz * qbw + qaw * qbz + qax * qby - qay * qbx;
 		this._w = qaw * qbw - qax * qbx - qay * qby - qaz * qbz;
 
-		this._updateEuler();
+		this.onChangeCallback();
 
 		return this;
 
@@ -1044,7 +1054,7 @@ THREE.Quaternion.prototype = {
 		this._y = ( y * ratioA + this._y * ratioB );
 		this._z = ( z * ratioA + this._z * ratioB );
 
-		this._updateEuler();
+		this.onChangeCallback();
 
 		return this;
 
@@ -1063,7 +1073,7 @@ THREE.Quaternion.prototype = {
 		this._z = array[ 2 ];
 		this._w = array[ 3 ];
 
-		this._updateEuler();
+		this.onChangeCallback();
 
 		return this;
 
@@ -1074,6 +1084,16 @@ THREE.Quaternion.prototype = {
 		return [ this._x, this._y, this._z, this._w ];
 
 	},
+
+	onChange: function ( callback ) {
+
+		this.onChangeCallback = callback;
+
+		return this;
+
+	},
+
+	onChangeCallback: function () {},
 
 	clone: function () {
 
@@ -2907,56 +2927,6 @@ THREE.Vector4.prototype = {
 
 /**
  * @author mrdoob / http://mrdoob.com/
- */
-
-THREE.ProxyVector2 = function ( array, offset ) {
-
-	this.array = array;
-	this.offset = offset;
-	
-};
-
-THREE.ProxyVector2.prototype = Object.create( THREE.Vector2.prototype );
-
-Object.defineProperties( THREE.ProxyVector2.prototype, {
-	'x': {
-		get: function () { return this.array[ this.offset ]; },
-		set: function ( v ) { this.array[ this.offset ] = v; }
-	},
-	'y': {
-		get: function () { return this.array[ this.offset + 1 ]; },
-		set: function ( v ) { this.array[ this.offset + 1 ] = v; }
-	}
-} );
-/**
- * @author mrdoob / http://mrdoob.com/
- */
-
-THREE.ProxyVector3 = function ( array, offset ) {
-	
-	this.array = array;
-	this.offset = offset;
-
-};
-
-THREE.ProxyVector3.prototype = Object.create( THREE.Vector3.prototype );
-
-Object.defineProperties( THREE.ProxyVector3.prototype, {
-	'x': {
-		get: function () { return this.array[ this.offset ]; },
-		set: function ( v ) { this.array[ this.offset ] = v; }
-	},
-	'y': {
-		get: function () { return this.array[ this.offset + 1 ]; },
-		set: function ( v ) { this.array[ this.offset + 1 ] = v; }
-	},
-	'z': {
-		get: function () { return this.array[ this.offset + 2 ]; },
-		set: function ( v ) { this.array[ this.offset + 2 ] = v; }
-	}
-} );
-/**
- * @author mrdoob / http://mrdoob.com/
  * @author WestLangley / http://github.com/WestLangley
  * @author bhouston / http://exocortex.com
  */
@@ -2980,18 +2950,6 @@ THREE.Euler.prototype = {
 
 	_x: 0, _y: 0, _z: 0, _order: THREE.Euler.DefaultOrder,
 
-	_quaternion: undefined,
-
-	_updateQuaternion: function () {
-
-		if ( this._quaternion !== undefined ) {
-
-			this._quaternion.setFromEuler( this, false );
-
-		}
-
-	},
-
 	get x () {
 
 		return this._x;
@@ -3001,7 +2959,7 @@ THREE.Euler.prototype = {
 	set x ( value ) {
 
 		this._x = value;
-		this._updateQuaternion();
+		this.onChangeCallback();
 
 	},
 
@@ -3014,7 +2972,7 @@ THREE.Euler.prototype = {
 	set y ( value ) {
 
 		this._y = value;
-		this._updateQuaternion();
+		this.onChangeCallback();
 
 	},
 
@@ -3027,7 +2985,7 @@ THREE.Euler.prototype = {
 	set z ( value ) {
 
 		this._z = value;
-		this._updateQuaternion();
+		this.onChangeCallback();
 
 	},
 
@@ -3040,7 +2998,7 @@ THREE.Euler.prototype = {
 	set order ( value ) {
 
 		this._order = value;
-		this._updateQuaternion();
+		this.onChangeCallback();
 
 	},
 
@@ -3051,7 +3009,7 @@ THREE.Euler.prototype = {
 		this._z = z;
 		this._order = order || this._order;
 
-		this._updateQuaternion();
+		this.onChangeCallback();
 
 		return this;
 
@@ -3064,7 +3022,7 @@ THREE.Euler.prototype = {
 		this._z = euler._z;
 		this._order = euler._order;
 
-		this._updateQuaternion();
+		this.onChangeCallback();
 
 		return this;
 
@@ -3187,7 +3145,7 @@ THREE.Euler.prototype = {
 
 		this._order = order;
 
-		this._updateQuaternion();
+		this.onChangeCallback();
 
 		return this;
 
@@ -3252,7 +3210,7 @@ THREE.Euler.prototype = {
 
 		this._order = order;
 
-		if ( update !== false ) this._updateQuaternion();
+		if ( update !== false ) this.onChangeCallback();
 
 		return this;
 
@@ -3274,6 +3232,12 @@ THREE.Euler.prototype = {
 
 	}(),
 
+	equals: function ( euler ) {
+
+		return ( euler._x === this._x ) && ( euler._y === this._y ) && ( euler._z === this._z ) && ( euler._order === this._order );
+
+	},
+
 	fromArray: function ( array ) {
 
 		this._x = array[ 0 ];
@@ -3281,7 +3245,7 @@ THREE.Euler.prototype = {
 		this._z = array[ 2 ];
 		if ( array[ 3 ] !== undefined ) this._order = array[ 3 ];
 
-		this._updateQuaternion();
+		this.onChangeCallback();
 
 		return this;
 
@@ -3293,11 +3257,15 @@ THREE.Euler.prototype = {
 
 	},
 
-	equals: function ( euler ) {
+	onChange: function ( callback ) {
 
-		return ( euler._x === this._x ) && ( euler._y === this._y ) && ( euler._z === this._z ) && ( euler._order === this._order );
+		this.onChangeCallback = callback;
+
+		return this;
 
 	},
+
+	onChangeCallback: function () {},
 
 	clone: function () {
 
@@ -7548,6 +7516,8 @@ THREE.EventDispatcher.prototype = {
 
 THREE.Object3D = function () {
 
+	var scope = this;
+
 	this.id = THREE.Object3DIdCount ++;
 	this.uuid = THREE.Math.generateUUID();
 
@@ -7559,14 +7529,10 @@ THREE.Object3D = function () {
 	this.up = new THREE.Vector3( 0, 1, 0 );
 
 	this.position = new THREE.Vector3();
-	this._rotation = new THREE.Euler();
-	this._quaternion = new THREE.Quaternion();
+	this.rotation = new THREE.Euler().onChange( function () { scope.quaternion.setFromEuler( scope.rotation, false ); } );
+	this.quaternion = new THREE.Quaternion().onChange( function () { scope.rotation.setFromQuaternion( scope.quaternion, undefined, false );
+ } );
 	this.scale = new THREE.Vector3( 1, 1, 1 );
-
-	// keep rotation and quaternion in sync
-
-	this._rotation._quaternion = this.quaternion;
-	this._quaternion._euler = this.rotation;
 
 	this.renderDepth = null;
 
@@ -7593,32 +7559,6 @@ THREE.Object3D = function () {
 THREE.Object3D.prototype = {
 
 	constructor: THREE.Object3D,
-	
-	get rotation () { 
-		return this._rotation; 
-	},
-
-	set rotation ( value ) {
-		
-		this._rotation = value;
-		this._rotation._quaternion = this._quaternion;
-		this._quaternion._euler = this._rotation;
-		this._rotation._updateQuaternion();
-		
-	},
-
-	get quaternion () { 
-		return this._quaternion; 
-	},
-	
-	set quaternion ( value ) {
-		
-		this._quaternion = value;
-		this._quaternion._euler = this._rotation;
-		this._rotation._quaternion = this._quaternion;
-		this._quaternion._updateEuler();
-		
-	},
 
 	get eulerOrder () {
 
@@ -10682,6 +10622,337 @@ THREE.Geometry2 = function ( vertices, normals, uvs ) {
 };
 
 THREE.Geometry2.prototype = Object.create( THREE.BufferGeometry.prototype );
+
+THREE.Geometry99 = function ( ) {
+
+	THREE.BufferGeometry.call( this );
+
+};
+
+THREE.Geometry99.prototype = Object.create( THREE.BufferGeometry.prototype );
+
+Object.defineProperties( THREE.Geometry99.prototype, {
+	vertices: { 
+		enumerable: true, 
+		get: function () { return this.createVertexProxies(); } 
+	},
+	faces: {
+		enumerable: true,	
+		get: function () { return this.createFaceProxies() } 
+	},
+	faceVertexUvs: {
+		enumerable: true,	
+		get: function () { return this.createUvProxies() } 
+	},
+	// TODO - fill in additional proxies:
+	// - morphColors
+	// - morphNormals
+	// - morphTargets
+	// - skinIndex
+	// - skinWeights
+
+
+	verticesNeedUpdate: {
+		enumerable: true,	
+		get: function () { return this.attributes[ 'position' ].needsUpdate; } ,
+		set: function ( v ) { this.attributes[ 'position' ].needsUpdate = v; } 
+	},
+	colorsNeedUpdate: {
+		enumerable: true,	
+		get: function () { if ( this.attributes[ 'color' ] ) return this.attributes[ 'color' ].needsUpdate; } ,
+		set: function ( v ) { if ( this.attributes[ 'color' ] ) this.attributes[ 'color' ].needsUpdate = v; } 
+	},
+	normalsNeedUpdate: {
+		enumerable: true,	
+		get: function () { if ( this.attributes[ 'normal' ] ) return this.attributes[ 'normal' ].needsUpdate; } ,
+		set: function ( v ) { if ( this.attributes[ 'normal' ] ) this.attributes[ 'normal' ].needsUpdate = v; } 
+	},
+});
+
+THREE.Geometry99.prototype.createVertexProxies = function () {
+
+	// Replace the prototype getter with a local array property
+
+	Object.defineProperty( this, "vertices", { value: [] } );
+
+	// If the attribute buffer has already been populated, set up proxy objects
+
+	this.populateProxyFromBuffer( this.vertices, "position", THREE.TypedVector3, 3 );
+
+	// Return a reference to the newly-created array
+
+	return this.vertices;
+
+}
+
+THREE.Geometry99.prototype.createFaceProxies = function () {
+
+	// Replace the prototype getter with a local array property
+
+	Object.defineProperty( this, "faces", { value: [] } );
+
+	// If the attribute buffer has already been populated, set up proxy objects
+
+	var faces = this.faces,
+	    indexarray = false,
+	    positionarray = false,
+	    normalarray = false,
+	    colorarray = false;
+
+	if ( this.attributes.position ) {
+		positionarray = this.attributes[ 'position' ].array;
+	}
+	if ( this.attributes.index ) {
+		indexarray = this.attributes[ 'index' ].array;
+	}
+	if (this.attributes[ 'normal' ]) {
+		normalarray = this.attributes[ 'normal' ].array;
+	}
+	if (this.attributes[ 'color' ]) {
+		colorarray = this.attributes[ 'color' ].array;
+	}
+
+	if (indexarray) {
+
+		for ( var i = 0, l = indexarray.length / 3; i < l; i ++ ) {
+
+			var o = i * 3;
+
+			// Generate face.vertexNormals and face.vertexFaceColors
+			var vertexNormals = false,
+			    vertexColors = false;
+			if (normalarray) {
+
+				vertexNormals = [
+					new THREE.TypedVector3(normalarray, indexarray[o] * 3),
+					new THREE.TypedVector3(normalarray, indexarray[o+1] * 3),
+					new THREE.TypedVector3(normalarray, indexarray[o+2] * 3),
+				]
+
+			}
+
+			// TODO - do BufferGeometries support face normals?
+
+			if (colorarray) {
+
+				vertexColors = [
+					new THREE.TypedColor(colorarray, indexarray[o] * 3),
+					new THREE.TypedColor(colorarray, indexarray[o+1] * 3),
+					new THREE.TypedColor(colorarray, indexarray[o+2] * 3),
+				]
+
+			}
+
+			var face = new THREE.TypedFace3( indexarray, i * 3, vertexNormals );
+
+		}
+
+	} else {
+
+		for ( var i = 0, l = positionarray.length / 3; i < l; i += 3 ) {
+
+			var o = i * 3;
+
+			var v1 = i, v2 = i+1, v3 = i+2;
+
+			// Generate face.vertexNormals and face.vertexColors
+
+			// TODO - do BufferGeometries support face normals/face colors?
+			// Maybe they could be implemented using some sort of TypedMultiVector3 which would let us expose a single
+			// face.normal Vector3, and it would simultaneously update the three vertexNormals involved in this face with the same values
+
+			var vertexNormals = false,
+			    vertexColors = false;
+			if (normalarray) {
+
+				vertexNormals = [
+					new THREE.TypedVector3(normalarray, o),
+					new THREE.TypedVector3(normalarray, o+3),
+					new THREE.TypedVector3(normalarray, o+6),
+				];
+
+			}
+
+			if (colorarray) {
+
+				vertexColors = [
+					new THREE.TypedColor(colorarray, o),
+					new THREE.TypedColor(colorarray, o+3),
+					new THREE.TypedColor(colorarray, o+6),
+				];
+
+			}
+
+			var face = new THREE.Face3( v1, v2, v3, vertexNormals, vertexColors );
+
+			faces.push(face);
+
+		}
+
+	}
+
+	// Return a reference to the newly-created array
+
+	return this.faces;
+
+}
+THREE.Geometry99.prototype.createUvProxies = function () {
+
+	// Replace the prototype getter with a local array property
+
+	Object.defineProperty( this, "faceVertexUvs", { value: [[]] } );
+
+	// If the attribute buffer has already been populated, set up proxy objects
+
+	if ( this.attributes.uv ) {
+
+		var faces = this.faces;
+		var uvarray = this.attributes.uv.array;
+
+		for ( var i = 0, l = faces.length; i < l; i ++ ) {
+
+			var f = faces[i];
+
+			this.faceVertexUvs[ 0 ][ i ] = [];
+			this.faceVertexUvs[ 0 ][ i ][ 0 ] = new THREE.TypedVector2( uvarray, f.a * 2 );
+			this.faceVertexUvs[ 0 ][ i ][ 1 ] = new THREE.TypedVector2( uvarray, f.b * 2 );
+			this.faceVertexUvs[ 0 ][ i ][ 2 ] = new THREE.TypedVector2( uvarray, f.c * 2 );
+
+		}
+	
+	}
+
+	// Return a reference to the newly-created array
+
+	return this.faceVertexUvs;
+
+}
+
+THREE.Geometry99.prototype.populateProxyFromBuffer = function ( attr, buffername, proxytype, itemsize, offset, count ) {
+
+	if ( this.attributes[ buffername ] ) {
+
+		var array = this.attributes[ buffername ].array;
+		var size = itemsize || this.attributes[ buffername ].itemSize;
+		var start = offset || 0;
+		
+		count = count || ( array.length / size - start );
+
+		for ( var i = start, l = start + count; i < l; i ++ ) {
+
+			attr.push( new proxytype( array, i * size ) );
+
+		}
+
+	}
+
+}
+
+// Proxies
+
+THREE.TypedVector2 = function ( array, offset ) {
+
+	this.array = array;
+	this.offset = offset;
+	
+};
+
+THREE.TypedVector2.prototype = Object.create( THREE.Vector2.prototype );
+
+Object.defineProperties( THREE.TypedVector2.prototype, {
+	'x': {
+		get: function () { return this.array[ this.offset ]; },
+		set: function ( v ) { this.array[ this.offset ] = v; }
+	},
+	'y': {
+		get: function () { return this.array[ this.offset + 1 ]; },
+		set: function ( v ) { this.array[ this.offset + 1 ] = v; }
+	}
+} );
+
+//
+
+
+THREE.TypedVector3 = function ( array, offset ) {
+	
+	this.array = array;
+	this.offset = offset;
+
+};
+
+THREE.TypedVector3.prototype = Object.create( THREE.Vector3.prototype );
+
+Object.defineProperties( THREE.TypedVector3.prototype, {
+	'x': {
+		get: function () { return this.array[ this.offset ]; },
+		set: function ( v ) { this.array[ this.offset ] = v; }
+	},
+	'y': {
+		get: function () { return this.array[ this.offset + 1 ]; },
+		set: function ( v ) { this.array[ this.offset + 1 ] = v; }
+	},
+	'z': {
+		get: function () { return this.array[ this.offset + 2 ]; },
+		set: function ( v ) { this.array[ this.offset + 2 ] = v; }
+	}
+} );
+
+//
+
+THREE.TypedFace3 = function ( array, offset, vertexNormals ) {
+
+	this.array = array;
+	this.offset = offset;
+	this.vertexNormals = vertexNormals;
+
+	//THREE.Face3.call( this, array[offset], array[offset+1], array[offset+2] /*, normal, color, materialIndex */);
+
+}
+
+THREE.TypedFace3.prototype = Object.create( THREE.Face3.prototype );
+
+Object.defineProperties( THREE.TypedFace3.prototype, {
+	'a': {
+		enumerable: true,	
+		get: function () { return this.array[ this.offset ]; },
+		set: function ( v ) { this.array[ this.offset ] = v; }
+	},
+	'b': {
+		enumerable: true,	
+		get: function () { return this.array[ this.offset + 1 ]; },
+		set: function ( v ) { this.array[ this.offset + 1 ] = v; }
+	},
+	'c': {
+		enumerable: true,	
+		get: function () { return this.array[ this.offset + 2 ]; },
+		set: function ( v ) { this.array[ this.offset + 2 ] = v; }
+	},
+} );
+
+THREE.TypedColor = function ( array, offset ) {
+	this.array = array;
+	this.offset = offset;
+}
+THREE.TypedColor.prototype = Object.create( THREE.Color.prototype );
+
+Object.defineProperties( THREE.TypedColor.prototype, {
+	'r': {
+		enumerable: true,	
+		get: function () { return this.array[ this.offset ]; },
+		set: function ( v ) { this.array[ this.offset ] = v; }
+	},
+	'g': {
+		enumerable: true,	
+		get: function () { return this.array[ this.offset + 1 ]; },
+		set: function ( v ) { this.array[ this.offset + 1 ] = v; }
+	},
+	'b': {
+		enumerable: true,	
+		get: function () { return this.array[ this.offset + 2 ]; },
+		set: function ( v ) { this.array[ this.offset + 2 ] = v; }
+	}
+} );
+
 /**
  * @author mrdoob / http://mrdoob.com/
  */
@@ -10697,7 +10968,8 @@ THREE.IndexedGeometry2 = function ( indices, vertices, normals, uvs ) {
 
 };
 
-THREE.IndexedGeometry2.prototype = Object.create( THREE.BufferGeometry.prototype );
+THREE.IndexedGeometry2.prototype = Object.create( THREE.Geometry99.prototype );
+
 /**
  * @author mrdoob / http://mrdoob.com/
  * @author mikael emtinger / http://gomo.se/
@@ -12679,7 +12951,7 @@ THREE.ObjectLoader.prototype = {
 						break;
 
 					case 'BoxGeometry':
-					case 'BoxGeometry': // DEPRECATED
+					case 'CubeGeometry': // DEPRECATED
 
 						geometry = new THREE.BoxGeometry(
 							data.width,
@@ -13915,11 +14187,11 @@ THREE.SceneLoader.prototype = {
 
 				if ( isCompressed ) {
 
-					texture = THREE.ImageUtils.loadCompressedTextureBox( url_array, textureJSON.mapping, generateTextureCallback( count ) );
+					texture = THREE.ImageUtils.loadCompressedTextureCube( url_array, textureJSON.mapping, generateTextureCallback( count ) );
 
 				} else {
 
-					texture = THREE.ImageUtils.loadTextureBox( url_array, textureJSON.mapping, generateTextureCallback( count ) );
+					texture = THREE.ImageUtils.loadTextureCube( url_array, textureJSON.mapping, generateTextureCallback( count ) );
 
 				}
 
@@ -14081,7 +14353,7 @@ THREE.SceneLoader.prototype = {
 
 				if ( matJSON.parameters.envMap ) {
 
-					uniforms[ "tBox" ].value = matJSON.parameters.envMap;
+					uniforms[ "tCube" ].value = matJSON.parameters.envMap;
 					uniforms[ "enableReflection" ].value = true;
 					uniforms[ "reflectivity" ].value = matJSON.parameters.reflectivity;
 
@@ -14512,7 +14784,7 @@ THREE.LineDashedMaterial.prototype.clone = function () {
  *
  *  specularMap: new THREE.Texture( <Image> ),
  *
- *  envMap: new THREE.TextureBox( [posx, negx, posy, negy, posz, negz] ),
+ *  envMap: new THREE.TextureCube( [posx, negx, posy, negy, posz, negz] ),
  *  combine: THREE.Multiply,
  *  reflectivity: <float>,
  *  refractionRatio: <float>,
@@ -14624,7 +14896,7 @@ THREE.MeshBasicMaterial.prototype.clone = function () {
  *
  *  specularMap: new THREE.Texture( <Image> ),
  *
- *  envMap: new THREE.TextureBox( [posx, negx, posy, negy, posz, negz] ),
+ *  envMap: new THREE.TextureCube( [posx, negx, posy, negy, posz, negz] ),
  *  combine: THREE.Multiply,
  *  reflectivity: <float>,
  *  refractionRatio: <float>,
@@ -14757,7 +15029,7 @@ THREE.MeshLambertMaterial.prototype.clone = function () {
  *
  *  specularMap: new THREE.Texture( <Image> ),
  *
- *  envMap: new THREE.TextureBox( [posx, negx, posy, negy, posz, negz] ),
+ *  envMap: new THREE.TextureCube( [posx, negx, posy, negy, posz, negz] ),
  *  combine: THREE.Multiply,
  *  reflectivity: <float>,
  *  refractionRatio: <float>,
@@ -17566,7 +17838,7 @@ THREE.ShaderChunk = {
 		"#ifdef USE_ENVMAP",
 
 		"	uniform float reflectivity;",
-		"	uniform samplerBox envMap;",
+		"	uniform samplerCube envMap;",
 		"	uniform float flipEnvMap;",
 		"	uniform int combine;",
 
@@ -17619,11 +17891,11 @@ THREE.ShaderChunk = {
 		"	#ifdef DOUBLE_SIDED",
 
 		"		float flipNormal = ( -1.0 + 2.0 * float( gl_FrontFacing ) );",
-		"		vec4 cubeColor = textureBox( envMap, flipNormal * vec3( flipEnvMap * reflectVec.x, reflectVec.yz ) );",
+		"		vec4 cubeColor = textureCube( envMap, flipNormal * vec3( flipEnvMap * reflectVec.x, reflectVec.yz ) );",
 
 		"	#else",
 
-		"		vec4 cubeColor = textureBox( envMap, vec3( flipEnvMap * reflectVec.x, reflectVec.yz ) );",
+		"		vec4 cubeColor = textureCube( envMap, vec3( flipEnvMap * reflectVec.x, reflectVec.yz ) );",
 
 		"	#endif",
 
@@ -20004,7 +20276,7 @@ THREE.ShaderLib = {
 
 			"tDisplacement": { type: "t", value: null }, // must go first as this is vertex texture
 			"tDiffuse"	   : { type: "t", value: null },
-			"tBox"		   : { type: "t", value: null },
+			"tCube"		   : { type: "t", value: null },
 			"tNormal"	   : { type: "t", value: null },
 			"tSpecular"	   : { type: "t", value: null },
 			"tAO"		   : { type: "t", value: null },
@@ -20051,7 +20323,7 @@ THREE.ShaderLib = {
 			"uniform sampler2D tSpecular;",
 			"uniform sampler2D tAO;",
 
-			"uniform samplerBox tBox;",
+			"uniform samplerCube tCube;",
 
 			"uniform vec2 uNormalScale;",
 
@@ -20439,7 +20711,7 @@ THREE.ShaderLib = {
 
 			"		}",
 
-			"		vec4 cubeColor = textureBox( tBox, vec3( -vReflect.x, vReflect.yz ) );",
+			"		vec4 cubeColor = textureCube( tCube, vec3( -vReflect.x, vReflect.yz ) );",
 
 			"		#ifdef GAMMA_INPUT",
 
@@ -20600,12 +20872,12 @@ THREE.ShaderLib = {
 	},
 
 	/* -------------------------------------------------------------------------
-	//	Box map shader
+	//	Cube map shader
 	 ------------------------------------------------------------------------- */
 
 	'cube': {
 
-		uniforms: { "tBox": { type: "t", value: null },
+		uniforms: { "tCube": { type: "t", value: null },
 					"tFlip": { type: "f", value: -1 } },
 
 		vertexShader: [
@@ -20629,7 +20901,7 @@ THREE.ShaderLib = {
 
 		fragmentShader: [
 
-			"uniform samplerBox tBox;",
+			"uniform samplerCube tCube;",
 			"uniform float tFlip;",
 
 			"varying vec3 vWorldPosition;",
@@ -20638,7 +20910,7 @@ THREE.ShaderLib = {
 
 			"void main() {",
 
-			"	gl_FragColor = textureBox( tBox, vec3( tFlip * vWorldPosition.x, vWorldPosition.yz ) );",
+			"	gl_FragColor = textureCube( tCube, vec3( tFlip * vWorldPosition.x, vWorldPosition.yz ) );",
 
 				THREE.ShaderChunk[ "logdepthbuf_fragment" ],
 
@@ -20793,7 +21065,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	// flags
 
-	this.autoScaleBoxmaps = true;
+	this.autoScaleCubemaps = true;
 
 	// custom render plugins
 
@@ -20920,7 +21192,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 	var _maxTextures = _gl.getParameter( _gl.MAX_TEXTURE_IMAGE_UNITS );
 	var _maxVertexTextures = _gl.getParameter( _gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS );
 	var _maxTextureSize = _gl.getParameter( _gl.MAX_TEXTURE_SIZE );
-	var _maxBoxmapSize = _gl.getParameter( _gl.MAX_CUBE_MAP_TEXTURE_SIZE );
+	var _maxCubemapSize = _gl.getParameter( _gl.MAX_CUBE_MAP_TEXTURE_SIZE );
 
 	var _maxAnisotropy = _glExtensionTextureFilterAnisotropic ? _gl.getParameter( _glExtensionTextureFilterAnisotropic.MAX_TEXTURE_MAX_ANISOTROPY_EXT ) : 0;
 
@@ -21378,11 +21650,11 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	var deallocateTexture = function ( texture ) {
 
-		if ( texture.image && texture.image.__webglTextureBox ) {
+		if ( texture.image && texture.image.__webglTextureCube ) {
 
 			// cube texture
 
-			_gl.deleteTexture( texture.image.__webglTextureBox );
+			_gl.deleteTexture( texture.image.__webglTextureCube );
 
 		} else {
 
@@ -21403,7 +21675,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		_gl.deleteTexture( renderTarget.__webglTexture );
 
-		if ( renderTarget instanceof THREE.WebGLRenderTargetBox ) {
+		if ( renderTarget instanceof THREE.WebGLRenderTargetCube ) {
 
 			for ( var i = 0; i < 6; i ++ ) {
 
@@ -25266,7 +25538,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 		}
 
 		uniforms.envMap.value = material.envMap;
-		uniforms.flipEnvMap.value = ( material.envMap instanceof THREE.WebGLRenderTargetBox ) ? 1 : -1;
+		uniforms.flipEnvMap.value = ( material.envMap instanceof THREE.WebGLRenderTargetCube ) ? 1 : -1;
 
 		if ( _this.gammaInput ) {
 
@@ -25281,7 +25553,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		uniforms.refractionRatio.value = material.refractionRatio;
 		uniforms.combine.value = material.combine;
-		uniforms.useRefract.value = material.envMap && material.envMap.mapping instanceof THREE.BoxRefractionMapping;
+		uniforms.useRefract.value = material.envMap && material.envMap.mapping instanceof THREE.CubeRefractionMapping;
 
 	};
 
@@ -25614,11 +25886,11 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 				if ( texture.image instanceof Array && texture.image.length === 6 ) {
 
-					setBoxTexture( texture, textureUnit );
+					setCubeTexture( texture, textureUnit );
 
-				} else if ( texture instanceof THREE.WebGLRenderTargetBox ) {
+				} else if ( texture instanceof THREE.WebGLRenderTargetCube ) {
 
-					setBoxTextureDynamic( texture, textureUnit );
+					setCubeTextureDynamic( texture, textureUnit );
 
 				} else {
 
@@ -26318,24 +26590,24 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	}
 
-	function setBoxTexture ( texture, slot ) {
+	function setCubeTexture ( texture, slot ) {
 
 		if ( texture.image.length === 6 ) {
 
 			if ( texture.needsUpdate ) {
 
-				if ( ! texture.image.__webglTextureBox ) {
+				if ( ! texture.image.__webglTextureCube ) {
 
 					texture.addEventListener( 'dispose', onTextureDispose );
 
-					texture.image.__webglTextureBox = _gl.createTexture();
+					texture.image.__webglTextureCube = _gl.createTexture();
 
 					_this.info.memory.textures ++;
 
 				}
 
 				_gl.activeTexture( _gl.TEXTURE0 + slot );
-				_gl.bindTexture( _gl.TEXTURE_CUBE_MAP, texture.image.__webglTextureBox );
+				_gl.bindTexture( _gl.TEXTURE_CUBE_MAP, texture.image.__webglTextureCube );
 
 				_gl.pixelStorei( _gl.UNPACK_FLIP_Y_WEBGL, texture.flipY );
 
@@ -26345,9 +26617,9 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 				for ( var i = 0; i < 6; i ++ ) {
 
-					if ( _this.autoScaleBoxmaps && ! isCompressed ) {
+					if ( _this.autoScaleCubemaps && ! isCompressed ) {
 
-						cubeImage[ i ] = clampToMaxSize( texture.image[ i ], _maxBoxmapSize );
+						cubeImage[ i ] = clampToMaxSize( texture.image[ i ], _maxCubemapSize );
 
 					} else {
 
@@ -26402,7 +26674,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 			} else {
 
 				_gl.activeTexture( _gl.TEXTURE0 + slot );
-				_gl.bindTexture( _gl.TEXTURE_CUBE_MAP, texture.image.__webglTextureBox );
+				_gl.bindTexture( _gl.TEXTURE_CUBE_MAP, texture.image.__webglTextureCube );
 
 			}
 
@@ -26410,7 +26682,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	};
 
-	function setBoxTextureDynamic ( texture, slot ) {
+	function setCubeTextureDynamic ( texture, slot ) {
 
 		_gl.activeTexture( _gl.TEXTURE0 + slot );
 		_gl.bindTexture( _gl.TEXTURE_CUBE_MAP, texture.__webglTexture );
@@ -26456,7 +26728,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	this.setRenderTarget = function ( renderTarget ) {
 
-		var isBox = ( renderTarget instanceof THREE.WebGLRenderTargetBox );
+		var isCube = ( renderTarget instanceof THREE.WebGLRenderTargetCube );
 
 		if ( renderTarget && ! renderTarget.__webglFramebuffer ) {
 
@@ -26475,7 +26747,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 				glFormat = paramThreeToGL( renderTarget.format ),
 				glType = paramThreeToGL( renderTarget.type );
 
-			if ( isBox ) {
+			if ( isCube ) {
 
 				renderTarget.__webglFramebuffer = [];
 				renderTarget.__webglRenderbuffer = [];
@@ -26542,7 +26814,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 			// Release everything
 
-			if ( isBox ) {
+			if ( isCube ) {
 
 				_gl.bindTexture( _gl.TEXTURE_CUBE_MAP, null );
 
@@ -26561,9 +26833,9 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		if ( renderTarget ) {
 
-			if ( isBox ) {
+			if ( isCube ) {
 
-				framebuffer = renderTarget.__webglFramebuffer[ renderTarget.activeBoxFace ];
+				framebuffer = renderTarget.__webglFramebuffer[ renderTarget.activeCubeFace ];
 
 			} else {
 
@@ -26605,7 +26877,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	function updateRenderTargetMipmap ( renderTarget ) {
 
-		if ( renderTarget instanceof THREE.WebGLRenderTargetBox ) {
+		if ( renderTarget instanceof THREE.WebGLRenderTargetCube ) {
 
 			_gl.bindTexture( _gl.TEXTURE_CUBE_MAP, renderTarget.__webglTexture );
 			_gl.generateMipmap( _gl.TEXTURE_CUBE_MAP );
@@ -26996,15 +27268,15 @@ THREE.EventDispatcher.prototype.apply( THREE.WebGLRenderTarget.prototype );
  * @author alteredq / http://alteredqualia.com
  */
 
-THREE.WebGLRenderTargetBox = function ( width, height, options ) {
+THREE.WebGLRenderTargetCube = function ( width, height, options ) {
 
 	THREE.WebGLRenderTarget.call( this, width, height, options );
 
-	this.activeBoxFace = 0; // PX 0, NX 1, PY 2, NY 3, PZ 4, NZ 5
+	this.activeCubeFace = 0; // PX 0, NX 1, PY 2, NY 3, PZ 4, NZ 5
 
 };
 
-THREE.WebGLRenderTargetBox.prototype = Object.create( THREE.WebGLRenderTarget.prototype );
+THREE.WebGLRenderTargetCube.prototype = Object.create( THREE.WebGLRenderTarget.prototype );
 
 THREE.WebGLProgram = ( function () {
 
@@ -27914,7 +28186,7 @@ THREE.ImageUtils = {
 
 	},
 
-	loadTextureBox: function ( array, mapping, onLoad, onError ) {
+	loadTextureCube: function ( array, mapping, onLoad, onError ) {
 
 		var images = [];
 		images.loadCount = 0;
@@ -27956,7 +28228,7 @@ THREE.ImageUtils = {
 
 	},
 
-	loadCompressedTextureBox: function ( array, mapping, onLoad, onError ) {
+	loadCompressedTextureCube: function ( array, mapping, onLoad, onError ) {
 
 		var images = [];
 		images.loadCount = 0;
@@ -27975,7 +28247,7 @@ THREE.ImageUtils = {
 
 		texture.generateMipmaps = false;
 
-		var generateBoxFaceCallback = function ( rq, img ) {
+		var generateCubeFaceCallback = function ( rq, img ) {
 
 			return function () {
 
@@ -28013,7 +28285,7 @@ THREE.ImageUtils = {
 
 				var request = new XMLHttpRequest();
 
-				request.onload = generateBoxFaceCallback( request, cubeImage );
+				request.onload = generateCubeFaceCallback( request, cubeImage );
 				request.onerror = onError;
 
 				var url = array[ i ];
@@ -28036,7 +28308,7 @@ THREE.ImageUtils = {
 				var buffer = request.response;
 				var dds = THREE.ImageUtils.parseDDS( buffer, true );
 
-				if ( dds.isBoxmap ) {
+				if ( dds.isCubemap ) {
 
 					var faces = dds.mipmaps.length / dds.mipmapCount;
 
@@ -28102,7 +28374,7 @@ THREE.ImageUtils = {
 				var buffer = request.response;
 				var dds = THREE.ImageUtils.parseDDS( buffer, true );
 
-				if ( dds.isBoxmap ) {
+				if ( dds.isCubemap ) {
 
 					var faces = dds.mipmaps.length / dds.mipmapCount;
 
@@ -28327,7 +28599,7 @@ THREE.ImageUtils = {
 
 		//TODO: Verify that all faces of the cubemap are present with DDSCAPS2_CUBEMAP_POSITIVEX, etc.
 
-		dds.isBoxmap = header[ off_caps2 ] & DDSCAPS2_CUBEMAP ? true : false;
+		dds.isCubemap = header[ off_caps2 ] & DDSCAPS2_CUBEMAP ? true : false;
 
 		dds.width = header[ off_width ];
 		dds.height = header[ off_height ];
@@ -28339,7 +28611,7 @@ THREE.ImageUtils = {
 		var width = dds.width;
 		var height = dds.height;
 
-		var faces = dds.isBoxmap ? 6 : 1;
+		var faces = dds.isCubemap ? 6 : 1;
 
 		for ( var face = 0; face < faces; face ++ ) {
 
@@ -32287,7 +32559,7 @@ THREE.MorphAnimation.prototype = {
  * @author alteredq / http://alteredqualia.com/
  */
 
-THREE.BoxCamera = function ( near, far, cubeResolution ) {
+THREE.CubeCamera = function ( near, far, cubeResolution ) {
 
 	THREE.Object3D.call( this );
 
@@ -32323,40 +32595,40 @@ THREE.BoxCamera = function ( near, far, cubeResolution ) {
 	cameraNZ.lookAt( new THREE.Vector3( 0, 0, -1 ) );
 	this.add( cameraNZ );
 
-	this.renderTarget = new THREE.WebGLRenderTargetBox( cubeResolution, cubeResolution, { format: THREE.RGBFormat, magFilter: THREE.LinearFilter, minFilter: THREE.LinearFilter } );
+	this.renderTarget = new THREE.WebGLRenderTargetCube( cubeResolution, cubeResolution, { format: THREE.RGBFormat, magFilter: THREE.LinearFilter, minFilter: THREE.LinearFilter } );
 
-	this.updateBoxMap = function ( renderer, scene ) {
+	this.updateCubeMap = function ( renderer, scene ) {
 
 		var renderTarget = this.renderTarget;
 		var generateMipmaps = renderTarget.generateMipmaps;
 
 		renderTarget.generateMipmaps = false;
 
-		renderTarget.activeBoxFace = 0;
+		renderTarget.activeCubeFace = 0;
 		renderer.render( scene, cameraPX, renderTarget );
 
-		renderTarget.activeBoxFace = 1;
+		renderTarget.activeCubeFace = 1;
 		renderer.render( scene, cameraNX, renderTarget );
 
-		renderTarget.activeBoxFace = 2;
+		renderTarget.activeCubeFace = 2;
 		renderer.render( scene, cameraPY, renderTarget );
 
-		renderTarget.activeBoxFace = 3;
+		renderTarget.activeCubeFace = 3;
 		renderer.render( scene, cameraNY, renderTarget );
 
-		renderTarget.activeBoxFace = 4;
+		renderTarget.activeCubeFace = 4;
 		renderer.render( scene, cameraPZ, renderTarget );
 
 		renderTarget.generateMipmaps = generateMipmaps;
 
-		renderTarget.activeBoxFace = 5;
+		renderTarget.activeCubeFace = 5;
 		renderer.render( scene, cameraNZ, renderTarget );
 
 	};
 
 };
 
-THREE.BoxCamera.prototype = Object.create( THREE.Object3D.prototype );
+THREE.CubeCamera.prototype = Object.create( THREE.Object3D.prototype );
 
 /**
  *	@author zz85 / http://twitter.com/blurspline / http://www.lab4games.net/zz85/blog
@@ -32597,7 +32869,7 @@ THREE.CombinedCamera.prototype.toBottomView = function() {
 
 /**
  * @author mrdoob / http://mrdoob.com/
- * based on http://papervision3d.googlecode.com/svn/trunk/as3/trunk/src/org/papervision3d/objects/primitives/Box.as
+ * based on http://papervision3d.googlecode.com/svn/trunk/as3/trunk/src/org/papervision3d/objects/primitives/Cube.as
  */
 
 THREE.BoxGeometry = function ( width, height, depth, widthSegments, heightSegments, depthSegments ) {
@@ -32797,7 +33069,7 @@ THREE.CircleGeometry.prototype = Object.create( THREE.IndexedGeometry2.prototype
 // DEPRECATED
 
 THREE.CubeGeometry = function ( width, height, depth, widthSegments, heightSegments, depthSegments ) {
-	console.warn( 'DEPRECATED: THREE.BoxGeometry is deprecated. Use THREE.BoxGeometry instead.' );
+	console.warn( 'DEPRECATED: THREE.CubeGeometry is deprecated. Use THREE.BoxGeometry instead.' );
  	return new THREE.BoxGeometry( width, height, depth, widthSegments, heightSegments, depthSegments );
  };
 /**
