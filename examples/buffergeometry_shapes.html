@@ -23,7 +23,7 @@
   CompoundDemo.prototype.initDemo = function() {
     var geometry = this.cubeGeometry = new THREE.BufferGeometry();
 
-    var i, 
+    var i,
         triangles = 12,
         indices = new THREE.Uint16Attribute(triangles * 3, 1),
         positions = new THREE.Float32Attribute(triangles * 3, 3),
@@ -33,7 +33,7 @@
     geometry.addAttribute('position', positions);
     geometry.addAttribute('normal', normals);
 
-    var cube = new THREE.BoxGeometry(1, 1, 1);
+    var cube = new THREE.BoxGeometry(3, 3, 3);
 
     for (i = 0; i < cube.vertices.length; i++) {
       positions.array[i * 3 + 0] = cube.vertices[i].x;
@@ -49,17 +49,36 @@
       normals.array[i * 3 + 1] = cube.faces[i].normal.y;
       normals.array[i * 3 + 2] = cube.faces[i].normal.z;
     }
-    
+
     this.objects=[];
     this.bodies=[];
     this._createShapes();
   };
 
   CompoundDemo.prototype._createShapes = function() {
-    var material = new THREE.MeshLambertMaterial({ color: 0xCC0000 });
+    var compoundMaterial = new THREE.MeshPhongMaterial({ color: 0xCC0000 }),
+        convexHullMaterial = new THREE.MeshPhongMaterial({ color: 0x00CC00 }),
+        triangleMaterial = new THREE.MeshPhongMaterial({ color: 0x00000ff }),
+        strategy,
+        material;
 
-    for (var i = 0; i < 500; i++) {
-      var box = this._createBufferGeometryShape(material);
+    for (var i = 0; i < 100; i++) {
+      switch (i%3) {
+      case 0:
+        strategy = 'compound_bounding_box';
+        material = compoundMaterial;
+        break;
+      case 1:
+        strategy = 'convex_hull_mesh';
+        material = convexHullMaterial;
+        break;
+      case 2:
+        strategy = 'convex_triangle_mesh';
+        material = triangleMaterial;
+        break;
+      }
+
+      var box = this._createBufferGeometryShape(strategy, material);
       box.position.x = 20 - (Math.random() * 40);
       box.position.z = 20 - (Math.random() * 40);
       box.position.y = 20 + Math.random() * 20;
@@ -73,7 +92,7 @@
     }
   };
 
-  CompoundDemo.prototype._createBufferGeometryShape = function(material) {
+  CompoundDemo.prototype._createBufferGeometryShape = function(strategy, material) {
     var c = new THREE.Object3D();
 
     this.scene.add(c);
@@ -82,17 +101,25 @@
     c.position.x = (Math.random() * 40) - 20;
     c.position.z = (Math.random() * 40) - 20;
 
+    c.rotation.z = 25;
+    c.scale.x = c.scale.y = c.scale.z = 1;
+
     var c1 = new THREE.Object3D();
 
     c1.add(new THREE.Mesh(this.cubeGeometry, material));
 
     c1.position.y = 0;
 
+    c1.rotation.x = 25;
+    c1.scale.x = 1.5;
+    c1.scale.y = 0.8;
+    c1.scale.z = 1.1;
+
     c.add(c1);
 
     this.scene.updateMatrixWorld(true);
     this.proxy
-      .createRigidBodyFromObject(c, 1, { shape: 'auto', strategy: 'compound_bounding_box' })
+      .createRigidBodyFromObject(c, 1, { shape: 'auto', strategy: strategy })
       .then(function(rigidBody) {
         rigidBody.addToWorld();
         this.bodies.push(rigidBody);

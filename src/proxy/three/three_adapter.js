@@ -179,6 +179,7 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
         rotation = new THREE.Quaternion(),
         scale = new THREE.Vector3();
 
+
         scale.setFromMatrixScale(o.matrixWorld);
 
         tmpMatrix.copy(inverseParent);
@@ -261,7 +262,7 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
           var positions = geometry.attributes.position.array;
 
           for (i = 0; i < positions.length; i += 3) {
-            tmpVector3.x = positions[ i + 0 ];
+            tmpVector3.x = positions[ i + 0];
             tmpVector3.y = positions[ i + 1];
             tmpVector3.z = positions[ i + 2];
 
@@ -323,10 +324,11 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
           var offsets = geometry.offsets;
           var il;
 
-          for (var j = 0, jl = offsets.length; j < jl; ++ j ) {
-            var start = offsets[ j ].start;
-            var count = offsets[ j ].count;
-            var index = offsets[ j ].index;
+          // support for buffer geometry with and without chunks
+          for (var j = 0, jl = offsets.length || 1; j < jl; ++ j ) {
+            var start = offsets[j] && offsets[ j ].start || 0;
+            var count = offsets[j] && offsets[ j ].count || indices.length / 3;
+            var index = offsets[j] && offsets[ j ].index || 0;
 
             for (i = start, il = start + count; i < il; i += 3 ) {
               vA = index + indices[ i + 0 ];
