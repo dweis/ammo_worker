@@ -23,49 +23,36 @@
   CompoundDemo.prototype.initDemo = function() {
     var geometry = this.cubeGeometry = new THREE.BufferGeometry();
 
-    var triangles = 12;
+    var i, 
+        triangles = 12,
+        indices = new THREE.Uint16Attribute(triangles * 3, 1),
+        positions = new THREE.Float32Attribute(triangles * 3, 3),
+        normals = new THREE.Float32Attribute(triangles * 3, 3);
 
-    var indices = new THREE.Uint16Attribute(triangles * 3, 1);
-    var positions = new THREE.Float32Attribute(triangles * 3, 3);
-    var normals = new THREE.Float32Attribute(triangles * 3, 3);
-    var colors = new THREE.Float32Attribute(triangles * 3 * 3, 3);
-
-    geometry.addAttribute('index', indices);//new Uint16Array(triangles * 3), 1);
-    geometry.addAttribute('position', positions);// new Float32Array(triangles * 3 * 3), 3);
-    geometry.addAttribute('normal', normals);//new Float32Array(triangles * 3 * 3), 3);
-
-    var indices = geometry.getAttribute( 'index' ).array;
-    var positions = geometry.getAttribute( 'position' ).array;
-    var normals = geometry.getAttribute( 'normal' ).array;
+    geometry.addAttribute('index', indices);
+    geometry.addAttribute('position', positions);
+    geometry.addAttribute('normal', normals);
 
     var cube = new THREE.BoxGeometry(1, 1, 1);
 
-    console.log(cube);
-
-		var color = new THREE.Color();
-
-    var i;
-
     for (i = 0; i < cube.vertices.length; i++) {
-      positions[i * 3 + 0] = cube.vertices[i].x;
-      positions[i * 3 + 1] = cube.vertices[i].y;
-      positions[i * 3 + 2] = cube.vertices[i].z;
+      positions.array[i * 3 + 0] = cube.vertices[i].x;
+      positions.array[i * 3 + 1] = cube.vertices[i].y;
+      positions.array[i * 3 + 2] = cube.vertices[i].z;
     }
 
     for (i = 0; i < cube.faces.length; i++) {
-      indices[i * 3 + 0] = cube.faces[i].a;
-      indices[i * 3 + 1] = cube.faces[i].b;
-      indices[i * 3 + 2] = cube.faces[i].c;
-      normals[i * 3 + 0] = cube.faces[i].normal.x;
-      normals[i * 3 + 1] = cube.faces[i].normal.y;
-      normals[i * 3 + 2] = cube.faces[i].normal.z;
+      indices.array[i * 3 + 0] = cube.faces[i].a;
+      indices.array[i * 3 + 1] = cube.faces[i].b;
+      indices.array[i * 3 + 2] = cube.faces[i].c;
+      normals.array[i * 3 + 0] = cube.faces[i].normal.x;
+      normals.array[i * 3 + 1] = cube.faces[i].normal.y;
+      normals.array[i * 3 + 2] = cube.faces[i].normal.z;
     }
     
     this.objects=[];
     this.bodies=[];
     this._createShapes();
-    this.scene.updateMatrixWorld(true);
-
   };
 
   CompoundDemo.prototype._createShapes = function() {
