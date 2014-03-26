@@ -114,7 +114,7 @@
         this.dynamicsWorld.removeConstraint(constraint.ammoData);
         Ammo.destroy(constraint.ammoData);
         this.objects[id] = undefined;
-        this.trigger(&#039;Constraint_destroy&#039;, id);
+        this.trigger(&#039;destroy&#039;, id);
         this.ids.push(id);
       }
     },

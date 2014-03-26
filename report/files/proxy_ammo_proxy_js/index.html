@@ -45,11 +45,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
-      <p class="stat">67.55</p>
+      <p class="stat">67.24</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
-      <p class="stat">610</p>
+      <p class="stat">561</p>
     </div>
   </div>
   <div class="row historical">
@@ -63,11 +63,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
-      <p class="stat">85.11</p>
+      <p class="stat">83.41</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
-      <p class="stat">7.15</p>
+      <p class="stat">6.61</p>
     </div>
   </div>
 </div>
@@ -119,44 +119,9 @@
 
     this.adapter = new THREEAdapter(this);
 
-    this.on(&#039;GhostObject_destroy&#039;, function(id) {
+    this.on(&#039;destroy&#039;, function(id) {
       if (objects[id]) {
         objects[id].trigger(&#039;destroy&#039;);
-        objects[id] = undefined;
-      }
-    });
-
-    this.on(&#039;RigidBody_destroy&#039;, function(id) {
-      if (objects[id]) {
-        objects[id].trigger(&#039;destroy&#039;);
-        objects[id] = undefined;
-      }
-    });
-
-    this.on(&#039;Vehicle_destroy&#039;, function(id) {
-      if (objects[id]) {
-        objects[id].trigger(&#039;destroy&#039;);
-        objects[id] = undefined;
-      }
-    });
-
-    this.on(&#039;Constraint_destroy&#039;, function(id) {
-      if (objects[id]) {
-        objects[id].trigger(&#039;destroy&#039;);
-        objects[id] = undefined;
-      }
-    });
-
-    this.on(&#039;KinematicCharacterController_destroy&#039;, function(id) {
-      if (objects[id]) {
-        objects[id].destroy();
-        objects[id] = undefined;
-      }
-    });
-
-    this.on(&#039;CollisionObject_destroy&#039;, function(id) {
-      if (objects[id]) {
-        objects[id].destroy();
         objects[id] = undefined;
       }
     });
@@ -634,38 +599,6 @@
     return this.adapter.createKinematicCharacterControllerFromObject(object, shape, stepHeight);
   };
 
-  AmmoProxy.prototype.getVehicle = function(vehicleId) {
-    if (this.vehicles[vehicleId]) {
-      return this.vehicles[vehicleId];
-    }
-
-    console.warn(&#039;Asked for non-existent vehicle with ID: &#039; + vehicleId);
-  };
-
-  AmmoProxy.prototype.getConstraint = function(constraintId) {
-    if (this.constraints[constraintId]) {
-      return this.constraints[constraintId];
-    }
-
-    console.warn(&#039;Asked for non-existent constraint with ID: &#039; + constraintId);
-  };
-
-  AmmoProxy.prototype.getRigidBody = function(rigidBodyId) {
-    if (this.bodies[rigidBodyId]) {
-      return this.bodies[rigidBodyId];
-    }
-
-    console.warn(&#039;Asked for non-existent rigid body with ID: &#039; + rigidBodyId);
-  };
-
-  AmmoProxy.prototype.getGhostObject = function(ghostObjectId) {
-    if (this.ghosts[ghostObjectId]) {
-      return this.ghosts[ghostObjectId];
-    }
-
-    console.warn(&#039;Asked for non-existent ghost object with ID: &#039; + ghostObjectId);
-  };
-
   AmmoProxy.prototype.setUserData = function(key, value) {
     this.execute(&#039;AmmoProxy_setUserData&#039;, { key: key, value: value });
   };
@@ -678,7 +611,7 @@
     this.execute(&#039;AmmoProxy_runOnce&#039;, fn.toString());
   };
 
-  AmmoProxy.prototype.runInPostUpdate = function(fn) {
+  AmmoProxy.prototype.runPostStep = function(fn) {
     if (typeof fn !== &#039;function&#039;) {
       return console.error(&#039;fn is not a function!&#039;);
     }
@@ -686,7 +619,25 @@
     var deferred = when.defer();
 
     this
-      .execute(&#039;AmmoProxy_runInPostUpdate&#039;, fn.toString(), true)
+      .execute(&#039;AmmoProxy_runPostStep&#039;, fn.toString(), true)
+      .then(_.bind(function(fnId) {
+        setTimeout(function() {
+          deferred.resolve(fnId);
+        }, 0);
+      },this));
+
+    return deferred.promise;
+  };
+
+  AmmoProxy.prototype.runPreStep = function(fn) {
+    if (typeof fn !== &#039;function&#039;) {
+      return console.error(&#039;fn is not a function!&#039;);
+    }
+
+    var deferred = when.defer();
+
+    this
+      .execute(&#039;AmmoProxy_runPreStep&#039;, fn.toString(), true)
       .then(_.bind(function(fnId) {
         setTimeout(function() {
           deferred.resolve(fnId);

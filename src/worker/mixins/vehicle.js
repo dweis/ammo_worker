@@ -210,7 +210,7 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
         this.dynamicsWorld.removeVehicle(vehicle);
         Ammo.destroy(vehicle.ammoData);
         this.objects[id] = undefined;
-        this.trigger('Vehicle_destroy', id);
+        this.trigger('destroy', id);
         this.ids.push(id);
       }
     }

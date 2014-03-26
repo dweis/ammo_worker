@@ -408,7 +408,7 @@
         this.objects[id] = undefined;
         this.dynamicsWorld.removeRigidBody(body.ammoData);
         Ammo.destroy(body.ammoData);
-        this.trigger(&#039;RigidBody_destroy&#039;, id);
+        this.trigger(&#039;destroy&#039;, id);
         this.ids.push(id);
       }
     }

@@ -70,7 +70,7 @@ define([ 'worker/constants/collision_flags', 'worker/objects/ghost_object' ],
         this.dynamicsWorld.removeCollisionObject(ghost.ammoData);
         Ammo.destroy(ghost.ammoData);
         this.objects[id] = undefined;
-        this.trigger('GhostObject_destroy', id);
+        this.trigger('destroy', id);
         this.ids.push(id);
       }
     }

@@ -91,7 +91,7 @@
 <div class="container">
   <div class="row">
     <textarea id="file-source" class="col-md-12">define([ &#039;worker/constants/collision_flags&#039;, &#039;worker/objects/ghost_object&#039; ],
-    function(GhostObject, CollisionFlags) {
+    function(CollisionFlags, GhostObject) {
   var tmpVec = [
       new Ammo.btVector3()
     ],
@@ -162,7 +162,7 @@
         this.dynamicsWorld.removeCollisionObject(ghost.ammoData);
         Ammo.destroy(ghost.ammoData);
         this.objects[id] = undefined;
-        this.trigger(&#039;GhostObject_destroy&#039;, id);
+        this.trigger(&#039;destroy&#039;, id);
         this.ids.push(id);
       }
     }
