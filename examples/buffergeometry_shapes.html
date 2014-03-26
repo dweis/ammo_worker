@@ -33,12 +33,10 @@
     geometry.addAttribute('index', indices);//new Uint16Array(triangles * 3), 1);
     geometry.addAttribute('position', positions);// new Float32Array(triangles * 3 * 3), 3);
     geometry.addAttribute('normal', normals);//new Float32Array(triangles * 3 * 3), 3);
-    geometry.addAttribute('color', colors);//new Float32Array(triangles * 3 * 3), 3);
 
     var indices = geometry.getAttribute( 'index' ).array;
     var positions = geometry.getAttribute( 'position' ).array;
     var normals = geometry.getAttribute( 'normal' ).array;
-		var colors = geometry.getAttribute( 'color' ).array;
 
     var cube = new THREE.BoxGeometry(1, 1, 1);
 
@@ -58,13 +56,9 @@
       indices[i * 3 + 0] = cube.faces[i].a;
       indices[i * 3 + 1] = cube.faces[i].b;
       indices[i * 3 + 2] = cube.faces[i].c;
-      normals[i * 3 + 0] = 1;
-      normals[i * 3 + 1] = 1;
-      normals[i * 3 + 2] = 1;
-
-      for (j = 0; j < 9; j++) {
-        colors[i * 9 + j] = 1;
-      }
+      normals[i * 3 + 0] = cube.faces[i].normal.x;
+      normals[i * 3 + 1] = cube.faces[i].normal.y;
+      normals[i * 3 + 2] = cube.faces[i].normal.z;
     }
     
     this.objects=[];
@@ -77,7 +71,7 @@
   CompoundDemo.prototype._createShapes = function() {
     var material = new THREE.MeshLambertMaterial({ color: 0xCC0000 });
 
-    for (var i = 0; i < 200; i++) {
+    for (var i = 0; i < 500; i++) {
       var box = this._createBufferGeometryShape(material);
       box.position.x = 20 - (Math.random() * 40);
       box.position.z = 20 - (Math.random() * 40);
@@ -97,7 +91,7 @@
 
     this.scene.add(c);
 
-    c.position.y = 5;
+    c.position.y = 5 + (Math.random() * 20);
     c.position.x = (Math.random() * 40) - 20;
     c.position.z = (Math.random() * 40) - 20;
 
@@ -105,14 +99,13 @@
 
     c1.add(new THREE.Mesh(this.cubeGeometry, material));
 
-    c1.position.y  = 0;
+    c1.position.y = 0;
 
     c.add(c1);
 
     this.scene.updateMatrixWorld(true);
-    return c;
     this.proxy
-      .createRigidBodyFromObject(c, 100, { shape: 'auto', strategy: 'compound_bounding_box' })
+      .createRigidBodyFromObject(c, 1, { shape: 'auto', strategy: 'compound_bounding_box' })
       .then(function(rigidBody) {
         rigidBody.addToWorld();
         this.bodies.push(rigidBody);
