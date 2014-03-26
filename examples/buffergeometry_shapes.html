@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Compound Object Test</title>
+  <style>
+  html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
+  </style>
+</head>
+<body>
+  <div id="container">
+  </div>
+  <script src="js/three.js"></script>
+  <script src="js/stats.min.js"></script>
+  <script src="js/OrbitControls.js"></script>
+  <script src="../build/ammo_proxy.js"></script>
+  <script src="js/demo_scene.js"></script>
+  <script type="text/javascript">
+  function CompoundDemo() {
+  }
+
+  CompoundDemo.prototype = new DemoScene();
+
+  CompoundDemo.prototype.initDemo = function() {
+    var geometry = this.cubeGeometry = new THREE.BufferGeometry();
+
+    var triangles = 12;
+
+    var indices = new THREE.Uint16Attribute(triangles * 3, 1);
+    var positions = new THREE.Float32Attribute(triangles * 3, 3);
+    var normals = new THREE.Float32Attribute(triangles * 3, 3);
+    var colors = new THREE.Float32Attribute(triangles * 3 * 3, 3);
+
+    geometry.addAttribute('index', indices);//new Uint16Array(triangles * 3), 1);
+    geometry.addAttribute('position', positions);// new Float32Array(triangles * 3 * 3), 3);
+    geometry.addAttribute('normal', normals);//new Float32Array(triangles * 3 * 3), 3);
+    geometry.addAttribute('color', colors);//new Float32Array(triangles * 3 * 3), 3);
+
+    var indices = geometry.getAttribute( 'index' ).array;
+    var positions = geometry.getAttribute( 'position' ).array;
+    var normals = geometry.getAttribute( 'normal' ).array;
+		var colors = geometry.getAttribute( 'color' ).array;
+
+    var cube = new THREE.BoxGeometry(1, 1, 1);
+
+    console.log(cube);
+
+		var color = new THREE.Color();
+
+    var i;
+
+    for (i = 0; i < cube.vertices.length; i++) {
+      positions[i * 3 + 0] = cube.vertices[i].x;
+      positions[i * 3 + 1] = cube.vertices[i].y;
+      positions[i * 3 + 2] = cube.vertices[i].z;
+    }
+
+    for (i = 0; i < cube.faces.length; i++) {
+      indices[i * 3 + 0] = cube.faces[i].a;
+      indices[i * 3 + 1] = cube.faces[i].b;
+      indices[i * 3 + 2] = cube.faces[i].c;
+      normals[i * 3 + 0] = 1;
+      normals[i * 3 + 1] = 1;
+      normals[i * 3 + 2] = 1;
+
+      for (j = 0; j < 9; j++) {
+        colors[i * 9 + j] = 1;
+      }
+    }
+    
+    this.objects=[];
+    this.bodies=[];
+    this._createShapes();
+    this.scene.updateMatrixWorld(true);
+
+  };
+
+  CompoundDemo.prototype._createShapes = function() {
+    var material = new THREE.MeshLambertMaterial({ color: 0xCC0000 });
+
+    for (var i = 0; i < 200; i++) {
+      var box = this._createBufferGeometryShape(material);
+      box.position.x = 20 - (Math.random() * 40);
+      box.position.z = 20 - (Math.random() * 40);
+      box.position.y = 20 + Math.random() * 20;
+      box.scale.x = 1;
+      box.scale.y = 1;
+      box.scale.z = 1;
+      box.bodyId = i;
+      this.scene.add(box);
+
+      this.objects[i] = box;
+    }
+  };
+
+  CompoundDemo.prototype._createBufferGeometryShape = function(material) {
+    var c = new THREE.Object3D();
+
+    this.scene.add(c);
+
+    c.position.y = 5;
+    c.position.x = (Math.random() * 40) - 20;
+    c.position.z = (Math.random() * 40) - 20;
+
+    var c1 = new THREE.Object3D();
+
+    c1.add(new THREE.Mesh(this.cubeGeometry, material));
+
+    c1.position.y  = 0;
+
+    c.add(c1);
+
+    this.scene.updateMatrixWorld(true);
+    return c;
+    this.proxy
+      .createRigidBodyFromObject(c, 100, { shape: 'auto', strategy: 'compound_bounding_box' })
+      .then(function(rigidBody) {
+        rigidBody.addToWorld();
+        this.bodies.push(rigidBody);
+      }.bind(this));
+
+    return c;
+  };
+
+  CompoundDemo.prototype.updateBodies = function() {
+    for (var i in this.bodies) {
+      this.bodies[i].update();
+    }
+  };
+
+  CompoundDemo.prototype.preUpdate = function() {
+    this.updateBodies();
+  };
+
+  var demo = new CompoundDemo();
+
+  demo.init();
+  </script>
+</body>
+</html>
