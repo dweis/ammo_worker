@@ -3510,10 +3510,6 @@ define('proxy/ammo_vehicle',[ 'when', 'underscore', './ammo_base_object' ], func
   };
 
   AmmoVehicle.prototype.update = function() {
-    if (this.rigidBody) {
-      this.rigidBody.update();
-    }
-
     _.each(this.wheelBindings, function(binding) {
       binding.update();
     });
@@ -4076,8 +4072,9 @@ define('proxy/three/three_adapter',[ 'underscore', 'proxy/three/three_binding' ]
   };
 
   THREEAdapter.prototype._createBoundingBoxCompoundShape = function(o) {
-    var inverseParent = new THREE.Matrix4(),
-        tmpMatrix = new THREE.Matrix4();
+    var inverseParent = new THREE.Matrix4();
+
+    inverseParent.getInverse(o.matrixWorld);
 
     var json = {
       'shape': 'compound',
@@ -4085,39 +4082,31 @@ define('proxy/three/three_adapter',[ 'underscore', 'proxy/three/three_binding' ]
       ]
     };
 
-    inverseParent.getInverse(o.matrixWorld);
+    o.traverse(function(child) {
+      var tmpMatrix = new THREE.Matrix4(),
+          min, 
+          max, 
+          halfExtents = new THREE.Vector3(),
+          position = new THREE.Vector3(),
+          rotation = new THREE.Quaternion(),
+          scale = new THREE.Vector3();
 
-    o.traverse(function(o) {
-      if (o instanceof THREE.Mesh && !o.isBB) {
-        var min, max, halfExtents = new THREE.Vector3(),
-        position = new THREE.Vector3(),
-        rotation = new THREE.Quaternion(),
-        scale = new THREE.Vector3();
-
-
-        scale.setFromMatrixScale(o.matrixWorld);
-
+      if (child instanceof THREE.Mesh && !child.isBB) {
         tmpMatrix.copy(inverseParent);
-        tmpMatrix.multiply(o.matrixWorld);
+        tmpMatrix.multiply(child.matrixWorld);
+        scale.setFromMatrixScale(child.matrixWorld);
 
         position.setFromMatrixPosition(tmpMatrix);
         tmpMatrix.extractRotation(tmpMatrix);
         rotation.setFromRotationMatrix(tmpMatrix);
 
-        o.geometry.computeBoundingBox();
-        min = o.geometry.boundingBox.min.clone();
-        max = o.geometry.boundingBox.max.clone();
+        child.geometry.computeBoundingBox();
+        min = child.geometry.boundingBox.min.clone();
+        max = child.geometry.boundingBox.max.clone();
 
         halfExtents.subVectors(max, min);
         halfExtents.multiplyScalar(0.5);
-
         halfExtents.multiplyVectors(halfExtents, scale);
-
-        var center = new THREE.Vector3();
-        center.x = ( min.x + max.x ) / 2;
-        center.y = ( min.y + max.y ) / 2;
-        center.z = ( min.z + max.z ) / 2;
-        center.multiplyVectors(center, scale);
 
         json.children.push({
           shape: 'box',

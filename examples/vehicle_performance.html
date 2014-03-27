@@ -208,6 +208,7 @@
       if (this.vehicles && this.vehicles.length) {
         for (var i = 0; i < this.vehicles.length; i++) {
           this.vehicles[i].update();
+          this.vehicles[i].rigidBody.update();
         }
       }
 

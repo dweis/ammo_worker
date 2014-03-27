@@ -121,6 +121,8 @@
       };
 
       this.proxy.createRigidBodyFromObject(o, 1000).then(function(rigidBody) {
+        this.rigidBody = rigidBody;
+
         rigidBody.addToWorld();
         that.proxy.createVehicle(rigidBody, tuning).then(function(vehicle) {
           var wheel, cylinder, euler = new THREE.Euler(),
@@ -181,7 +183,8 @@
       var bodyIndex, pos;
 
       if (this.vehicle) {
-       this.vehicle.update();
+        this.rigidBody.update();
+        this.vehicle.update();
       }
     };
 

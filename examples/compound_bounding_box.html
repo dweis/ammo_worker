@@ -36,10 +36,6 @@
       box.position.x = 20 - (Math.random() * 40);
       box.position.z = 20 - (Math.random() * 40);
       box.position.y = 20 + Math.random() * 20;
-      //box.scale.x = 1;
-      //box.scale.y = 1;
-      //box.scale.z = 1;
-      //box.bodyId = i;
       this.scene.add(box);
 
       this.objects[i] = box;
@@ -51,7 +47,7 @@
 
     o.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
 
-    o.scale.x = o.scale.y = o.scale.z = 1;
+    o.scale.x = o.scale.y = o.scale.z = 1.5;
 
     var o1 = new THREE.Object3D();
     o1.position.x = -2;

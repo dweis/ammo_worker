@@ -99,10 +99,6 @@ define([ 'when', 'underscore', './ammo_base_object' ], function(when, _, AmmoBas
   };
 
   AmmoVehicle.prototype.update = function() {
-    if (this.rigidBody) {
-      this.rigidBody.update();
-    }
-
     _.each(this.wheelBindings, function(binding) {
       binding.update();
     });
