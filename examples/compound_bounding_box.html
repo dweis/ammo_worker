@@ -56,6 +56,9 @@
     o1.scale.x = Math.floor(Math.random() * 2) + 1;
     o1.scale.y = Math.floor(Math.random() * 2) + 1;
     o1.scale.z = Math.floor(Math.random() * 2) + 1;
+    o1.rotation.x = Math.random() * 180;
+    o1.rotation.y = Math.random() * 180;
+    o1.rotation.z = Math.random() * 180;
     //o1.quaternion.setFromAxisAngle({ x: 0, y: 1, z: 0 }, Math.PI/4);
     o1.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
     o.add(o1);
@@ -64,6 +67,9 @@
     o2.position.x = 0;
     o2.position.y = 2;
     o2.position.z = -2;
+    o2.rotation.x = 45;
+    o2.rotation.y = -10;
+    o2.rotation.z = 100;
     o2.scale.x = Math.floor(Math.random() * 2) + 1;
     o2.scale.y = Math.floor(Math.random() * 2) + 1;
     o2.scale.z = Math.floor(Math.random() * 2) + 1;

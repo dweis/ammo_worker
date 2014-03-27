@@ -102,7 +102,9 @@
     c.position.z = (Math.random() * 40) - 20;
 
     c.rotation.z = 25;
-    c.scale.x = c.scale.y = c.scale.z = 0.2;
+    c.scale.x = Math.random() * 2; 
+    c.scale.y = Math.random() * 2;
+    c.scale.z = Math.random() * 2;
 
     var c1 = new THREE.Object3D();
 
@@ -111,9 +113,9 @@
     c1.position.y = 0;
 
     c1.rotation.x = 25;
-    c1.scale.x = 0.8;
-    c1.scale.y = 1.5;
-    c1.scale.z = 2;
+    c1.scale.x = Math.random() * 2;
+    c1.scale.y = Math.random() * 2;
+    c1.scale.z = Math.random() * 2;
 
     c.add(c1);
 
