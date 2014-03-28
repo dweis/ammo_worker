@@ -43,21 +43,21 @@
       // Gas/brake/steering
       maxEngineForce: 1000,
       maxBreakingForce: 100,
-      steeringClamp: 0.3,
+      steeringClamp: 0.2,
 
       // Per wheel config
       wheelsRadius: 0.75,
       wheelWidth: 0.25,
       rollInfluence: 1,
-      connectionHeight: 1.2,
+      connectionHeight: 0.2,
       suspensionRestLength: 0.8,
       wheelsDampingCompression: 10,
       wheelsDampingRelaxation: 5,
 
       // Vehicle Tuning
       suspensionDamping: 2.3,
-      suspensionCompression: 4.4,
-      suspensionStiffness: 20,
+      suspensionCompression: 10.4,
+      suspensionStiffness: 40,
       // Also set on  wheels
       maxSuspensionTravelCm: 100,
       frictionSlip: 1000,
@@ -129,7 +129,7 @@
         frictionSlip: config.frictionSlip
       };
 
-      this.proxy.createRigidBodyFromObject(o, 1000).then(function(rigidBody) {
+      this.proxy.createRigidBodyFromObject(o, 500).then(function(rigidBody) {
         this.rigidBody = rigidBody;
 
         rigidBody.addToWorld();
@@ -200,10 +200,10 @@
     VehicleTest.prototype.preUpdate = function() {
       if (this.vehicle) {
         for (var i = 0; i < 4; i++) {
-          this.vehicle.setBrake(i, 0);
-          this.vehicle.applyEngineForce(i, config.maxEngineForce);
-
           if (i < 2) {
+            this.vehicle.setBrake(i, 0);
+            this.vehicle.applyEngineForce(i, config.maxEngineForce);
+
             this.vehicle.setSteeringValue(i, config.steeringClamp);
           }
         }

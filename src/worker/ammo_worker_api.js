@@ -83,7 +83,6 @@ define([ 'underscore',
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
-        new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize)
       ];
 
@@ -208,7 +207,7 @@ define([ 'underscore',
       this.userFunctions.preStep(delta);
       that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);
 
-      if (that.buffers.length > 0) {
+      if (that.buffers.length) {
         update = new Float32Array(that.buffers.pop());
       }
 

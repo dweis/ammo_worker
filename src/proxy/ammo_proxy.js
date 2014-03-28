@@ -37,6 +37,8 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     this.setStep(opts.step);
     this.setIterations(opts.iterations);
     this.setGravity(opts.gravity);
+
+    this.buffers = [];
   }
 
   AmmoProxy.prototype.beginContact = function(idA, idB) {
@@ -478,16 +480,19 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
   };
 
   AmmoProxy.prototype.update = function(data) {
-    if (this.next) {
-      //this.worker.swap(this.data && this.data.buffer);
-      if (this.data) {
-        this.worker.postMessage({ method: 'swap', data: this.data.buffer }, [ this.data.buffer ]);
-      } else {
-        this.worker.postMessage({ method: 'swap', data: undefined });
-      }
-      this.data = this.next;
+
+    if (data) {
+      this.buffers.push(new Float32Array(data));
     }
-    this.next = new Float32Array(data);
+
+    if (this.data) {
+      this.worker.postMessage({ method: 'swap', data: this.data.buffer }, [ this.data.buffer ]);
+      this.data = undefined;
+    }
+
+    if (this.buffers.length) {
+      this.data = this.buffers.shift();
+    }
   };
 
   AmmoProxy.prototype.createCollisionObjectFromObject = function(object, shape) {
