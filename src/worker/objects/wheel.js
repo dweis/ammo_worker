@@ -11,6 +11,7 @@ define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
   Wheel.prototype = new AmmoObject();
 
   Wheel.prototype.update = function(data, delta) {
+    this.vehicle.ammoData.updateWheelTransform(this.index, true);
     var trans = this.vehicle.ammoData.getWheelTransformWS(this.index);
 
     data[this.offset + 0] = trans.getOrigin().x();

@@ -22,6 +22,6 @@ define([ 'worker/objects/collision_object' ], function(CollisionObject) {
     data[this.offset + 5] = tmpTrans.getRotation().z();
     data[this.offset + 6] = tmpTrans.getRotation().w();
   };
- 
+
   return RigidBody;
 });
