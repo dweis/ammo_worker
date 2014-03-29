@@ -102,6 +102,14 @@ define([], function() {
     },
 
     _createShape: function(shape) {
+      this.shapeCache = this.shapeCache || {};
+
+      var shapeJSON = JSON.stringify(shape);
+
+      if (this.shapeCache[shapeJSON]) {
+        return this.shapeCache[shapeJSON];
+      }
+
       var colShape;
       switch(shape.shape) {
       case 'box':
@@ -146,6 +154,9 @@ define([], function() {
       default:
         return console.error('Unknown shape: ' + shape.shape);
       }
+
+      this.shapeCache[shapeJSON] = colShape;
+
       return colShape;
     }
   };
