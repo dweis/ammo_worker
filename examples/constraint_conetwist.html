@@ -32,7 +32,13 @@
         this.scene.add(o);
       }
 
-      setTimeout(function() {
+      var intervalId = setInterval(function() {
+        if (this.bodies.length !== 10) {
+          return;
+        }
+
+        clearInterval(intervalId);
+
         var last;
         var quat = new THREE.Quaternion();
 
@@ -40,12 +46,12 @@
 
         this.bodies.forEach(function(body,i) {
           if (last) {
-            this.proxy.createConeTwistConstraint(last, body, 
+            this.proxy.createConeTwistConstraint(last, body,
               {
                 position: { x: 0, y: 0, z: 0 },
                 rotation: quat
-              }, 
-              { 
+              },
+              {
                 position: { x: 5, y: 0, z: 0 },
                 rotation: quat
               }).then(function(coneTwistConstraint) {
