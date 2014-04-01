@@ -15,6 +15,7 @@ define([ 'worker/constants/collision_flags', 'worker/objects/ghost_object' ],
       if (!this.ids.length) {
         return console.error('No unused ids');
       }
+
       var colShape = this._createShape(descriptor.shape),
           origin = tmpVec[0],
           rotation = tmpQuaternion[0],
@@ -26,9 +27,9 @@ define([ 'worker/constants/collision_flags', 'worker/objects/ghost_object' ],
 
       tmpTrans[0].setIdentity();
 
-      origin.setX(descriptor.position.x);
-      origin.setY(descriptor.position.y);
-      origin.setZ(descriptor.position.z);
+      origin.setX(descriptor.position.x / this.scaleFactor);
+      origin.setY(descriptor.position.y / this.scaleFactor);
+      origin.setZ(descriptor.position.z / this.scaleFactor);
 
       rotation.setX(descriptor.quaternion.x);
       rotation.setY(descriptor.quaternion.y);
@@ -53,7 +54,7 @@ define([ 'worker/constants/collision_flags', 'worker/objects/ghost_object' ],
         id: id
       };
 
-      var obj = new GhostObject(id, ghostObject);
+      var obj = new GhostObject(id, ghostObject, this);
 
       this.objects[id] = obj;
 

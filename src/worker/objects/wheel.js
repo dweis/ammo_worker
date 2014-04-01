@@ -1,6 +1,6 @@
 /* jshint unused:vars */
 define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
-  function Wheel(id, ammoData, vehicle) {
+  function Wheel(id, ammoData, worker, vehicle) {
     AmmoObject.apply(this, arguments);
     this.type = 'btWheelInfo';
     this.vehicle = vehicle;
@@ -14,15 +14,19 @@ define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
     this.vehicle.ammoData.updateWheelTransform(this.index, true);
     var trans = this.vehicle.ammoData.getWheelTransformWS(this.index);
 
-    data[this.offset + 0] = trans.getOrigin().x();
-    data[this.offset + 1] = trans.getOrigin().y();
-    data[this.offset + 2] = trans.getOrigin().z();
+    var position = trans.getOrigin().op_mul(this.worker.scaleFactor);
+
+    data[this.offset + 0] = position.x();
+    data[this.offset + 1] = position.y();
+    data[this.offset + 2] = position.z();
     data[this.offset + 3] = trans.getRotation().x();
     data[this.offset + 4] = trans.getRotation().y();
     data[this.offset + 5] = trans.getRotation().z();
     data[this.offset + 6] = trans.getRotation().w();
 
     this.vehicle.ammoData.applyEngineForce(this.force * delta, this.index);
+
+    Ammo.destroy(position);
   };
 
   return Wheel;

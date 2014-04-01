@@ -39,15 +39,15 @@ define([ 'worker/objects/conetwist_constraint', 'worker/objects/point2point_cons
           id;
 
       if (rigidBodyA) {
-        tmpVec[0].setX(descriptor.pivotA.x);
-        tmpVec[0].setY(descriptor.pivotA.y);
-        tmpVec[0].setZ(descriptor.pivotA.z);
+        tmpVec[0].setX(descriptor.pivotA.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.pivotA.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.pivotA.z / this.scaleFactor);
 
         if (rigidBodyB) {
           rigidBodyB = this.objects[descriptor.rigidBodyIdB];
-          tmpVec[1].setX(descriptor.pivotB.x);
-          tmpVec[1].setY(descriptor.pivotB.y);
-          tmpVec[1].setZ(descriptor.pivotB.z);
+          tmpVec[1].setX(descriptor.pivotB.x / this.scaleFactor);
+          tmpVec[1].setY(descriptor.pivotB.y / this.scaleFactor);
+          tmpVec[1].setZ(descriptor.pivotB.z / this.scaleFactor);
           constraint = new Ammo.btPoint2PointConstraint(rigidBodyA.ammoData, rigidBodyB.ammoData, tmpVec[0], tmpVec[1]);
         } else {
           constraint = new Ammo.btPoint2PointConstraint(rigidBodyA.ammoData, tmpVec[0]);
@@ -82,9 +82,9 @@ define([ 'worker/objects/conetwist_constraint', 'worker/objects/point2point_cons
       if (rigidBodyA) {
         var transformA = new Ammo.btTransform();
 
-        tmpVec[0].setX(descriptor.frameInA.position.x);
-        tmpVec[0].setY(descriptor.frameInA.position.y);
-        tmpVec[0].setZ(descriptor.frameInA.position.z);
+        tmpVec[0].setX(descriptor.frameInA.position.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.frameInA.position.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.frameInA.position.z / this.scaleFactor);
 
         tmpQuaternion[0].setX(descriptor.frameInA.rotation.x);
         tmpQuaternion[0].setY(descriptor.frameInA.rotation.y);
@@ -97,9 +97,9 @@ define([ 'worker/objects/conetwist_constraint', 'worker/objects/point2point_cons
         if (rigidBodyB) {
           var transformB = new Ammo.btTransform();
 
-          tmpVec[1].setX(descriptor.frameInB.position.x);
-          tmpVec[1].setY(descriptor.frameInB.position.y);
-          tmpVec[1].setZ(descriptor.frameInB.position.z);
+          tmpVec[1].setX(descriptor.frameInB.position.x / this.scaleFactor);
+          tmpVec[1].setY(descriptor.frameInB.position.y / this.scaleFactor);
+          tmpVec[1].setZ(descriptor.frameInB.position.z / this.scaleFactor);
 
           tmpQuaternion[1].setX(descriptor.frameInB.rotation.x);
           tmpQuaternion[1].setY(descriptor.frameInB.rotation.y);
@@ -176,9 +176,9 @@ define([ 'worker/objects/conetwist_constraint', 'worker/objects/point2point_cons
       if (rigidBodyA) {
         var transformA = new Ammo.btTransform();
 
-        tmpVec[0].setX(descriptor.rbAFrame.position.x);
-        tmpVec[0].setY(descriptor.rbAFrame.position.y);
-        tmpVec[0].setZ(descriptor.rbAFrame.position.z);
+        tmpVec[0].setX(descriptor.rbAFrame.position.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.rbAFrame.position.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.rbAFrame.position.z / this.scaleFactor);
 
         tmpQuaternion[0].setX(descriptor.rbAFrame.rotation.x);
         tmpQuaternion[0].setY(descriptor.rbAFrame.rotation.y);
@@ -191,9 +191,9 @@ define([ 'worker/objects/conetwist_constraint', 'worker/objects/point2point_cons
         if (rigidBodyB) {
           var transformB = new Ammo.btTransform();
 
-          tmpVec[1].setX(descriptor.rbBFrame.position.x);
-          tmpVec[1].setY(descriptor.rbBFrame.position.y);
-          tmpVec[1].setZ(descriptor.rbBFrame.position.z);
+          tmpVec[1].setX(descriptor.rbBFrame.position.x / this.scaleFactor);
+          tmpVec[1].setY(descriptor.rbBFrame.position.y / this.scaleFactor);
+          tmpVec[1].setZ(descriptor.rbBFrame.position.z / this.scaleFactor);
 
           tmpQuaternion[1].setX(descriptor.rbBFrame.rotation.x);
           tmpQuaternion[1].setY(descriptor.rbBFrame.rotation.y);
@@ -237,9 +237,9 @@ define([ 'worker/objects/conetwist_constraint', 'worker/objects/point2point_cons
       if (rigidBodyA) {
         var transformA = new Ammo.btTransform();
 
-        tmpVec[0].setX(descriptor.rbAFrame.position.x);
-        tmpVec[0].setY(descriptor.rbAFrame.position.y);
-        tmpVec[0].setZ(descriptor.rbAFrame.position.z);
+        tmpVec[0].setX(descriptor.rbAFrame.position.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.rbAFrame.position.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.rbAFrame.position.z / this.scaleFactor);
 
         tmpQuaternion[0].setX(descriptor.rbAFrame.rotation.x);
         tmpQuaternion[0].setY(descriptor.rbAFrame.rotation.y);
@@ -252,9 +252,9 @@ define([ 'worker/objects/conetwist_constraint', 'worker/objects/point2point_cons
         if (rigidBodyB) {
           var transformB = new Ammo.btTransform();
 
-          tmpVec[1].setX(descriptor.rbBFrame.position.x);
-          tmpVec[1].setY(descriptor.rbBFrame.position.y);
-          tmpVec[1].setZ(descriptor.rbBFrame.position.z);
+          tmpVec[1].setX(descriptor.rbBFrame.position.x / this.scaleFactor);
+          tmpVec[1].setY(descriptor.rbBFrame.position.y / this.scaleFactor);
+          tmpVec[1].setZ(descriptor.rbBFrame.position.z / this.scaleFactor);
 
           tmpQuaternion[1].setX(descriptor.rbBFrame.rotation.x);
           tmpQuaternion[1].setY(descriptor.rbBFrame.rotation.y);
@@ -361,18 +361,18 @@ define([ 'worker/objects/conetwist_constraint', 'worker/objects/point2point_cons
           id;
 
       if (rigidBodyA) {
-        tmpVec[0].setX(descriptor.pivotA.x);
-        tmpVec[0].setY(descriptor.pivotA.y);
-        tmpVec[0].setZ(descriptor.pivotA.z);
+        tmpVec[0].setX(descriptor.pivotA.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.pivotA.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.pivotA.z / this.scaleFactor);
         tmpVec[1].setX(descriptor.axisA.x);
         tmpVec[1].setX(descriptor.axisA.y);
         tmpVec[1].setX(descriptor.axisA.z);
 
         if (descriptor.rigidBodyIdB) {
           rigidBodyB = this.objects[descriptor.rigidBodyIdB];
-          tmpVec[2].setX(descriptor.pivotB.x);
-          tmpVec[2].setY(descriptor.pivotB.y);
-          tmpVec[2].setZ(descriptor.pivotB.z);
+          tmpVec[2].setX(descriptor.pivotB.x / this.scaleFactor);
+          tmpVec[2].setY(descriptor.pivotB.y / this.scaleFactor);
+          tmpVec[2].setZ(descriptor.pivotB.z / this.scaleFactor);
           tmpVec[3].setX(descriptor.axisB.x);
           tmpVec[3].setY(descriptor.axisB.y);
           tmpVec[3].setZ(descriptor.axisB.z);

@@ -40,9 +40,9 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
         colShape.calculateLocalInertia(descriptor.mass,localInertia);
       }
 
-      origin.setX(descriptor.position.x);
-      origin.setY(descriptor.position.y);
-      origin.setZ(descriptor.position.z);
+      origin.setX(descriptor.position.x / this.scaleFactor);
+      origin.setY(descriptor.position.y / this.scaleFactor);
+      origin.setZ(descriptor.position.z / this.scaleFactor);
 
       rotation.setX(descriptor.quaternion.x);
       rotation.setY(descriptor.quaternion.y);
@@ -58,7 +58,7 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
 
       var id = this.ids.pop();
 
-      var obj = new RigidBody(id, body);
+      var obj = new RigidBody(id, body, this);
 
       this.objects[id] = obj;
 
@@ -110,9 +110,9 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
         rotation = tmpTrans[0].getRotation();
 
         if (descriptor.position) {
-          position.setX(descriptor.position.x);
-          position.setY(descriptor.position.y);
-          position.setZ(descriptor.position.z);
+          position.setX(descriptor.position.x / this.scaleFactor);
+          position.setY(descriptor.position.y / this.scaleFactor);
+          position.setZ(descriptor.position.z / this.scaleFactor);
         }
 
         if (descriptor.rotation) {
@@ -143,12 +143,12 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
       var body = this.objects[descriptor.bodyId];
 
       if (body.ammoData) {
-        tmpVec[0].setX(descriptor.force.x);
-        tmpVec[0].setY(descriptor.force.y);
-        tmpVec[0].setZ(descriptor.force.z);
-        tmpVec[1].setX(descriptor.relativePosition.x);
-        tmpVec[1].setY(descriptor.relativePosition.y);
-        tmpVec[1].setZ(descriptor.relativePosition.z);
+        tmpVec[0].setX(descriptor.force.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.force.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.force.z / this.scaleFactor);
+        tmpVec[1].setX(descriptor.relativePosition.x / this.scaleFactor);
+        tmpVec[1].setY(descriptor.relativePosition.y / this.scaleFactor);
+        tmpVec[1].setZ(descriptor.relativePosition.z / this.scaleFactor);
 
         body.ammoData.applyForce(tmpVec[0], tmpVec[1]);
         body.ammoData.activate();
@@ -159,9 +159,9 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
       var body = this.objects[descriptor.bodyId];
 
       if (body.ammoData) {
-        tmpVec[0].setX(descriptor.force.x);
-        tmpVec[0].setY(descriptor.force.y);
-        tmpVec[0].setZ(descriptor.force.z);
+        tmpVec[0].setX(descriptor.force.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.force.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.force.z / this.scaleFactor);
 
         body.ammoData.applyCentralForce(tmpVec[0]);
         body.ammoData.activate();
@@ -172,12 +172,12 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
       var body = this.objects[descriptor.bodyId];
 
       if (body.ammoData) {
-        tmpVec[0].setX(descriptor.impulse.x);
-        tmpVec[0].setY(descriptor.impulse.y);
-        tmpVec[0].setZ(descriptor.impulse.z);
-        tmpVec[1].setX(descriptor.relativePosition.x);
-        tmpVec[1].setY(descriptor.relativePosition.y);
-        tmpVec[1].setZ(descriptor.relativePosition.z);
+        tmpVec[0].setX(descriptor.impulse.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.impulse.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.impulse.z / this.scaleFactor);
+        tmpVec[1].setX(descriptor.relativePosition.x / this.scaleFactor);
+        tmpVec[1].setY(descriptor.relativePosition.y / this.scaleFactor);
+        tmpVec[1].setZ(descriptor.relativePosition.z / this.scaleFactor);
 
         body.ammoData.applyImpulse(tmpVec[0], tmpVec[1]);
         body.ammoData.activate();
@@ -188,9 +188,9 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
       var body = this.objects[descriptor.bodyId];
 
       if (body.ammoData) {
-        tmpVec[0].setX(descriptor.force.x);
-        tmpVec[0].setY(descriptor.force.y);
-        tmpVec[0].setZ(descriptor.force.z);
+        tmpVec[0].setX(descriptor.force.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.force.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.force.z / this.scaleFactor);
 
         body.ammoData.applyCentralImpulse(tmpVec[0]);
         body.ammoData.activate();
@@ -201,9 +201,9 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
       var body = this.objects[descriptor.bodyId];
 
       if (body.ammoData) {
-        tmpVec[0].setX(descriptor.torque.x);
-        tmpVec[0].setY(descriptor.torque.y);
-        tmpVec[0].setZ(descriptor.torque.z);
+        tmpVec[0].setX(descriptor.torque.x / (this.scaleFactor * this.scaleFactor));
+        tmpVec[0].setY(descriptor.torque.y / (this.scaleFactor * this.scaleFactor));
+        tmpVec[0].setZ(descriptor.torque.z / (this.scaleFactor * this.scaleFactor));
 
         body.ammoData.applyTorque(tmpVec[0]);
         body.ammoData.activate();
@@ -242,9 +242,9 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
         lv = body.ammoData.getLinearVelocity();
 
         fn({
-          x: lv.x(),
-          y: lv.y(),
-          z: lv.z()
+          x: lv.x() * this.scaleFactor,
+          y: lv.y() * this.scaleFactor,
+          z: lv.z() * this.scaleFactor
         });
       }
     },
@@ -290,9 +290,9 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
       var body = this.objects[descriptor.bodyId];
 
       if (body.ammoData) {
-        tmpVec[0].setX(descriptor.linearVelocity.x);
-        tmpVec[0].setY(descriptor.linearVelocity.y);
-        tmpVec[0].setZ(descriptor.linearVelocity.z);
+        tmpVec[0].setX(descriptor.linearVelocity.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.linearVelocity.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.linearVelocity.z / this.scaleFactor);
         body.ammoData.setLinearVelocity(tmpVec[0]);
       }
     },

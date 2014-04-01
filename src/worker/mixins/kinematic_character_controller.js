@@ -32,9 +32,9 @@ define([ 'worker/constants/collision_flags', 'worker/constants/collision_filter_
         throw('Invalid collision shape!');
       }
 
-      origin.setX(descriptor.position.x);
-      origin.setY(descriptor.position.y);
-      origin.setZ(descriptor.position.z);
+      origin.setX(descriptor.position.x / this.scaleFactor);
+      origin.setY(descriptor.position.y / this.scaleFactor);
+      origin.setZ(descriptor.position.z / this.scaleFactor);
 
       rotation.setX(descriptor.quaternion.x);
       rotation.setY(descriptor.quaternion.y);
@@ -59,7 +59,7 @@ define([ 'worker/constants/collision_flags', 'worker/constants/collision_filter_
 
       var id = this.ids.pop();
 
-      var obj = new KinematicCharacterController(id, controller);
+      var obj = new KinematicCharacterController(id, controller, this);
 
       this.objects[id] = obj;
 
@@ -79,9 +79,9 @@ define([ 'worker/constants/collision_flags', 'worker/constants/collision_filter_
       var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        tmpVec[0].setX(descriptor.direction.x);
-        tmpVec[0].setY(descriptor.direction.y);
-        tmpVec[0].setZ(descriptor.direction.z);
+        tmpVec[0].setX(descriptor.direction.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.direction.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.direction.z / this.scaleFactor);
 
         controller.ammoData.setWalkDirection(tmpVec[0]);
       }
@@ -99,7 +99,7 @@ define([ 'worker/constants/collision_flags', 'worker/constants/collision_filter_
       var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        controller.ammoData.setJumpSpeed(descriptor.jumpSpeed);
+        controller.ammoData.setJumpSpeed(descriptor.jumpSpeed / this.scaleFactor);
       }
     },
 
@@ -107,7 +107,7 @@ define([ 'worker/constants/collision_flags', 'worker/constants/collision_filter_
       var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        controller.ammoData.setFallSpeed(descriptor.fallSpeed);
+        controller.ammoData.setFallSpeed(descriptor.fallSpeed / this.scaleFactor);
       }
     },
 
@@ -115,7 +115,7 @@ define([ 'worker/constants/collision_flags', 'worker/constants/collision_filter_
       var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        controller.ammoData.setMaxJumpHeight(descriptor.maxJumpHeight);
+        controller.ammoData.setMaxJumpHeight(descriptor.maxJumpHeight / this.scaleFactor);
       }
     },
 
@@ -123,7 +123,7 @@ define([ 'worker/constants/collision_flags', 'worker/constants/collision_filter_
       var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        controller.ammoData.setGravity(descriptor.gravity);
+        controller.ammoData.setGravity(descriptor.gravity / this.scaleFactor);
       }
     },
 
@@ -139,9 +139,9 @@ define([ 'worker/constants/collision_flags', 'worker/constants/collision_filter_
       var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        tmpVec[0].setX(descriptor.velocity.x);
-        tmpVec[0].setY(descriptor.velocity.y);
-        tmpVec[0].setZ(descriptor.velocity.z);
+        tmpVec[0].setX(descriptor.velocity.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.velocity.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.velocity.z / this.scaleFactor);
 
         controller.ammoData.setVelocityForTimeInterval(tmpVec[0], descriptor.interval);
       }
@@ -167,9 +167,9 @@ define([ 'worker/constants/collision_flags', 'worker/constants/collision_filter_
       var controller = this.objects[descriptor.controllerId];
 
       if (controller) {
-        tmpVec[0].setX(descriptor.origin.x);
-        tmpVec[0].setY(descriptor.origin.y);
-        tmpVec[0].setZ(descriptor.origin.z);
+        tmpVec[0].setX(descriptor.origin.x / this.scaleFactor);
+        tmpVec[0].setY(descriptor.origin.y / this.scaleFactor);
+        tmpVec[0].setZ(descriptor.origin.z / this.scaleFactor);
 
         controller.ammoData.warp(tmpVec[0]);
       }

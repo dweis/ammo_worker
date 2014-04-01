@@ -59,6 +59,8 @@ DemoScene.prototype.init = function() {
 DemoScene.prototype._initProxy = function() {
   this.proxy = new AmmoProxy();
 
+  this.proxy.setScaleFactor(1);
+
   this.proxy.on('ready', function() {
     this._initScene();
   }.bind(this));

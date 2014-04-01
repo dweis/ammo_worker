@@ -65,14 +65,10 @@ define([ 'underscore',
     }
   });
 
-  function AmmoWorkerAPI(opts) {
+  function AmmoWorkerAPI() {
     _.bindAll(this);
 
-    for (var i in opts) {
-      if (opts.hasOwnProperty(i)) {
-        this[i] = opts[i];
-      }
-    }
+    this.scaleFactor = 1;
   }
 
   AmmoWorkerAPI.prototype = {
@@ -259,6 +255,10 @@ define([ 'underscore',
       }
     },
 
+    setScaleFactor: function(descriptor) {
+      this.scaleFactor = descriptor.scaleFactor;
+    },
+
     setStep: function(descriptor) {
       this.step = descriptor.step;
     },
@@ -299,13 +299,13 @@ define([ 'underscore',
         })();
       }
 
-      tmpVec[0].setX(descriptor.min.x);
-      tmpVec[0].setY(descriptor.min.y);
-      tmpVec[0].setZ(descriptor.min.z);
+      tmpVec[0].setX(descriptor.min.x / this.scaleFactor);
+      tmpVec[0].setY(descriptor.min.y / this.scaleFactor);
+      tmpVec[0].setZ(descriptor.min.z / this.scaleFactor);
 
-      tmpVec[1].setX(descriptor.max.x);
-      tmpVec[1].setY(descriptor.max.y);
-      tmpVec[1].setZ(descriptor.max.z);
+      tmpVec[1].setX(descriptor.max.x / this.scaleFactor);
+      tmpVec[1].setY(descriptor.max.y / this.scaleFactor);
+      tmpVec[1].setZ(descriptor.max.z / this.scaleFactor);
 
       this.aabbCallback.bodies = [];
       this.dynamicsWorld

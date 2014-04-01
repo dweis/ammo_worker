@@ -103,6 +103,10 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     return this.execute('setStep', { step: step });
   };
 
+  AmmoProxy.prototype.setScaleFactor = function(scaleFactor) {
+    return this.execute('setScaleFactor', { scaleFactor: scaleFactor });
+  };
+
   AmmoProxy.prototype.getStats = function() {
     return this.execute('getStats', {}, true);
   };
