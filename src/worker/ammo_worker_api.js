@@ -255,8 +255,15 @@ define([ 'underscore',
       }
     },
 
-    setScaleFactor: function(descriptor) {
-      this.scaleFactor = descriptor.scaleFactor;
+    setUnitsToMeters: function(descriptor) {
+      this.scaleFactor = descriptor.unitsToMeters;
+
+
+      if (this.dynamicsWorld) {
+        var gravity = this.dynamicsWorld.getGravity().op_div(this.scaleFactor);
+
+        this.dynamicsWorld.setGravity(gravity);
+      } 
     },
 
     setStep: function(descriptor) {
@@ -268,9 +275,9 @@ define([ 'underscore',
     },
 
     setGravity: function(descriptor) {
-      tmpVec[0].setX(descriptor.gravity.x);
-      tmpVec[0].setY(descriptor.gravity.y);
-      tmpVec[0].setZ(descriptor.gravity.z);
+      tmpVec[0].setX(descriptor.gravity.x / this.scaleFactor);
+      tmpVec[0].setY(descriptor.gravity.y / this.scaleFactor);
+      tmpVec[0].setZ(descriptor.gravity.z / this.scaleFactor);
       this.dynamicsWorld.setGravity(tmpVec[0]);
     },
 

@@ -36,9 +36,15 @@ var DemoScene = function() {
 };
 
 DemoScene.prototype.init = function() {
+  this.unitsToMeters = 1;
+
   this._initProxy();
+  this.proxy.setUnitsToMeters(this.unitsToMeters);
   this.proxy.setStep(1/60);
   this.proxy.setIterations(2);
+  this.proxy.setGravity({ x: 0 * this.unitsToMeters, 
+                          y: -9.82 * this.unitsToMeters, 
+                          z: 0 * this.unitsToMeters });
 
   setInterval(function() {
     this.proxy.getStats().
@@ -59,9 +65,8 @@ DemoScene.prototype.init = function() {
 DemoScene.prototype._initProxy = function() {
   this.proxy = new AmmoProxy();
 
-  this.proxy.setScaleFactor(1);
-
   this.proxy.on('ready', function() {
+    //this.proxy.setGravity({ x: 0, y: -9.82, z: 0 });
     this._initScene();
   }.bind(this));
 };

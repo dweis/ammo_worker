@@ -19,6 +19,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     //this.worker.addEventListener('error', this.onError, false);
 
     opts = this.opts = opts || {};
+    opts.unitsToMeters = opts.unitsToMeters || 1;
     opts.gravity = opts.gravity || { x: 0, y: -9.82, z: 0};
     opts.iterations = opts.iterations || 10;
     opts.step = opts.step || 1/60;
@@ -34,6 +35,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       }
     });
 
+    this.setUnitsToMeters(opts.unitsToMeters);
     this.setStep(opts.step);
     this.setIterations(opts.iterations);
     this.setGravity(opts.gravity);
@@ -103,8 +105,8 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     return this.execute('setStep', { step: step });
   };
 
-  AmmoProxy.prototype.setScaleFactor = function(scaleFactor) {
-    return this.execute('setScaleFactor', { scaleFactor: scaleFactor });
+  AmmoProxy.prototype.setUnitsToMeters = function(unitsToMeters) {
+    return this.execute('setUnitsToMeters', { unitsToMeters: unitsToMeters });
   };
 
   AmmoProxy.prototype.getStats = function() {
