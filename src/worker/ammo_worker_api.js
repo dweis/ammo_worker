@@ -110,6 +110,7 @@ define([ 'underscore',
           this.overlappingPairCache, this.solver, this.collisionConfiguration);
 
       this.ghostPairCallback = new Ammo.btGhostPairCallback();
+      console.log(this.dynamicsWorld.getPairCache());
       this.dynamicsWorld.getPairCache().setInternalGhostPairCallback(this.ghostPairCallback);
 
       this.dynamicsWorld.getDispatchInfo().set_m_allowedCcdPenetration(0.0001);
@@ -260,7 +261,7 @@ define([ 'underscore',
 
 
       if (this.dynamicsWorld) {
-        var gravity = this.dynamicsWorld.getGravity().op_div(this.scaleFactor);
+        var gravity = this.dynamicsWorld.getGravity().op_mul(1/this.scaleFactor);
 
         this.dynamicsWorld.setGravity(gravity);
       } 

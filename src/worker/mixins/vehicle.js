@@ -52,7 +52,7 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
       body.ammoData.setActivationState(ActivationStates.DISABLE_DEACTIVATION);
       vehicle.setCoordinateSystem(0, 1, 2);
 
-      this.dynamicsWorld.addVehicle(vehicle);
+      this.dynamicsWorld.addAction(vehicle);
 
       var id = this.ids.pop();
 
@@ -172,7 +172,11 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
 
         for (var i in descriptor.properties) {
           if (descriptor.properties.hasOwnProperty(i)) {
-            info['set_m_' + i](descriptor.properties[i]);
+            try {
+              info['set_m_' + i](descriptor.properties[i]);
+            } catch(e) {
+              console.log('Failed to set for: ' + i);
+            }
           }
         }
       }

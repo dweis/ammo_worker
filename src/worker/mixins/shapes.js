@@ -5,7 +5,7 @@ define([], function() {
       new Ammo.btVector3()
     ],
     tmpQuaternion = [
-      new Ammo.btVector3()
+      new Ammo.btQuaternion()
     ],
     tmpTrans = [
       new Ammo.btTransform()
@@ -134,11 +134,11 @@ define([], function() {
         colShape = new Ammo.btCylinderShape(tmpVec[0]);
         break;
       case 'capsule':
-        colShape = new Ammo.btCapsuleShape(shape.radius / this.scaleFactor, 
+        colShape = new Ammo.btCapsuleShape(shape.radius / this.scaleFactor,
             shape.height / this.scaleFactor);
         break;
       case 'cone':
-        colShape = new Ammo.btConeShape(shape.radius / this.scaleFactor, 
+        colShape = new Ammo.btConeShape(shape.radius / this.scaleFactor,
             shape.height / this.scaleFactor);
         break;
       case 'compound':

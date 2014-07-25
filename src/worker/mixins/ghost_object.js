@@ -4,7 +4,7 @@ define([ 'worker/constants/collision_flags', 'worker/objects/ghost_object' ],
       new Ammo.btVector3()
     ],
     tmpQuaternion = [
-      new Ammo.btVector3()
+      new Ammo.btQuaternion()
     ],
     tmpTrans = [
       new Ammo.btTransform()

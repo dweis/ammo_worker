@@ -5,7 +5,7 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
       new Ammo.btVector3()
     ],
     tmpQuaternion = [
-      new Ammo.btVector3()
+      new Ammo.btQuaternion()
     ],
     tmpTrans = [
       new Ammo.btTransform()
@@ -28,7 +28,10 @@ define([ 'worker/constants/collision_flags', 'worker/constants/activation_states
           body;
 
       startTransform.setIdentity();
-      localInertia.setZero();
+      ////localInertia.setZero();
+      localInertia.setX(0);
+      localInertia.setY(0);
+      localInertia.setZ(0);
 
       colShape = this._createShape(descriptor.shape);
 

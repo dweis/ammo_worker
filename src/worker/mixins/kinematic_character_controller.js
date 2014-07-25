@@ -5,7 +5,7 @@ define([ 'worker/constants/collision_flags', 'worker/constants/collision_filter_
       new Ammo.btVector3()
     ],
     tmpQuaternion = [
-      new Ammo.btVector3()
+      new Ammo.btQuaternion()
     ],
     tmpTrans = [
       new Ammo.btTransform()

@@ -122,7 +122,7 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
 
   THREEAdapter.prototype._getShapeJSON = function(o, opts) {
     opts = opts || {};
-    opts.strategy = opts.strategy || 'convex_hull_mesh';
+    opts.strategy = opts.strategy || 'compound_bounding_box';
 
     switch(opts.strategy) {
     case 'compound_bounding_box':
