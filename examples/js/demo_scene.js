@@ -36,9 +36,15 @@ var DemoScene = function() {
 };
 
 DemoScene.prototype.init = function() {
+  this.unitsToMeters = 1;
+
   this._initProxy();
+  this.proxy.setUnitsToMeters(this.unitsToMeters);
   this.proxy.setStep(1/60);
   this.proxy.setIterations(2);
+  this.proxy.setGravity({ x: 0 * this.unitsToMeters, 
+                          y: -9.82 * this.unitsToMeters, 
+                          z: 0 * this.unitsToMeters });
 
   setInterval(function() {
     this.proxy.getStats().
@@ -60,6 +66,7 @@ DemoScene.prototype._initProxy = function() {
   this.proxy = new AmmoProxy();
 
   this.proxy.on('ready', function() {
+    //this.proxy.setGravity({ x: 0, y: -9.82, z: 0 });
     this._initScene();
   }.bind(this));
 };
@@ -118,10 +125,10 @@ DemoScene.prototype._initScene = function() {
     color: 0x999999
   });
 
-  var ground = new THREE.Mesh(new THREE.BoxGeometry(1000,0.01,1000, 1, 1, 1),groundMaterial);
+  var ground = new THREE.Mesh(new THREE.BoxGeometry(1000,20,1000, 50, 50, 50),groundMaterial);
+  ground.position.y = -10;
   //ground.quaternion.setFromAxisAngle({ x: 1, y: 0, z: 0 }, -Math.PI/2);
   ground.receiveShadow = true;
-  ground.position.y = 0;
   scene.add(ground);
   scene.updateMatrixWorld();
 
@@ -134,11 +141,11 @@ DemoScene.prototype._initScene = function() {
     }, this));
     */
 
-  this.proxy.adapter.createRigidBodyFromObject(ground, 1000000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'})
+  this.proxy.adapter.createRigidBodyFromObject(ground, 100000000, { 'shape': 'auto', 'strategy': 'bvh_triangle_mesh'})
     .then(_.bind(function(rigidBody) {
       rigidBody.setType('static');
-      rigidBody.setFriction(0.5);
-      rigidBody.setRestitution(0.8);
+      rigidBody.setFriction(0.8);
+      rigidBody.setRestitution(0.2);
       rigidBody.addToWorld(1,255);
 
       this.groundBody = rigidBody;

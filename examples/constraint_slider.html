@@ -32,7 +32,13 @@
         this.scene.add(o);
       }
 
-      setTimeout(function() {
+      var intervalId = setInterval(function() {
+        if (this.bodies.length !== 5) {
+          return;
+        }
+
+        clearInterval(intervalId);
+
         var first;
         var quat = new THREE.Quaternion();
 
@@ -40,12 +46,12 @@
 
         this.bodies.forEach(function(body,i) {
           if (first) {
-            this.proxy.createSliderConstraint(first, body, 
+            this.proxy.createSliderConstraint(first, body,
               {
                 position: new THREE.Vector3(),
                 rotation: quat
-              }, 
-              { 
+              },
+              {
                 position: new THREE.Vector3(),
                 rotation: quat
               }).then(function(sliderConstraint) {

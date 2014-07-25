@@ -34,7 +34,7 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
         }
 
         if (descriptor.tuning.maxSuspensionTravelCm) {
-          vehicleTuning.set_m_maxSuspensionTravelCm(descriptor.tuning.maxSuspensionTravelCm);
+          vehicleTuning.set_m_maxSuspensionTravelCm(descriptor.tuning.maxSuspensionTravelCm / this.scaleFactor);
         }
 
         if (descriptor.tuning.maxSuspensionForce) {
@@ -52,7 +52,7 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
       body.ammoData.setActivationState(ActivationStates.DISABLE_DEACTIVATION);
       vehicle.setCoordinateSystem(0, 1, 2);
 
-      this.dynamicsWorld.addVehicle(vehicle);
+      this.dynamicsWorld.addAction(vehicle);
 
       var id = this.ids.pop();
 
@@ -61,7 +61,7 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
         id: id
       };
 
-      var obj = new Vehicle(id, vehicle);
+      var obj = new Vehicle(id, vehicle, this);
 
       this.objects[id] = obj;
 
@@ -99,7 +99,7 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
           }
 
           if (descriptor.tuning.maxSuspensionTravelCm) {
-            tuning.set_m_maxSuspensionTravelCm(descriptor.tuning.maxSuspensionTravelCm);
+            tuning.set_m_maxSuspensionTravelCm(descriptor.tuning.maxSuspensionTravelCm / this.scaleFactor);
           }
 
           if (descriptor.tuning.maxSuspensionForce) {
@@ -111,9 +111,9 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
           }
         }
 
-        connectionPoint.setX(descriptor.connectionPoint.x);
-        connectionPoint.setY(descriptor.connectionPoint.y);
-        connectionPoint.setZ(descriptor.connectionPoint.z);
+        connectionPoint.setX(descriptor.connectionPoint.x / this.scaleFactor);
+        connectionPoint.setY(descriptor.connectionPoint.y / this.scaleFactor);
+        connectionPoint.setZ(descriptor.connectionPoint.z / this.scaleFactor);
 
         wheelDirection.setX(descriptor.wheelDirection.x);
         wheelDirection.setY(descriptor.wheelDirection.y);
@@ -127,15 +127,15 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
           connectionPoint,
           wheelDirection,
           wheelAxle,
-          descriptor.suspensionRestLength,
-          descriptor.wheelRadius,
+          descriptor.suspensionRestLength / this.scaleFactor,
+          descriptor.wheelRadius / this.scaleFactor,
           tuning,
           descriptor.isFrontWheel
         );
 
         var id = this.ids.pop();
 
-        var obj = new Wheel(id, wheelInfo, vehicle);
+        var obj = new Wheel(id, wheelInfo, this, vehicle);
 
         vehicle.addWheel(obj);
 
@@ -172,7 +172,11 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
 
         for (var i in descriptor.properties) {
           if (descriptor.properties.hasOwnProperty(i)) {
-            info['set_m_' + i](descriptor.properties[i]);
+            try {
+              info['set_m_' + i](descriptor.properties[i]);
+            } catch(e) {
+              console.log('Failed to set for: ' + i);
+            }
           }
         }
       }
@@ -183,13 +187,10 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
           wheel;
 
       if (vehicle) {
-        //vehicle.engineForce = descriptor.force
-        //vehicle.ammoData.applyEngineForce(descriptor.force, descriptor.wheelId);
-
         wheel = vehicle.wheels[descriptor.wheelId];
 
         if (wheel) {
-          wheel.force = descriptor.force;
+          wheel.force = descriptor.force / this.scaleFactor;
         }
       }
     },
@@ -198,7 +199,7 @@ define([ 'worker/constants/activation_states', 'worker/objects/vehicle', 'worker
       var vehicle = this.objects[descriptor.vehicleId];
 
       if (vehicle) {
-        vehicle.ammoData.applyEngineForce(descriptor.force, descriptor.wheelId);
+        vehicle.ammoData.applyEngineForce(descriptor.force / this.scaleFactor, descriptor.wheelId);
       }
     },
 

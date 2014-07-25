@@ -19,6 +19,7 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
     //this.worker.addEventListener('error', this.onError, false);
 
     opts = this.opts = opts || {};
+    opts.unitsToMeters = opts.unitsToMeters || 1;
     opts.gravity = opts.gravity || { x: 0, y: -9.82, z: 0};
     opts.iterations = opts.iterations || 10;
     opts.step = opts.step || 1/60;
@@ -34,9 +35,12 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
       }
     });
 
+    this.setUnitsToMeters(opts.unitsToMeters);
     this.setStep(opts.step);
     this.setIterations(opts.iterations);
     this.setGravity(opts.gravity);
+
+    this.buffers = [];
   }
 
   AmmoProxy.prototype.beginContact = function(idA, idB) {
@@ -99,6 +103,10 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
 
   AmmoProxy.prototype.setStep = function(step) {
     return this.execute('setStep', { step: step });
+  };
+
+  AmmoProxy.prototype.setUnitsToMeters = function(unitsToMeters) {
+    return this.execute('setUnitsToMeters', { unitsToMeters: unitsToMeters });
   };
 
   AmmoProxy.prototype.getStats = function() {
@@ -478,16 +486,19 @@ define([ 'when', 'underscore', 'vendor/backbone.events', 'text!gen/ammo_worker_a
   };
 
   AmmoProxy.prototype.update = function(data) {
-    if (this.next) {
-      //this.worker.swap(this.data && this.data.buffer);
-      if (this.data) {
-        this.worker.postMessage({ method: 'swap', data: this.data.buffer }, [ this.data.buffer ]);
-      } else {
-        this.worker.postMessage({ method: 'swap', data: undefined });
-      }
-      this.data = this.next;
+
+    if (data) {
+      this.buffers.push(new Float32Array(data));
     }
-    this.next = new Float32Array(data);
+
+    if (this.data) {
+      this.worker.postMessage({ method: 'swap', data: this.data.buffer }, [ this.data.buffer ]);
+      this.data = undefined;
+    }
+
+    if (this.buffers.length) {
+      this.data = this.buffers.shift();
+    }
   };
 
   AmmoProxy.prototype.createCollisionObjectFromObject = function(object, shape) {

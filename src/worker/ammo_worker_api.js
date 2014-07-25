@@ -65,14 +65,10 @@ define([ 'underscore',
     }
   });
 
-  function AmmoWorkerAPI(opts) {
+  function AmmoWorkerAPI() {
     _.bindAll(this);
 
-    for (var i in opts) {
-      if (opts.hasOwnProperty(i)) {
-        this[i] = opts[i];
-      }
-    }
+    this.scaleFactor = 1;
   }
 
   AmmoWorkerAPI.prototype = {
@@ -82,9 +78,10 @@ define([ 'underscore',
       this.buffers = [
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize),
-        new ArrayBuffer(bufferSize),
+        /*
         new ArrayBuffer(bufferSize),
         new ArrayBuffer(bufferSize)
+        */
       ];
 
       this.userFunctions = new UserFunctions(this);
@@ -113,6 +110,7 @@ define([ 'underscore',
           this.overlappingPairCache, this.solver, this.collisionConfiguration);
 
       this.ghostPairCallback = new Ammo.btGhostPairCallback();
+      console.log(this.dynamicsWorld.getPairCache());
       this.dynamicsWorld.getPairCache().setInternalGhostPairCallback(this.ghostPairCallback);
 
       this.dynamicsWorld.getDispatchInfo().set_m_allowedCcdPenetration(0.0001);
@@ -208,7 +206,7 @@ define([ 'underscore',
       this.userFunctions.preStep(delta);
       that.dynamicsWorld.stepSimulation(delta/*that.step*/, that.iterations, that.step);
 
-      if (that.buffers.length > 0) {
+      if (that.buffers.length) {
         update = new Float32Array(that.buffers.pop());
       }
 
@@ -258,6 +256,17 @@ define([ 'underscore',
       }
     },
 
+    setUnitsToMeters: function(descriptor) {
+      this.scaleFactor = descriptor.unitsToMeters;
+
+
+      if (this.dynamicsWorld) {
+        var gravity = this.dynamicsWorld.getGravity().op_mul(1/this.scaleFactor);
+
+        this.dynamicsWorld.setGravity(gravity);
+      } 
+    },
+
     setStep: function(descriptor) {
       this.step = descriptor.step;
     },
@@ -267,9 +276,9 @@ define([ 'underscore',
     },
 
     setGravity: function(descriptor) {
-      tmpVec[0].setX(descriptor.gravity.x);
-      tmpVec[0].setY(descriptor.gravity.y);
-      tmpVec[0].setZ(descriptor.gravity.z);
+      tmpVec[0].setX(descriptor.gravity.x / this.scaleFactor);
+      tmpVec[0].setY(descriptor.gravity.y / this.scaleFactor);
+      tmpVec[0].setZ(descriptor.gravity.z / this.scaleFactor);
       this.dynamicsWorld.setGravity(tmpVec[0]);
     },
 
@@ -298,13 +307,13 @@ define([ 'underscore',
         })();
       }
 
-      tmpVec[0].setX(descriptor.min.x);
-      tmpVec[0].setY(descriptor.min.y);
-      tmpVec[0].setZ(descriptor.min.z);
+      tmpVec[0].setX(descriptor.min.x / this.scaleFactor);
+      tmpVec[0].setY(descriptor.min.y / this.scaleFactor);
+      tmpVec[0].setZ(descriptor.min.z / this.scaleFactor);
 
-      tmpVec[1].setX(descriptor.max.x);
-      tmpVec[1].setY(descriptor.max.y);
-      tmpVec[1].setZ(descriptor.max.z);
+      tmpVec[1].setX(descriptor.max.x / this.scaleFactor);
+      tmpVec[1].setY(descriptor.max.y / this.scaleFactor);
+      tmpVec[1].setZ(descriptor.max.z / this.scaleFactor);
 
       this.aabbCallback.bodies = [];
       this.dynamicsWorld

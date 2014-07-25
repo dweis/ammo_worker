@@ -122,7 +122,7 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
 
   THREEAdapter.prototype._getShapeJSON = function(o, opts) {
     opts = opts || {};
-    opts.strategy = opts.strategy || 'convex_hull_mesh';
+    opts.strategy = opts.strategy || 'compound_bounding_box';
 
     switch(opts.strategy) {
     case 'compound_bounding_box':
@@ -161,8 +161,9 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
   };
 
   THREEAdapter.prototype._createBoundingBoxCompoundShape = function(o) {
-    var inverseParent = new THREE.Matrix4(),
-        tmpMatrix = new THREE.Matrix4();
+    var inverseParent = new THREE.Matrix4();
+
+    inverseParent.getInverse(o.matrixWorld);
 
     var json = {
       'shape': 'compound',
@@ -170,38 +171,31 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
       ]
     };
 
-    inverseParent.getInverse(o.matrixWorld);
+    o.traverse(function(child) {
+      var tmpMatrix = new THREE.Matrix4(),
+          min, 
+          max, 
+          halfExtents = new THREE.Vector3(),
+          position = new THREE.Vector3(),
+          rotation = new THREE.Quaternion(),
+          scale = new THREE.Vector3();
 
-    o.traverse(function(o) {
-      if (o instanceof THREE.Mesh && !o.isBB) {
-        var min, max, halfExtents = new THREE.Vector3(),
-        position = new THREE.Vector3(),
-        rotation = new THREE.Quaternion(),
-        scale = new THREE.Vector3();
-
-        scale.setFromMatrixScale(o.matrixWorld);
-
+      if (child instanceof THREE.Mesh && !child.isBB) {
         tmpMatrix.copy(inverseParent);
-        tmpMatrix.multiply(o.matrixWorld);
+        tmpMatrix.multiply(child.matrixWorld);
+        scale.setFromMatrixScale(child.matrixWorld);
 
         position.setFromMatrixPosition(tmpMatrix);
         tmpMatrix.extractRotation(tmpMatrix);
         rotation.setFromRotationMatrix(tmpMatrix);
 
-        o.geometry.computeBoundingBox();
-        min = o.geometry.boundingBox.min.clone();
-        max = o.geometry.boundingBox.max.clone();
+        child.geometry.computeBoundingBox();
+        min = child.geometry.boundingBox.min.clone();
+        max = child.geometry.boundingBox.max.clone();
 
         halfExtents.subVectors(max, min);
         halfExtents.multiplyScalar(0.5);
-
         halfExtents.multiplyVectors(halfExtents, scale);
-
-        var center = new THREE.Vector3();
-        center.x = ( min.x + max.x ) / 2;
-        center.y = ( min.y + max.y ) / 2;
-        center.z = ( min.z + max.z ) / 2;
-        center.multiplyVectors(center, scale);
 
         json.children.push({
           shape: 'box',
@@ -261,7 +255,7 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
           var positions = geometry.attributes.position.array;
 
           for (i = 0; i < positions.length; i += 3) {
-            tmpVector3.x = positions[ i + 0 ];
+            tmpVector3.x = positions[ i + 0];
             tmpVector3.y = positions[ i + 1];
             tmpVector3.z = positions[ i + 2];
 
@@ -323,10 +317,11 @@ define([ 'underscore', 'proxy/three/three_binding' ], function(_, THREEBinding) 
           var offsets = geometry.offsets;
           var il;
 
-          for (var j = 0, jl = offsets.length; j < jl; ++ j ) {
-            var start = offsets[ j ].start;
-            var count = offsets[ j ].count;
-            var index = offsets[ j ].index;
+          // support for buffer geometry with and without chunks
+          for (var j = 0, jl = offsets.length || 1; j < jl; ++ j ) {
+            var start = offsets[j] && offsets[ j ].start || 0;
+            var count = offsets[j] && offsets[ j ].count || indices.length / 3;
+            var index = offsets[j] && offsets[ j ].index || 0;
 
             for (i = start, il = start + count; i < il; i += 3 ) {
               vA = index + indices[ i + 0 ];

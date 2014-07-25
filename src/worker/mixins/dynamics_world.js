@@ -31,12 +31,12 @@ define([], function() {
     */
 
     DynamicsWorld_rayTestClosest: function(descriptor, fn) {
-      tmpVec[0].setX(descriptor.rayFromWorld.x);
-      tmpVec[0].setY(descriptor.rayFromWorld.y);
-      tmpVec[0].setZ(descriptor.rayFromWorld.z);
-      tmpVec[1].setX(descriptor.rayToWorld.x);
-      tmpVec[1].setY(descriptor.rayToWorld.y);
-      tmpVec[1].setZ(descriptor.rayToWorld.z);
+      tmpVec[0].setX(descriptor.rayFromWorld.x / this.scaleFactor);
+      tmpVec[0].setY(descriptor.rayFromWorld.y / this.scaleFactor);
+      tmpVec[0].setZ(descriptor.rayFromWorld.z / this.scaleFactor);
+      tmpVec[1].setX(descriptor.rayToWorld.x / this.scaleFactor);
+      tmpVec[1].setY(descriptor.rayToWorld.y / this.scaleFactor);
+      tmpVec[1].setZ(descriptor.rayToWorld.z / this.scaleFactor);
 
       var callback = new Ammo.ClosestRayResultCallback(tmpVec[0], tmpVec[1]);
 
@@ -51,9 +51,9 @@ define([], function() {
               type: 'btRigidBody',
               bodyId: body.userData.id,
               hitPointWorld: {
-                x: callback.get_m_hitPointWorld().x(),
-                y: callback.get_m_hitPointWorld().y(),
-                z: callback.get_m_hitPointWorld().z()
+                x: callback.get_m_hitPointWorld().x() * this.scaleFactor,
+                y: callback.get_m_hitPointWorld().y() * this.scaleFactor,
+                z: callback.get_m_hitPointWorld().z() * this.scaleFactor
               },
               hitNormalWorld: {
                 x: callback.get_m_hitNormalWorld().x(),

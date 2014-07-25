@@ -2,7 +2,7 @@
 define([ 'worker/objects/collision_object' ], function(CollisionObject) {
   var tmpTrans = new Ammo.btTransform();
 
-  function RigidBody(id, ammoData) {
+  function RigidBody(id, ammoData, worker) {
     CollisionObject.apply(this, arguments);
     this.type = 'btRigidBody';
   }
@@ -14,14 +14,18 @@ define([ 'worker/objects/collision_object' ], function(CollisionObject) {
 
     this.ammoData.getMotionState().getWorldTransform(tmpTrans);
 
-    data[this.offset + 0] = tmpTrans.getOrigin().x();
-    data[this.offset + 1] = tmpTrans.getOrigin().y();
-    data[this.offset + 2] = tmpTrans.getOrigin().z();
+    var position = tmpTrans.getOrigin().op_mul(this.worker.scaleFactor);
+
+    data[this.offset + 0] = position.x();
+    data[this.offset + 1] = position.y();
+    data[this.offset + 2] = position.z();
     data[this.offset + 3] = tmpTrans.getRotation().x();
     data[this.offset + 4] = tmpTrans.getRotation().y();
     data[this.offset + 5] = tmpTrans.getRotation().z();
     data[this.offset + 6] = tmpTrans.getRotation().w();
+
+    Ammo.destroy(position);
   };
- 
+
   return RigidBody;
 });
