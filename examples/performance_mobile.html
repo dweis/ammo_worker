@@ -25,9 +25,9 @@
       var material = new THREE.MeshPhongMaterial({ color: 0x33CC00 });
 
       this.bodies = [];
-      for (var z  = 0; z < 8; z++) {
-        for (var y  = 1; y < 8; y++) {
-          for (var x  = 0; x < 8; x++) {
+      for (var z  = 0; z < 5; z++) {
+        for (var y  = 1; y < 5; y++) {
+          for (var x  = 0; x < 5; x++) {
             var o = this._createBox(x * 2.5, y * 6, z * 2.5, material);
             this.scene.add(o);
           }
