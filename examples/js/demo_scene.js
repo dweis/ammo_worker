@@ -188,7 +188,7 @@ DemoScene.prototype.update = function(delta) {
   }
 
   this.controls.update();
-  this.renderer.render(this.scene, this.camera);
+  //this.renderer.render(this.scene, this.camera);
 
   if (typeof this.postUpdate === 'function') {
     this.postUpdate(dt);
