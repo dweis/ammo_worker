@@ -110,7 +110,7 @@ define([ 'worker/objects/conetwist_constraint', 'worker/objects/point2point_cons
           transformB.setRotation(tmpQuaternion[1]);
 
           constraint = new Ammo.btSliderConstraint(rigidBodyA.ammoData, rigidBodyB.ammoData,
-            transformA, transformB);
+            transformA, transformB, true);
         } else {
           constraint = new Ammo.btSliderConstraint(rigidBodyA.ammoData, transformA);
         }
