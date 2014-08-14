@@ -110,7 +110,6 @@ define([ 'underscore',
           this.overlappingPairCache, this.solver, this.collisionConfiguration);
 
       this.ghostPairCallback = new Ammo.btGhostPairCallback();
-      console.log(this.dynamicsWorld.getPairCache());
       this.dynamicsWorld.getPairCache().setInternalGhostPairCallback(this.ghostPairCallback);
 
       this.dynamicsWorld.getDispatchInfo().set_m_allowedCcdPenetration(0.0001);
@@ -146,8 +145,8 @@ define([ 'underscore',
         if (nContacts > 0) {
           for (var j = 0; j < nContacts; j++) {
             point = manifold.getContactPoint(j);
-            body1 = Ammo.wrapPointer(manifold.getBody0(), Ammo.btCollisionObject);
-            body2 = Ammo.wrapPointer(manifold.getBody1(), Ammo.btCollisionObject);
+            body1 = Ammo.castObject(manifold.getBody0(), Ammo.btCollisionObject);
+            body2 = Ammo.castObject(manifold.getBody1(), Ammo.btCollisionObject);
 
             if (body1.userData && body2.userData) {
               object1 = this.objects[body1.userData.id];
@@ -289,22 +288,16 @@ define([ 'underscore',
         this.aabbCallback = new Ammo.ConcreteBroadphaseAabbCallback();
         this.aabbCallback.bodies = [];
 
-        (function() {
-          Ammo.customizeVTable(that.aabbCallback, [{
-            original: Ammo.ConcreteBroadphaseAabbCallback.prototype.process,
-            replacement: function(thisPtr, proxyPtr) {
-              var proxy = Ammo.wrapPointer(proxyPtr, Ammo.btBroadphaseProxy);
-              var clientObject = Ammo.wrapPointer(proxy.get_m_clientObject(), Ammo.btRigidBody);
-              var _this = Ammo.wrapPointer(thisPtr, Ammo.ConcreteBroadphaseAabbCallback);
+        this.aabbCallback.process = function(proxyPtr) {
+          var proxy = Ammo.wrapPointer(proxyPtr, Ammo.btBroadphaseProxy);
+          var clientObject = Ammo.castObject(proxy.get_m_clientObject(), Ammo.btRigidBody);
 
-              if (clientObject.userData.id) {
-                _this.bodies.push(clientObject.userData.id);
-              }
+          if (clientObject.userData.id) {
+            that.aabbCallback.bodies.push(clientObject.userData.id);
+          }
 
-              return true;
-            }
-          }]);
-        })();
+          return true;
+        };
       }
 
       tmpVec[0].setX(descriptor.min.x / this.scaleFactor);
