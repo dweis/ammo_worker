@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Plato - proxy/ammo_collision_object.js</title>
+  <title>Plato - proxy\ammo_collision_object.js</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="">
@@ -15,7 +15,6 @@
   <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
   <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
   <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
-  <link href="../../assets/css/vendor/font-awesome-ie7.css" rel="stylesheet">
   <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
   <link href="../../assets/css/plato.css" rel="stylesheet">
   <link href="../../assets/css/plato-file.css" rel="stylesheet">
@@ -37,7 +36,7 @@
 
 <div class="jumbotron">
   <div class="container">
-    <h1>proxy/ammo_collision_object.js</h1>
+    <h1>proxy\ammo_collision_object.js</h1>
   </div>
 </div>
 
@@ -45,7 +44,7 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
-      <p class="stat">71.17</p>
+      <p class="stat">71.63</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
@@ -63,11 +62,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
-      <p class="stat">12.92</p>
+      <p class="stat">12.14</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
-      <p class="stat">0.27</p>
+      <p class="stat">0.28</p>
     </div>
   </div>
 </div>
@@ -90,41 +89,41 @@
 
 <div class="container">
   <div class="row">
-    <textarea id="file-source" class="col-md-12">define([ &#039;./ammo_base_object&#039; ], function(AmmoBaseObject) {
-  function AmmoCollisionObject(proxy, bodyId) {
-    this.proxy = proxy;
-    this.bodyId = bodyId;
-    this.binding = undefined;
-    this.position = { x: 0, y: 0, z: 0 };
-    this.rotation = { x: 0, y: 0, z: 0, w: 1 };
-  } 
+    <textarea id="file-source" class="col-md-12">var AmmoBaseObject = require(&#039;./ammo_base_object&#039;);
 
-  AmmoCollisionObject.prototype = new AmmoBaseObject();
+function AmmoCollisionObject(proxy, bodyId) {
+  this.proxy = proxy;
+  this.bodyId = bodyId;
+  this.binding = undefined;
+  this.position = { x: 0, y: 0, z: 0 };
+  this.rotation = { x: 0, y: 0, z: 0, w: 1 };
+} 
 
-  AmmoCollisionObject.prototype.addToWorld = function(group, mask) {
-    return this.proxy.execute(&#039;DynamicsWorld_addCollisionObject&#039;, {
-      collisionObjectId: this.bodyId,
-      group: group,
-      mask: mask
-    });
-  };
+AmmoCollisionObject.prototype = new AmmoBaseObject();
 
-  AmmoCollisionObject.prototype.setFriction = function(friction) {
-    return this.proxy.execute(&#039;CollisionObject_setFriction&#039;, {
-      bodyId: this.bodyId,
-      friction: friction
-    });
-  };
+AmmoCollisionObject.prototype.addToWorld = function(group, mask) {
+  return this.proxy.execute(&#039;DynamicsWorld_addCollisionObject&#039;, {
+    collisionObjectId: this.bodyId,
+    group: group,
+    mask: mask
+  });
+};
 
-  AmmoCollisionObject.prototype.setRestitution = function(restitution) {
-    return this.proxy.execute(&#039;CollisionObject_setRestitution&#039;, {
-      bodyId: this.bodyId,
-      restitution: restitution
-    });
-  };
-  
-  return AmmoCollisionObject;
-});</textarea>
+AmmoCollisionObject.prototype.setFriction = function(friction) {
+  return this.proxy.execute(&#039;CollisionObject_setFriction&#039;, {
+    bodyId: this.bodyId,
+    friction: friction
+  });
+};
+
+AmmoCollisionObject.prototype.setRestitution = function(restitution) {
+  return this.proxy.execute(&#039;CollisionObject_setRestitution&#039;, {
+    bodyId: this.bodyId,
+    restitution: restitution
+  });
+};
+
+module.exports = AmmoCollisionObject;</textarea>
   </div>
 </div>
 

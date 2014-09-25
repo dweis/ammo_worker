@@ -9,19 +9,17 @@
   "private": false,
   "dependencies": {},
   "devDependencies": {
-    "JSONStream": "^0.9.0",
-    "grunt": "~0.4.1",
-    "grunt-contrib-connect": "~0.5.0",
-    "grunt-contrib-jshint": "~0.7.0",
-    "grunt-contrib-livereload": "~0.1.2",
-    "grunt-contrib-requirejs": "~0.4.1",
-    "grunt-contrib-watch": "~0.5.3",
-    "grunt-plato": "^1.0.0",
-    "grunt-s3": "^0.2.0-alpha.3",
+    "browserify": "^5.12.0",
+    "gulp": "^3.8.8",
+    "gulp-concat": "^2.4.1",
+    "gulp-connect": "^2.0.6",
     "gulp-insert": "^0.4.0",
-    "gulp-to-json": "^1.0.1",
-    "through2": "^0.6.1",
+    "gulp-plato": "^1.0.1",
+    "gulp-replace": "^0.4.0",
+    "gulp-uglify": "^1.0.1",
     "underscore": "1.4.3",
+    "vinyl-buffer": "^1.0.0",
+    "vinyl-source-stream": "^1.0.0",
     "when": "^3.4.6"
   }
 }
