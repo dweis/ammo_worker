@@ -1,11 +1,11 @@
 /* jshint unused:vars */
-define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
-  function CollisionObject(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btCollisionObject';
-  }
+var AmmoObject = require('./ammo_object');
 
-  CollisionObject.prototype = new AmmoObject();
-  
-  return CollisionObject;
-});
+function CollisionObject(id, ammoData) {
+  AmmoObject.apply(this, arguments);
+  this.type = 'btCollisionObject';
+}
+
+CollisionObject.prototype = new AmmoObject();
+
+module.exports = CollisionObject;

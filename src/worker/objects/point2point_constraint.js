@@ -1,11 +1,11 @@
 /* jshint unused:vars */
-define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
-  function Point2PointConstraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btPoint2PointConstraint';
-  }
+var AmmoObject = require('./ammo_object');
 
-  Point2PointConstraint.prototype = new AmmoObject();
+function Point2PointConstraint(id, ammoData) {
+  AmmoObject.apply(this, arguments);
+  this.type = 'btPoint2PointConstraint';
+}
 
-  return Point2PointConstraint;
-});
+Point2PointConstraint.prototype = new AmmoObject();
+
+module.exports = Point2PointConstraint;

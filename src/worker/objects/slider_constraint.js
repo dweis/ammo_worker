@@ -1,11 +1,12 @@
 /* jshint unused: vars */
-define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
-  function SliderConstraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btSliderConstraint';
-  }
 
-  SliderConstraint.prototype = new AmmoObject();
+var AmmoObject = require('./ammo_object');
 
-  return SliderConstraint;
-});
+function SliderConstraint(id, ammoData) {
+  AmmoObject.apply(this, arguments);
+  this.type = 'btSliderConstraint';
+}
+
+SliderConstraint.prototype = new AmmoObject();
+
+module.exports = SliderConstraint;
