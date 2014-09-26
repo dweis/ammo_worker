@@ -1,8 +1,9 @@
-define([ 'underscore', 'vendor/backbone.events' ], function(_, Events) {
-  function AmmoBaseObject() {
-  }
+var _ = require('underscore'),
+    Events = require('../vendor/backbone.events');
 
-  _.extend(AmmoBaseObject.prototype, Events);
+function AmmoBaseObject() {
+}
 
-  return AmmoBaseObject;  
-});
+_.extend(AmmoBaseObject.prototype, Events);
+
+module.exports = AmmoBaseObject;

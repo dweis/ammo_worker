@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Plato - proxy/ammo_vehicle.js</title>
+  <title>Plato - proxy\ammo_vehicle.js</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="">
@@ -15,7 +15,6 @@
   <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
   <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
   <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
-  <link href="../../assets/css/vendor/font-awesome-ie7.css" rel="stylesheet">
   <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
   <link href="../../assets/css/plato.css" rel="stylesheet">
   <link href="../../assets/css/plato-file.css" rel="stylesheet">
@@ -37,7 +36,7 @@
 
 <div class="jumbotron">
   <div class="container">
-    <h1>proxy/ammo_vehicle.js</h1>
+    <h1>proxy\ammo_vehicle.js</h1>
   </div>
 </div>
 
@@ -45,11 +44,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
-      <p class="stat">72.27</p>
+      <p class="stat">74.39</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
-      <p class="stat">112</p>
+      <p class="stat">110</p>
     </div>
   </div>
   <div class="row historical">
@@ -63,11 +62,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
-      <p class="stat">22.77</p>
+      <p class="stat">17.77</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
-      <p class="stat">0.83</p>
+      <p class="stat">0.82</p>
     </div>
   </div>
 </div>
@@ -90,118 +89,116 @@
 
 <div class="container">
   <div class="row">
-    <textarea id="file-source" class="col-md-12">define([ &#039;when&#039;, &#039;underscore&#039;, &#039;./ammo_base_object&#039; ], function(when, _, AmmoBaseObject) {
-  function AmmoVehicle(proxy, vehicleId, rigidBody) {
-    this.proxy = proxy;
-    this.vehicleId = vehicleId;
-    this.wheelBindings = {};
-    this.rigidBody = rigidBody;
-  }
+    <textarea id="file-source" class="col-md-12">var when = require(&#039;when&#039;),
+    _ = require(&#039;underscore&#039;),
+    AmmoBaseObject = require(&#039;./ammo_base_object&#039;);
 
-  AmmoVehicle.prototype = new AmmoBaseObject();
+function AmmoVehicle(proxy, vehicleId, rigidBody) {
+  this.proxy = proxy;
+  this.vehicleId = vehicleId;
+  this.wheelBindings = {};
+  this.rigidBody = rigidBody;
+}
 
-  AmmoVehicle.prototype.addWheel = function(connectionPoint, wheelDirection, wheelAxle,
-      suspensionRestLength, wheelRadius, isFrontWheel, tuning) {
-    var descriptor = {
-      vehicleId: this.vehicleId,
-      connectionPoint: connectionPoint,
-      wheelDirection: wheelDirection,
-      wheelAxle: wheelAxle,
-      suspensionRestLength: suspensionRestLength,
-      wheelRadius: wheelRadius,
-      isFrontWheel: isFrontWheel,
-      tuning: tuning
-    };
+AmmoVehicle.prototype = new AmmoBaseObject();
 
-    var deferred = when.defer();
-
-    this.proxy.execute(&#039;Vehicle_addWheel&#039;, descriptor, true).then(_.bind(function(wheelId) {
-      deferred.resolve(wheelId);
-    }, this));
-
-    return deferred.promise;
+AmmoVehicle.prototype.addWheel = function(connectionPoint, wheelDirection, wheelAxle,
+    suspensionRestLength, wheelRadius, isFrontWheel, tuning) {
+  var descriptor = {
+    vehicleId: this.vehicleId,
+    connectionPoint: connectionPoint,
+    wheelDirection: wheelDirection,
+    wheelAxle: wheelAxle,
+    suspensionRestLength: suspensionRestLength,
+    wheelRadius: wheelRadius,
+    isFrontWheel: isFrontWheel,
+    tuning: tuning
   };
 
-  AmmoVehicle.prototype.setWheelInfo = function(wheelId, properties) {
-    var descriptor = {
-      vehicleId: this.vehicleId,
-      wheelId: wheelId,
-      properties: properties
-    };
+  var deferred = when.defer();
 
-    return this.proxy.execute(&#039;Vehicle_setWheelInfo&#039;, descriptor);
+  this.proxy.execute(&#039;Vehicle_addWheel&#039;, descriptor, true).then(_.bind(function(wheelId) {
+    deferred.resolve(wheelId);
+  }, this));
+
+  return deferred.promise;
+};
+
+AmmoVehicle.prototype.setWheelInfo = function(wheelId, properties) {
+  var descriptor = {
+    vehicleId: this.vehicleId,
+    wheelId: wheelId,
+    properties: properties
   };
 
-  AmmoVehicle.prototype.setBrake = function(wheelId, brake) {
-    var descriptor = {
-      vehicleId: this.vehicleId,
-      wheelId: wheelId,
-      brake: brake
-    };
+  return this.proxy.execute(&#039;Vehicle_setWheelInfo&#039;, descriptor);
+};
 
-    return this.proxy.execute(&#039;Vehicle_setBrake&#039;, descriptor);
+AmmoVehicle.prototype.setBrake = function(wheelId, brake) {
+  var descriptor = {
+    vehicleId: this.vehicleId,
+    wheelId: wheelId,
+    brake: brake
   };
 
-  AmmoVehicle.prototype.setEngineForce = function(wheelId, force) {
-    var descriptor = {
-      vehicleId: this.vehicleId,
-      wheelId: wheelId,
-      force: force
-    };
+  return this.proxy.execute(&#039;Vehicle_setBrake&#039;, descriptor);
+};
 
-    return this.proxy.execute(&#039;Vehicle_setEngineForce&#039;, descriptor);
+AmmoVehicle.prototype.setEngineForce = function(wheelId, force) {
+  var descriptor = {
+    vehicleId: this.vehicleId,
+    wheelId: wheelId,
+    force: force
   };
 
-  AmmoVehicle.prototype.applyEngineForce = function(wheelId, force) {
-    var descriptor = {
-      vehicleId: this.vehicleId,
-      wheelId: wheelId,
-      force: force
-    };
+  return this.proxy.execute(&#039;Vehicle_setEngineForce&#039;, descriptor);
+};
 
-    return this.proxy.execute(&#039;Vehicle_applyEngineForce&#039;, descriptor);
+AmmoVehicle.prototype.applyEngineForce = function(wheelId, force) {
+  var descriptor = {
+    vehicleId: this.vehicleId,
+    wheelId: wheelId,
+    force: force
   };
 
-  AmmoVehicle.prototype.setSteeringValue = function(wheelId, steeringValue) {
-    var descriptor = {
-      vehicleId: this.vehicleId,
-      wheelId: wheelId,
-      steeringValue: steeringValue
-    };
+  return this.proxy.execute(&#039;Vehicle_applyEngineForce&#039;, descriptor);
+};
 
-    return this.proxy.execute(&#039;Vehicle_setSteeringValue&#039;, descriptor);
+AmmoVehicle.prototype.setSteeringValue = function(wheelId, steeringValue) {
+  var descriptor = {
+    vehicleId: this.vehicleId,
+    wheelId: wheelId,
+    steeringValue: steeringValue
   };
 
-  AmmoVehicle.prototype.destroy = function() {
-    var descriptor = {
-      vehicleId: this.vehicleId
-    };
+  return this.proxy.execute(&#039;Vehicle_setSteeringValue&#039;, descriptor);
+};
 
-    _.each(this.wheelBindings, function(binding) {
-      binding.destroy();
-    });
-
-    this.rigidBody.destroy();
-
-    return this.proxy.execute(&#039;Vehicle_destroy&#039;, descriptor);
+AmmoVehicle.prototype.destroy = function() {
+  var descriptor = {
+    vehicleId: this.vehicleId
   };
 
-  AmmoVehicle.prototype.addWheelObject = function(wheelId, object) {
-    this.wheelBindings[wheelId] = this.proxy.adapter.createBinding(object, wheelId);
-  };
+  _.each(this.wheelBindings, function(binding) {
+    binding.destroy();
+  });
 
-  AmmoVehicle.prototype.update = function() {
-    if (this.rigidBody) {
-      this.rigidBody.update();
-    }
+  this.rigidBody.destroy();
 
-    _.each(this.wheelBindings, function(binding) {
-      binding.update();
-    });
-  };
+  return this.proxy.execute(&#039;Vehicle_destroy&#039;, descriptor);
+};
 
-  return AmmoVehicle;
-});</textarea>
+AmmoVehicle.prototype.addWheelObject = function(wheelId, object) {
+  this.wheelBindings[wheelId] = this.proxy.adapter.createBinding(object, wheelId);
+};
+
+AmmoVehicle.prototype.update = function() {
+  _.each(this.wheelBindings, function(binding) {
+    binding.update();
+  });
+};
+
+module.exports = AmmoVehicle;</textarea>
   </div>
 </div>
 

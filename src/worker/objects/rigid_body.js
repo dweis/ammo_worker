@@ -1,31 +1,31 @@
 /* jshint unused:vars */
-define([ 'worker/objects/collision_object' ], function(CollisionObject) {
-  var tmpTrans = new Ammo.btTransform();
+var CollisionObject = require('./collision_object');
 
-  function RigidBody(id, ammoData, worker) {
-    CollisionObject.apply(this, arguments);
-    this.type = 'btRigidBody';
-  }
+var tmpTrans = new Ammo.btTransform();
 
-  RigidBody.prototype = new CollisionObject();
+function RigidBody(id, ammoData, worker) {
+  CollisionObject.apply(this, arguments);
+  this.type = 'btRigidBody';
+}
 
-  RigidBody.prototype.update = function(data) {
-    tmpTrans.setIdentity();
+RigidBody.prototype = new CollisionObject();
 
-    this.ammoData.getMotionState().getWorldTransform(tmpTrans);
+RigidBody.prototype.update = function(data) {
+  tmpTrans.setIdentity();
 
-    var position = tmpTrans.getOrigin().op_mul(this.worker.scaleFactor);
+  this.ammoData.getMotionState().getWorldTransform(tmpTrans);
 
-    data[this.offset + 0] = position.x();
-    data[this.offset + 1] = position.y();
-    data[this.offset + 2] = position.z();
-    data[this.offset + 3] = tmpTrans.getRotation().x();
-    data[this.offset + 4] = tmpTrans.getRotation().y();
-    data[this.offset + 5] = tmpTrans.getRotation().z();
-    data[this.offset + 6] = tmpTrans.getRotation().w();
+  var position = tmpTrans.getOrigin().op_mul(this.worker.scaleFactor);
 
-    Ammo.destroy(position);
-  };
+  data[this.offset + 0] = position.x();
+  data[this.offset + 1] = position.y();
+  data[this.offset + 2] = position.z();
+  data[this.offset + 3] = tmpTrans.getRotation().x();
+  data[this.offset + 4] = tmpTrans.getRotation().y();
+  data[this.offset + 5] = tmpTrans.getRotation().z();
+  data[this.offset + 6] = tmpTrans.getRotation().w();
 
-  return RigidBody;
-});
+  Ammo.destroy(position);
+};
+
+module.exports = RigidBody;

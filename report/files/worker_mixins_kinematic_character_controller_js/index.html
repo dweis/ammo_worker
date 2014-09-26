@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Plato - worker/mixins/kinematic_character_controller.js</title>
+  <title>Plato - worker\mixins\kinematic_character_controller.js</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="">
@@ -15,7 +15,6 @@
   <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
   <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
   <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
-  <link href="../../assets/css/vendor/font-awesome-ie7.css" rel="stylesheet">
   <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
   <link href="../../assets/css/plato.css" rel="stylesheet">
   <link href="../../assets/css/plato-file.css" rel="stylesheet">
@@ -37,7 +36,7 @@
 
 <div class="jumbotron">
   <div class="container">
-    <h1>worker/mixins/kinematic_character_controller.js</h1>
+    <h1>worker\mixins\kinematic_character_controller.js</h1>
   </div>
 </div>
 
@@ -45,7 +44,7 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
-      <p class="stat">65.46</p>
+      <p class="stat">66.05</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
@@ -63,11 +62,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
-      <p class="stat">28.23</p>
+      <p class="stat">31.64</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
-      <p class="stat">1.54</p>
+      <p class="stat">1.72</p>
     </div>
   </div>
 </div>
@@ -90,184 +89,184 @@
 
 <div class="container">
   <div class="row">
-    <textarea id="file-source" class="col-md-12">define([ &#039;worker/constants/collision_flags&#039;, &#039;worker/constants/collision_filter_groups&#039;,
-      &#039;worker/objects/kinematic_character_controller&#039; ],
-    function(CollisionFlags, CollisionFilterGroups, KinematicCharacterController) {
-  var tmpVec = [
-      new Ammo.btVector3()
-    ],
-    tmpQuaternion = [
-      new Ammo.btVector3()
-    ],
-    tmpTrans = [
-      new Ammo.btTransform()
-    ];
+    <textarea id="file-source" class="col-md-12">var CollisionFlags = require(&#039;../constants/collision_flags&#039;),
+    CollisionFilterGroups = require(&#039;../constants/collision_filter_groups&#039;),
+    KinematicCharacterController = require(&#039;../objects/kinematic_character_controller&#039;);
 
-  return {
-    KinematicCharacterController_create: function(descriptor, fn) {
-      if (!this.ids.length) {
-        return console.error(&#039;No unused ids!&#039;);
-      }
+var tmpVec = [
+    new Ammo.btVector3()
+  ],
+  tmpQuaternion = [
+    new Ammo.btQuaternion()
+  ],
+  tmpTrans = [
+    new Ammo.btTransform()
+  ];
 
-      var colShape,
-          startTransform = tmpTrans[0],
-          origin = tmpVec[0],
-          rotation = tmpQuaternion[0],
-          ghost,
-          controller;
-
-      startTransform.setIdentity();
-
-      colShape = this._createShape(descriptor.shape);
-
-      if (!colShape) {
-        throw(&#039;Invalid collision shape!&#039;);
-      }
-
-      origin.setX(descriptor.position.x);
-      origin.setY(descriptor.position.y);
-      origin.setZ(descriptor.position.z);
-
-      rotation.setX(descriptor.quaternion.x);
-      rotation.setY(descriptor.quaternion.y);
-      rotation.setZ(descriptor.quaternion.z);
-      rotation.setW(descriptor.quaternion.w);
-
-      startTransform.setOrigin(origin);
-      startTransform.setRotation(rotation);
-
-      ghost = new Ammo.btPairCachingGhostObject();
-      ghost.setWorldTransform(startTransform);
-
-      ghost.setCollisionShape(colShape);
-      ghost.setCollisionFlags(CollisionFlags.CF_CHARACTER_OBJECT);
-
-      controller = new Ammo.btKinematicCharacterController (ghost, colShape, descriptor.stepHeight);
-
-      this.dynamicsWorld.addCollisionObject(ghost, CollisionFilterGroups.CharacterFilter,
-        CollisionFilterGroups.StaticFilter | CollisionFilterGroups.DefaultFilter);
-
-      this.dynamicsWorld.addAction(controller);
-
-      var id = this.ids.pop();
-
-      var obj = new KinematicCharacterController(id, controller);
-
-      this.objects[id] = obj;
-
-      var o = Ammo.castObject(ghost, Ammo.btCollisionObject);
-
-      controller.userData = o.userData = {
-        type: &#039;btKinematicCharacterController&#039;,
-        id: id
-      };
-
-      if (typeof fn === &#039;function&#039;) {
-        fn(id);
-      }
-    },
-
-    KinematicCharacterController_setWalkDirection: function(descriptor) {
-      var controller = this.objects[descriptor.controllerId];
-
-      if (controller) {
-        tmpVec[0].setX(descriptor.direction.x);
-        tmpVec[0].setY(descriptor.direction.y);
-        tmpVec[0].setZ(descriptor.direction.z);
-
-        controller.ammoData.setWalkDirection(tmpVec[0]);
-      }
-    },
-
-    KinematicCharacterController_jump: function(descriptor) {
-      var controller = this.objects[descriptor.controllerId];
-
-      if (controller) {
-        controller.ammoData.jump();
-      }
-    },
-
-    KinematicCharacterController_setJumpSpeed: function(descriptor) {
-      var controller = this.objects[descriptor.controllerId];
-
-      if (controller) {
-        controller.ammoData.setJumpSpeed(descriptor.jumpSpeed);
-      }
-    },
-
-    KinematicCharacterController_setFallSpeed: function(descriptor) {
-      var controller = this.objects[descriptor.controllerId];
-
-      if (controller) {
-        controller.ammoData.setFallSpeed(descriptor.fallSpeed);
-      }
-    },
-
-    KinematicCharacterController_setMaxJumpHeight: function(descriptor) {
-      var controller = this.objects[descriptor.controllerId];
-
-      if (controller) {
-        controller.ammoData.setMaxJumpHeight(descriptor.maxJumpHeight);
-      }
-    },
-
-    KinematicCharacterController_setGravity: function(descriptor) {
-      var controller = this.objects[descriptor.controllerId];
-
-      if (controller) {
-        controller.ammoData.setGravity(descriptor.gravity);
-      }
-    },
-
-    KinematicCharacterController_setUpAxis: function(descriptor) {
-      var controller = this.objects[descriptor.controllerId];
-
-      if (controller) {
-        controller.ammoData.setUpAxis(descriptor.upAxis);
-      }
-    },
-
-    KinematicCharacterController_setVelocityForTimeInterval: function(descriptor) {
-      var controller = this.objects[descriptor.controllerId];
-
-      if (controller) {
-        tmpVec[0].setX(descriptor.velocity.x);
-        tmpVec[0].setY(descriptor.velocity.y);
-        tmpVec[0].setZ(descriptor.velocity.z);
-
-        controller.ammoData.setVelocityForTimeInterval(tmpVec[0], descriptor.interval);
-      }
-    },
-
-    KinematicCharacterController_setUseGhostSweepTest: function(descriptor) {
-      var controller = this.objects[descriptor.controllerId];
-
-      if (controller) {
-        controller.ammoData.setUseGhostSweepTest(descriptor.useGhostSweepTest);
-      }
-    },
-
-    KinematicCharacterController_setMaxSlope: function(descriptor) {
-      var controller = this.objects[descriptor.controllerId];
-
-      if (controller) {
-        controller.ammoData.setMaxSlope(descriptor.slopeRadians);
-      }
-    },
-
-    KinematicCharacterController_warp: function(descriptor) {
-      var controller = this.objects[descriptor.controllerId];
-
-      if (controller) {
-        tmpVec[0].setX(descriptor.origin.x);
-        tmpVec[0].setY(descriptor.origin.y);
-        tmpVec[0].setZ(descriptor.origin.z);
-
-        controller.ammoData.warp(tmpVec[0]);
-      }
+module.exports = {
+  KinematicCharacterController_create: function(descriptor, fn) {
+    if (!this.ids.length) {
+      return console.error(&#039;No unused ids!&#039;);
     }
-  };
-});</textarea>
+
+    var colShape,
+        startTransform = tmpTrans[0],
+        origin = tmpVec[0],
+        rotation = tmpQuaternion[0],
+        ghost,
+        controller;
+
+    startTransform.setIdentity();
+
+    colShape = this._createShape(descriptor.shape);
+
+    if (!colShape) {
+      throw(&#039;Invalid collision shape!&#039;);
+    }
+
+    origin.setX(descriptor.position.x / this.scaleFactor);
+    origin.setY(descriptor.position.y / this.scaleFactor);
+    origin.setZ(descriptor.position.z / this.scaleFactor);
+
+    rotation.setX(descriptor.quaternion.x);
+    rotation.setY(descriptor.quaternion.y);
+    rotation.setZ(descriptor.quaternion.z);
+    rotation.setW(descriptor.quaternion.w);
+
+    startTransform.setOrigin(origin);
+    startTransform.setRotation(rotation);
+
+    ghost = new Ammo.btPairCachingGhostObject();
+    ghost.setWorldTransform(startTransform);
+
+    ghost.setCollisionShape(colShape);
+    ghost.setCollisionFlags(CollisionFlags.CF_CHARACTER_OBJECT);
+
+    controller = new Ammo.btKinematicCharacterController (ghost, colShape, descriptor.stepHeight);
+
+    this.dynamicsWorld.addCollisionObject(ghost, CollisionFilterGroups.CharacterFilter,
+      CollisionFilterGroups.StaticFilter | CollisionFilterGroups.DefaultFilter);
+
+    this.dynamicsWorld.addAction(controller);
+
+    var id = this.ids.pop();
+
+    var obj = new KinematicCharacterController(id, controller, this);
+
+    this.objects[id] = obj;
+
+    var o = Ammo.castObject(ghost, Ammo.btCollisionObject);
+
+    controller.userData = o.userData = {
+      type: &#039;btKinematicCharacterController&#039;,
+      id: id
+    };
+
+    if (typeof fn === &#039;function&#039;) {
+      fn(id);
+    }
+  },
+
+  KinematicCharacterController_setWalkDirection: function(descriptor) {
+    var controller = this.objects[descriptor.controllerId];
+
+    if (controller) {
+      tmpVec[0].setX(descriptor.direction.x / this.scaleFactor);
+      tmpVec[0].setY(descriptor.direction.y / this.scaleFactor);
+      tmpVec[0].setZ(descriptor.direction.z / this.scaleFactor);
+
+      controller.ammoData.setWalkDirection(tmpVec[0]);
+    }
+  },
+
+  KinematicCharacterController_jump: function(descriptor) {
+    var controller = this.objects[descriptor.controllerId];
+
+    if (controller) {
+      controller.ammoData.jump();
+    }
+  },
+
+  KinematicCharacterController_setJumpSpeed: function(descriptor) {
+    var controller = this.objects[descriptor.controllerId];
+
+    if (controller) {
+      controller.ammoData.setJumpSpeed(descriptor.jumpSpeed / this.scaleFactor);
+    }
+  },
+
+  KinematicCharacterController_setFallSpeed: function(descriptor) {
+    var controller = this.objects[descriptor.controllerId];
+
+    if (controller) {
+      controller.ammoData.setFallSpeed(descriptor.fallSpeed / this.scaleFactor);
+    }
+  },
+
+  KinematicCharacterController_setMaxJumpHeight: function(descriptor) {
+    var controller = this.objects[descriptor.controllerId];
+
+    if (controller) {
+      controller.ammoData.setMaxJumpHeight(descriptor.maxJumpHeight / this.scaleFactor);
+    }
+  },
+
+  KinematicCharacterController_setGravity: function(descriptor) {
+    var controller = this.objects[descriptor.controllerId];
+
+    if (controller) {
+      controller.ammoData.setGravity(descriptor.gravity / this.scaleFactor);
+    }
+  },
+
+  KinematicCharacterController_setUpAxis: function(descriptor) {
+    var controller = this.objects[descriptor.controllerId];
+
+    if (controller) {
+      controller.ammoData.setUpAxis(descriptor.upAxis);
+    }
+  },
+
+  KinematicCharacterController_setVelocityForTimeInterval: function(descriptor) {
+    var controller = this.objects[descriptor.controllerId];
+
+    if (controller) {
+      tmpVec[0].setX(descriptor.velocity.x / this.scaleFactor);
+      tmpVec[0].setY(descriptor.velocity.y / this.scaleFactor);
+      tmpVec[0].setZ(descriptor.velocity.z / this.scaleFactor);
+
+      controller.ammoData.setVelocityForTimeInterval(tmpVec[0], descriptor.interval);
+    }
+  },
+
+  KinematicCharacterController_setUseGhostSweepTest: function(descriptor) {
+    var controller = this.objects[descriptor.controllerId];
+
+    if (controller) {
+      controller.ammoData.setUseGhostSweepTest(descriptor.useGhostSweepTest);
+    }
+  },
+
+  KinematicCharacterController_setMaxSlope: function(descriptor) {
+    var controller = this.objects[descriptor.controllerId];
+
+    if (controller) {
+      controller.ammoData.setMaxSlope(descriptor.slopeRadians);
+    }
+  },
+
+  KinematicCharacterController_warp: function(descriptor) {
+    var controller = this.objects[descriptor.controllerId];
+
+    if (controller) {
+      tmpVec[0].setX(descriptor.origin.x / this.scaleFactor);
+      tmpVec[0].setY(descriptor.origin.y / this.scaleFactor);
+      tmpVec[0].setZ(descriptor.origin.z / this.scaleFactor);
+
+      controller.ammoData.warp(tmpVec[0]);
+    }
+  }
+};</textarea>
   </div>
 </div>
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Plato - proxy/ammo_conetwist_constraint.js</title>
+  <title>Plato - proxy\ammo_conetwist_constraint.js</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="">
@@ -15,7 +15,6 @@
   <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
   <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
   <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
-  <link href="../../assets/css/vendor/font-awesome-ie7.css" rel="stylesheet">
   <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
   <link href="../../assets/css/plato.css" rel="stylesheet">
   <link href="../../assets/css/plato-file.css" rel="stylesheet">
@@ -37,7 +36,7 @@
 
 <div class="jumbotron">
   <div class="container">
-    <h1>proxy/ammo_conetwist_constraint.js</h1>
+    <h1>proxy\ammo_conetwist_constraint.js</h1>
   </div>
 </div>
 
@@ -45,7 +44,7 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
-      <p class="stat">72.96</p>
+      <p class="stat">74.75</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
@@ -63,11 +62,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
-      <p class="stat">18.90</p>
+      <p class="stat">18.00</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
-      <p class="stat">0.54</p>
+      <p class="stat">0.55</p>
     </div>
   </div>
 </div>
@@ -90,80 +89,80 @@
 
 <div class="container">
   <div class="row">
-    <textarea id="file-source" class="col-md-12">define([ &#039;underscore&#039; ], function(_) {
-  function AmmoConeTwistConstraint(proxy, constraintId) {
-    this.proxy = proxy;
-    this.constraintId = constraintId;
-  } 
+    <textarea id="file-source" class="col-md-12">var _ = require(&#039;underscore&#039;);
 
-  AmmoConeTwistConstraint.prototype.setAngularOnly = function(angularOnly) {
-    return this.proxy.execute(&#039;ConeTwistConstraint_setAngularOnly&#039;, {
-      constraintId: this.constraintId,
-      angularOnly: angularOnly
-    });
-  };
+function AmmoConeTwistConstraint(proxy, constraintId) {
+  this.proxy = proxy;
+  this.constraintId = constraintId;
+} 
 
-  AmmoConeTwistConstraint.prototype.setDamping = function(damping) {
-    return this.proxy.execute(&#039;ConeTwistConstraint_setDamping&#039;, {
-      constraintId: this.constraintId,
-      damping: damping
-    });
-  };
+AmmoConeTwistConstraint.prototype.setAngularOnly = function(angularOnly) {
+  return this.proxy.execute(&#039;ConeTwistConstraint_setAngularOnly&#039;, {
+    constraintId: this.constraintId,
+    angularOnly: angularOnly
+  });
+};
 
-  AmmoConeTwistConstraint.prototype.enableMotor = function(isEnabled) {
-    return this.proxy.execute(&#039;ConeTwistConstraint_enableMotor&#039;, {
-      constraintId: this.constraintId,
-      isEnabled: isEnabled
-    });
-  };
+AmmoConeTwistConstraint.prototype.setDamping = function(damping) {
+  return this.proxy.execute(&#039;ConeTwistConstraint_setDamping&#039;, {
+    constraintId: this.constraintId,
+    damping: damping
+  });
+};
 
-  AmmoConeTwistConstraint.prototype.setMaxMotorImpulse = function(maxMotorImpulse) {
-    return this.proxy.execute(&#039;ConeTwistConstraint_setMaxMotorImpulse&#039;, {
-      constraintId: this.constraintId,
-      maxMotorImpulse: maxMotorImpulse
-    });
-  };
+AmmoConeTwistConstraint.prototype.enableMotor = function(isEnabled) {
+  return this.proxy.execute(&#039;ConeTwistConstraint_enableMotor&#039;, {
+    constraintId: this.constraintId,
+    isEnabled: isEnabled
+  });
+};
 
-  AmmoConeTwistConstraint.prototype.setMaxMotorImpulseNormalized = function(maxMotorImpulse) {
-    return this.proxy.execute(&#039;ConeTwistConstraint_setMaxMotorImpulseNormalized&#039;, {
-      constraintId: this.constraintId,
-      maxMotorImpulse: maxMotorImpulse
-    });
-  };
+AmmoConeTwistConstraint.prototype.setMaxMotorImpulse = function(maxMotorImpulse) {
+  return this.proxy.execute(&#039;ConeTwistConstraint_setMaxMotorImpulse&#039;, {
+    constraintId: this.constraintId,
+    maxMotorImpulse: maxMotorImpulse
+  });
+};
 
-  AmmoConeTwistConstraint.prototype.setMotorTarget = function(motorTarget) {
-    return this.proxy.execute(&#039;ConeTwistConstraint_setMotorTarget&#039;, {
-      constraintId: this.constraintId,
-      motorTarget: motorTarget
-    });
-  };
+AmmoConeTwistConstraint.prototype.setMaxMotorImpulseNormalized = function(maxMotorImpulse) {
+  return this.proxy.execute(&#039;ConeTwistConstraint_setMaxMotorImpulseNormalized&#039;, {
+    constraintId: this.constraintId,
+    maxMotorImpulse: maxMotorImpulse
+  });
+};
 
-  AmmoConeTwistConstraint.prototype.setMotorTargetInConstraintSpace = function(motorTarget) {
-    return this.proxy.execute(&#039;ConeTwistConstraint_setMotorTargetInConstraintSpace&#039;, {
-      constraintId: this.constraintId,
-      motorTarget: motorTarget
-    });
-  };
+AmmoConeTwistConstraint.prototype.setMotorTarget = function(motorTarget) {
+  return this.proxy.execute(&#039;ConeTwistConstraint_setMotorTarget&#039;, {
+    constraintId: this.constraintId,
+    motorTarget: motorTarget
+  });
+};
 
-  AmmoConeTwistConstraint.prototype.setLimit = function(swingSpan1, swingSpan2, twistSpan, 
-      softness, biasFactor, relaxationFactor) {
-    softness = (_.isNumber(softness)) ? softness : 1.0;
-    biasFactor = (_.isNumber(biasFactor)) ? biasFactor : 0.3;
-    relaxationFactor = (_.isNumber(relaxationFactor)) ? relaxationFactor : 1.0;
+AmmoConeTwistConstraint.prototype.setMotorTargetInConstraintSpace = function(motorTarget) {
+  return this.proxy.execute(&#039;ConeTwistConstraint_setMotorTargetInConstraintSpace&#039;, {
+    constraintId: this.constraintId,
+    motorTarget: motorTarget
+  });
+};
 
-    return this.proxy.execute(&#039;ConeTwistConstraint_setLimit&#039;, {
-      constraintId: this.constraintId,
-      swingSpan1: swingSpan1,
-      swingSpan2: swingSpan2,
-      twistSpan: twistSpan,
-      softness: softness,
-      biasFactor: biasFactor,
-      relaxationFactor: relaxationFactor
-    });
-  };
+AmmoConeTwistConstraint.prototype.setLimit = function(swingSpan1, swingSpan2, twistSpan, 
+    softness, biasFactor, relaxationFactor) {
+  softness = (_.isNumber(softness)) ? softness : 1.0;
+  biasFactor = (_.isNumber(biasFactor)) ? biasFactor : 0.3;
+  relaxationFactor = (_.isNumber(relaxationFactor)) ? relaxationFactor : 1.0;
 
-  return AmmoConeTwistConstraint;
-});</textarea>
+  return this.proxy.execute(&#039;ConeTwistConstraint_setLimit&#039;, {
+    constraintId: this.constraintId,
+    swingSpan1: swingSpan1,
+    swingSpan2: swingSpan2,
+    twistSpan: twistSpan,
+    softness: softness,
+    biasFactor: biasFactor,
+    relaxationFactor: relaxationFactor
+  });
+};
+
+module.exports = AmmoConeTwistConstraint;</textarea>
   </div>
 </div>
 

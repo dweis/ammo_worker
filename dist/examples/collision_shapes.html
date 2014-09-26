@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Compound Object Test</title>
+  <style>
+  html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; }
+  </style>
+</head>
+<body>
+  <div id="container">
+  </div>
+  <script src="js/three.js"></script>
+  <script src="js/stats.min.js"></script>
+  <script src="js/OrbitControls.js"></script>
+  <script src="../ammo_proxy.js"></script>
+  <script src="js/demo_scene.js"></script>
+  <script type="text/javascript">
+  function CompoundDemo() {
+  }
+
+  CompoundDemo.prototype = new DemoScene();
+
+  CompoundDemo.prototype.initDemo = function() {
+    this.objects=[];
+    this.bodies=[];
+    this._createShapes();
+    this.scene.updateMatrixWorld(true);
+    this._createBodies();
+  };
+
+  CompoundDemo.prototype._createShapes = function() {
+    var material = new THREE.MeshLambertMaterial({ color: 0xCC0000 });
+
+    for (var i = 0; i < 200; i++) {
+      var box = this._createCompoundShape(material);
+      box.position.x = 20 - (Math.random() * 40);
+      box.position.z = 20 - (Math.random() * 40);
+      box.position.y = 20 + Math.random() * 20;
+      box.scale.x = 1;
+      box.scale.y = 1;
+      box.scale.z = 1;
+      box.bodyId = i;
+      this.scene.add(box);
+
+      this.objects[i] = box;
+    }
+  };
+
+  CompoundDemo.prototype._createCompoundShape = function(material) {
+    /*
+    var o = new THREE.Object3D();
+
+    o.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
+
+    var o1 = new THREE.Object3D();
+    o1.position.x = -2;
+    o1.position.y = 0;
+    o1.position.z = 2;
+    o1.scale.x = Math.floor(Math.random() * 2) + 1;
+    o1.scale.y = Math.floor(Math.random() * 2) + 1;
+    o1.scale.z = Math.floor(Math.random() * 2) + 1;
+    //o1.quaternion.setFromAxisAngle({ x: 0, y: 1, z: 0 }, Math.PI/4);
+    o1.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
+    o.add(o1);
+
+    var o2 = new THREE.Object3D();
+    o2.position.x = 0;
+    o2.position.y = 2;
+    o2.position.z = -2;
+    o2.scale.x = Math.floor(Math.random() * 2) + 1;
+    o2.scale.y = Math.floor(Math.random() * 2) + 1;
+    o2.scale.z = Math.floor(Math.random() * 2) + 1;
+    //o2.quaternion.setFromAxisAngle({ x: 0, y: 1, z: 0 }, Math.PI/4);
+    o2.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
+    o.add(o2);
+
+    o.traverse(function(o) {
+      o.castShadow = true;
+    });
+    */
+
+    //for (var i = 0; i < 40; i++) {
+    var c = new THREE.Object3D();
+
+    this.scene.add(c);
+
+    c.position.y = 5;
+    c.position.x = (Math.random() * 40) - 20;
+    c.position.z = (Math.random() * 40) - 20;
+
+    var c1 = new THREE.Object3D();
+
+    c1.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material));
+
+    c1.position.y  = 2;
+
+    c.add(c1);
+    //}
+
+    this.scene.updateMatrixWorld(true);
+    this.proxy
+      .createRigidBodyFromObject(c, 100, { shape: 'auto', strategy: 'convex_hull_mesh' })
+      .then(function(rigidBody) {
+        rigidBody.addToWorld();
+        this.bodies.push(rigidBody);
+      }.bind(this));
+
+    return c;
+  };
+
+  CompoundDemo.prototype._createBody = function(object) {
+    this.proxy
+      .createRigidBodyFromObject(object, 100, { shape: 'auto', strategy: 'compound_bounding_box' })
+      .then(function(rigidBody) {
+        rigidBody.addToWorld();
+        this.bodies.push(rigidBody);
+      }.bind(this));
+  };
+
+  CompoundDemo.prototype._createBodies = function() {
+    for (var i in this.objects) {
+      //this._createBody(this.objects[i]);
+    }
+  };
+
+  CompoundDemo.prototype.updateBodies = function() {
+    for (var i in this.bodies) {
+      this.bodies[i].update();
+    }
+  };
+
+  CompoundDemo.prototype.preUpdate = function() {
+    this.updateBodies();
+  };
+
+  var demo = new CompoundDemo();
+
+  demo.init();
+  </script>
+</body>
+</html>
