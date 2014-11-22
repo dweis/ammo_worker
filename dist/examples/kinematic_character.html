@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kinematic Character</title>
+  <style>
+  html, body, pre#info, #container { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; }
+  </style>
+</head>
+<body>
+  <div id="container">
+  </div>
+  <div style="position: absolute; top: 0; left: 0; color: white; font-family: tahoma, sans-serif; font-size: 24pt;">
+  </div>
+  <script src="js/three.js"></script>
+  <script src="js/stats.min.js"></script>
+  <script src="js/OrbitControls.js"></script>
+  <script src="../ammo_proxy.js"></script>
+  <script src="js/demo_scene.js"></script>
+  <script type="text/javascript">
+    var tmpVec = new THREE.Vector3(),
+        tmpQuaternion = new THREE.Quaternion();
+
+    function SimpleDemo() {
+      this.useGhostSweepTest = false;
+
+      this.cubes = [];
+
+      this.angle = 0.0;
+
+      this.keys = {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+        enter: false
+      };
+
+      document.addEventListener('keyup', function(e) {
+        switch (e.keyCode) {
+          case 37: case 65: this.keys.left = false; break;
+          case 38: case 87: this.keys.up = false; break;
+          case 39: case 68: this.keys.right = false; break;
+          case 40: case 83: this.keys.down = false; break;
+          case 32: this.keys.space = false; break;
+          case 13: this.keys.enter = false; break;
+          case 49: 
+            this.useGhostSweepTest = !this.useGhostSweepTest;
+            this.character.setUseGhostSweepTest(this.useGhostSweepTest);
+            break;
+          case 50:
+            this.character.warp({ x: 0, y: 10, z: 0 });
+            break;
+          default: console.log(e.keyCode); break;
+        }
+      }.bind(this));
+
+      document.addEventListener('keydown', function(e) {
+        switch (e.keyCode) {
+          case 37: case 65: this.keys.left = true; break;
+          case 38: case 87: this.keys.up = true; break;
+          case 39: case 68: this.keys.right = true; break;
+          case 40: case 83: this.keys.down = true; break;
+          case 32: this.keys.space = true; break;
+          case 13: this.keys.enter = true; break;
+        }
+      }.bind(this));
+    }
+
+    SimpleDemo.prototype = new DemoScene();
+
+
+    SimpleDemo.prototype._createGhost = function(material) {
+      var o = new THREE.Object3D();
+
+      o.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), material));
+
+      /*
+      o.position.x = (Math.random() * 30) - 15;
+      o.position.y = 10 + (Math.random() * 20) - 10;
+      o.position.z = (Math.random() * 30) - 15;
+      */
+
+      o.position.x = 2; o.position.z = 2; o.position.y = 1;
+
+      this.proxy.createGhostObjectFromObject(o, { shape: 'box', halfExtents: { x: 4, y: 1, z: 4 } }).then(function(ghost) {
+            ghost.addToWorld();
+        ghost.on('begin_contact', function() {
+          console.log('begin_contact');
+        });
+        ghost.on('end_contact', function() {
+          console.log('end_contact');
+        });
+        this.ghost = ghost;
+      }.bind(this))
+      .otherwise(function(err) {
+        console.error('An error occured while adding the ghost object', err.message);   
+      });
+
+      o.traverse(function(o) {
+        o.castShadow = true;
+      });
+
+      this.scene.add(o);
+
+      return o;
+    };
+
+
+    SimpleDemo.prototype._createStep = function(i, material) {
+      var cube = new THREE.Object3D();
+      cube.add(new THREE.Mesh(new THREE.BoxGeometry(2, 1, 8), material));
+      cube.position.x = i * 2;
+      cube.position.y = i * 1;
+      cube.position.z = 0;
+
+      this.scene.add(cube);
+        this.proxy.createRigidBodyFromObject(cube, 0, { shape: 'auto', strategy: 'compound_bounding_box' })
+        .then(function(rigidBody) {
+          rigidBody.addToWorld();
+        }.bind(this));
+    };
+
+    SimpleDemo.prototype._createBox = function(material) {
+      var cube = new THREE.Object3D();
+      cube.add(new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), material));
+      cube.position.x = (Math.random() * 500) - 250;
+      cube.position.y = 10 + (Math.random() * 50);
+      cube.position.z = (Math.random() * 500) - 250;
+
+      this.scene.add(cube);
+      this.proxy.createRigidBodyFromObject(cube, 1, { shape: 'auto', strategy: 'compound_bounding_box' })
+        .then(function(rigidBody) {
+          rigidBody.addToWorld();
+          this.cubes.push(rigidBody);
+        }.bind(this))
+        .otherwise(function(err) {
+          console.error(err.message);
+        });
+    };
+
+    SimpleDemo.prototype.initDemo = function() {
+      console.log('initializing...');
+      // set the scene size
+      var WIDTH = document.body.clientWidth,
+          HEIGHT = document.body.clientHeight;
+
+      // set some camera attributes
+      var VIEW_ANGLE = 45,
+          ASPECT = WIDTH / HEIGHT,
+          NEAR = 0.01,
+          FAR = 1000;
+
+      var cameraRig = this.cameraRig = new THREE.Object3D();
+
+      this.camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+      this.camera.position.z = 15;
+      this.camera.position.y = 5;
+      this.camera.lookAt({x: 0, y: 0, z: 0 });
+      cameraRig.add(this.camera);
+
+      cameraRig.position.y = 0;
+      cameraRig.lookAt({x: 0, y: 0, z: 0});
+
+      var material = new THREE.MeshLambertMaterial({ color: 0x33CC00 });
+      var material2 = new THREE.MeshLambertMaterial({ color: 0xcc3300 });
+
+      var cube = new THREE.Object3D();
+
+      cube.add(new THREE.Mesh(new THREE.SphereGeometry(1, 12, 12), material2));
+      cube.position.y = 10;
+      cube.position.x = 20;
+      cube.children[0].castShadow = true;
+      this.scene.add(cube);
+      cube.add(cameraRig);
+
+      for (var i = 0; i < 100; i++) {
+        this._createBox(material);
+      }
+
+      // steps
+      for (var i = 0; i < 20; i++) {
+        this._createStep(i, material);
+      }
+
+      this._createGhost(material);
+
+      this.proxy.createKinematicCharacterControllerFromObject(cube, { shape: 'sphere', radius: 1  }, 0.2)
+        .then(function(kinematicCharacter) {
+          this.character = kinematicCharacter; 
+          kinematicCharacter.setJumpSpeed(40);
+          kinematicCharacter.setFallSpeed(50);
+          kinematicCharacter.setMaxJumpHeight(20);
+          kinematicCharacter.setGravity(50);
+          kinematicCharacter.setUpAxis(1);
+          kinematicCharacter.setMaxSlope(0.01);
+
+          kinematicCharacter.once('ghost_enter', function() { console.log('ghost_enter', arguments); });
+          kinematicCharacter.once('ghost_exit', function() { console.log('ghost_exit', arguments); });
+        }.bind(this))
+        .otherwise(function(err) {
+          console.error(err.message);
+        }.bind(this));
+    };
+
+    SimpleDemo.prototype.updateBodies = function(delta) {
+      if (this.character) {
+        this.character.update();
+      }
+
+      for (var i = 0; i < this.cubes.length; i++) {
+        this.cubes[i].update();  
+      }
+    };
+
+    SimpleDemo.prototype.preUpdate = function(delta) {
+      this.updateBodies(delta);
+
+      if (!this.character) return;
+      tmpVec.x = 0;
+      tmpVec.y = 0;
+      tmpVec.z = 0;
+
+      //tmpQuaternion.setFromRotationMatrix(this.character.binding.object.matrixWorld);
+      tmpQuaternion.setFromAxisAngle({ x: 0, y: 1, z: 0}, this.angle);
+
+      if (this.keys.up) {
+        tmpVec.z -= 1;
+      } else if (this.keys.down) {
+        tmpVec.z += 1;
+      } else if (this.keys.left) {
+        //tmpVec.x -= 1;
+        this.angle += Math.PI * (delta/1000);
+      } else if (this.keys.right) {
+        //tmpVec.x += 1;
+        this.angle -= Math.PI * (delta/1000);
+      }
+
+      tmpVec.applyQuaternion(tmpQuaternion);
+
+      this.character.setWalkDirection(tmpVec);
+
+      if (this.keys.space) {
+        this.character.jump();
+      }
+
+      this.cameraRig.quaternion.copy(tmpQuaternion);
+
+      if (this.keys.enter) {
+        this.character.setVelocityForTimeInterval({ x: 1, y: 0, z: 1 }, 1);  
+      }
+
+      tmpVec.applyQuaternion(tmpQuaternion);
+    };
+
+    var demo = new SimpleDemo();
+
+    demo.init();
+  </script>
+</body>
+</html>

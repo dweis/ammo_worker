@@ -1,11 +1,11 @@
 /* jshint unused:vars */
-define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
-  function ConeTwistConstraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btConeTwistConstraint';
-  }
+var AmmoObject = require('./ammo_object');
 
-  ConeTwistConstraint.prototype = new AmmoObject();
+function ConeTwistConstraint(id, ammoData) {
+  AmmoObject.apply(this, arguments);
+  this.type = 'btConeTwistConstraint';
+}
 
-  return ConeTwistConstraint;
-});
+ConeTwistConstraint.prototype = new AmmoObject();
+
+module.exports = ConeTwistConstraint;

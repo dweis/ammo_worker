@@ -1,11 +1,11 @@
 /* jshint unused:vars */
-define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
-  function HingeConstraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'btHingeConstraint';
-  }
+var AmmoObject = require('./ammo_object');
 
-  HingeConstraint.prototype = new AmmoObject();
+function HingeConstraint(id, ammoData) {
+  AmmoObject.apply(this, arguments);
+  this.type = 'btHingeConstraint';
+}
 
-  return HingeConstraint;
-});
+HingeConstraint.prototype = new AmmoObject();
+
+module.exports = HingeConstraint;

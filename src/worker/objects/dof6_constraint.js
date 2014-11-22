@@ -1,11 +1,11 @@
 /* jshint unused:vars */
-define([ 'worker/objects/ammo_object' ], function(AmmoObject) {
-  function DOF6Constraint(id, ammoData) {
-    AmmoObject.apply(this, arguments);
-    this.type = 'bt6DOFConstraint';
-  }
+var AmmoObject = require('./ammo_object');
 
-  DOF6Constraint.prototype = new AmmoObject();
+function DOF6Constraint(id, ammoData) {
+  AmmoObject.apply(this, arguments);
+  this.type = 'bt6DOFConstraint';
+}
 
-  return DOF6Constraint;
-});
+DOF6Constraint.prototype = new AmmoObject();
+
+module.exports = DOF6Constraint;
