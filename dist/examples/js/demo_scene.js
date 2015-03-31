@@ -107,6 +107,8 @@ DemoScene.prototype._initScene = function() {
   var camera = this.camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
   var scene = this.scene = new THREE.Scene();
 
+  scene.matrixAutoUpdate = false;
+
   // the camera starts at 0,0,0 so pull it back
   camera.position.z = 50;
   camera.position.y = 10;
